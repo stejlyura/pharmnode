@@ -1,0 +1,22 @@
+{
+  "app_title": "PharmNode",
+  "app_subtitle": "Virtual Formulation Studio",
+  "btn_open_studio": "Open Studio",
+  "btn_start_free": "Start Free Formulation",
+  "btn_book_demo": "Book a Demo",
+  "pricing": "Pricing Plans",
+  "features": "Features",
+  "technology": "Technology",
+  "regulatory": "Regulatory",
+  "hero_badge": "Digital Pharmaceutical Compounding",
+  "hero_title": "Virtual Formulation Studio for Drugs & Supplements",
+  "hero_desc": "Design formulations, calculate powder flowability (Hausner/Carr), simulate tablet press matrices, and check FDA compliance—all in one visual workspace.",
+  "gmp_title": "GMP Validation Report",
+  "regulatory_standard": "US Standard (FDA CFR Title 21)",
+  "supplement_type": "Dietary Supplement",
+  "allergen_compliance": "FALCPA Compliant",
+  "disclaimer_title": "Decision Support System (DSS) Agreement",
+  "disclaimer_notice": "Attention: PharmNode is a Decision Support System (DSS). All calculations are predictive and require mandatory laboratory validation (FTIR, DSC, HPLC) prior to scale-up and commercial production.",
+  "warning_dissolution": "Warning: High Lubricant Concentration. Risk of delayed dissolution.",
+  "warning_maillard": "Chemical Conflict: Maillard Reaction detected! Suggest MCC replacement."
+}

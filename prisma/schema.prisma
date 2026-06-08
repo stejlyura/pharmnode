@@ -1,0 +1,50 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String             @id @default(uuid())
+  name              String
+  email             String             @unique
+  image             String?
+  tariff            String             @default("hobby")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  recipes           Recipe[]
+  customIngredients CustomIngredient[]
+}
+
+model Recipe {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  nodes       Json     @default("[]")
+  connections Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomIngredient {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  role              String   // active, filler, lubricant, glidant, dry-binder
+  casNumber         String?
+  looseBulkDensity  Float
+  tappedBulkDensity Float
+  trueDensity       Float?
+  costPerKgUsd      Float    @default(0)
+  maxSafePercentage Float    @default(100)
+  incompatibleWith  Int[]    @default([])
+  compatibleWith    Int[]    @default([])
+  isAllergen        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

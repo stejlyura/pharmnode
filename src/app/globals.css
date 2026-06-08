@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
+/* Базовая тема: 1. Строгий медицинский (Стерильно чистый) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    --bg: #f8fafc; /* Ультра-светлый холодный фон (почти белый) */
+    --surface: #ffffff; /* Абсолютно чистые белые панели */
+    --text: #0f172a; /* Очень темный сланцевый для максимального контраста текста */
+    --muted: #64748b;
+    --primary: #005eb8; /* Классический надежный клинический синий */
+    --primary-hover: #004a94;
+    --border: #cbd5e1; /* Четкие, структурные границы без размытия */
+    --success: #16a34a;
+    --warning: #d97706;
+    --radius: 0.125rem; /* Очень острые углы (2px) для протокольной строгости */
+    --radius-btn: 0.125rem;
+    --shadow: none; /* Никаких теней, абсолютно плоский и чистый дизайн */
+    --shadow-sm: none;
+    --font: var(--font-inter), sans-serif;
+    --grid-dot: #cbd5e1; /* Светлые точки сетки */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Тема 3: Премиум Темный (True Black / High-End Medical Equipment) */
+[data-theme="dark"] {
+    --bg: #000000; /* Абсолютно черный фон */
+    --surface: #0c0c0e; /* Почти черный для рабочих панелей (отделяется от фона за счет бордера) */
+    --text: #ededed; /* Комфортный белый для снижения нагрузки на глаза */
+    --muted: #8b8b93;
+    --primary: #05e69f; /* Неоново-бирюзовый/изумрудный (как на мониторах жизнеобеспечения) */
+    --primary-hover: #00c486;
+    --border: #222226; /* Тонкие темные границы */
+    --success: #05e69f;
+    --warning: #fbbf24;
+    --radius: 0.375rem; /* Аккуратные скругления */
+    --radius-btn: 0.375rem;
+    --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255,255,255,0.03); /* Глубокая тень и легкое свечение сверху панелей */
+    --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.8);
+    --font: var(--font-inter), sans-serif;
+    --grid-dot: #222226; /* Темные точки сетки */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+    --color-background: var(--bg);
+    --color-foreground: var(--text);
+
+    --color-zinc-950: var(--bg);
+    --color-zinc-900: var(--surface);
+    --color-zinc-800: var(--border);
+    --color-zinc-700: var(--border);
+    --color-zinc-600: var(--muted);
+    --color-zinc-500: var(--muted);
+    --color-zinc-400: var(--muted);
+    --color-zinc-300: var(--text);
+    --color-zinc-200: var(--text);
+    --color-zinc-100: var(--text);
+    --color-zinc-50: var(--text);
+
+    --color-indigo-500: var(--primary);
+    --color-indigo-600: var(--primary-hover);
+    --color-indigo-400: var(--primary);
+    --color-indigo-300: var(--primary);
+
+    --radius-xl: var(--radius);
+    --radius-lg: var(--radius);
+    --radius-md: var(--radius);
+    --radius-sm: var(--radius-btn);
+
+    --shadow-2xl: var(--shadow);
+    --shadow-lg: var(--shadow-sm);
+
+    --font-sans: var(--font);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+}
+
+.theme-element {
+    transition: all 0.3s ease;
+}
+
+/* Стилизация скроллбара под текущую тему */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
 }
