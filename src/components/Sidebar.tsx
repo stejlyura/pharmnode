@@ -35,11 +35,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    active: true,
-    filler: true,
-    'dry-binder': true,
-    lubricant: true,
-    glidant: true
+    active: false,
+    filler: false,
+    'dry-binder': false,
+    lubricant: false,
+    glidant: false
   });
 
   const toggleCategory = (role: string) => {

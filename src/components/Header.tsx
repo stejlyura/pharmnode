@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "../context/I18nContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { 
   LogIn, 
@@ -48,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCompatibilityMatrix
 }) => {
   const { user, status, login, logout, changeTariff } = useAuth();
+  const { locale, setLocale } = useTranslation();
   const [showLoginMenu, setShowLoginMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -182,6 +184,14 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         )}
+
+        <button
+          onClick={() => setLocale(locale === "ru-RU" ? "en-US" : "ru-RU")}
+          className="px-2.5 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 transition-colors cursor-pointer theme-element"
+          title="Переключить язык (EN/RU)"
+        >
+          {locale === "ru-RU" ? "RU" : "EN"}
+        </button>
 
         <ThemeToggle />
 
