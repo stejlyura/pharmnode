@@ -841,7 +841,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         onClick={() => onToggleExpand(true)}
         data-drag-handle="true"
         data-node-id={id}
-        className={`w-[72px] h-[72px] rounded-2xl bg-zinc-900/90 backdrop-blur-md border theme-element shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center cursor-pointer select-none group hover:scale-105 active:scale-95 z-10 ${borderClass}`}
+        className={`w-[72px] h-[72px] rounded-2xl bg-zinc-900/90 backdrop-blur-md border theme-element shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center cursor-pointer select-none group hover:scale-105 active:scale-95 z-10 hover:z-40 focus-within:z-40 ${borderClass}`}
       >
         {/* Compact Icon */}
         {renderCompactIcon()}
@@ -891,7 +891,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         transform: `translate(${position.x}px, ${position.y}px)`,
         position: 'absolute',
       }}
-      className={`w-[290px] md:w-[320px] rounded-xl bg-zinc-900/90 backdrop-blur-md border theme-element shadow-2xl transition-shadow select-none duration-150 ${borderClass}`}
+      className={`w-[290px] md:w-[320px] rounded-xl bg-zinc-900/90 backdrop-blur-md border theme-element shadow-2xl transition-shadow select-none duration-150 z-20 hover:z-40 focus-within:z-40 ${borderClass}`}
     >
       {/* Top Drag Handle Bar */}
       <div

@@ -32,6 +32,8 @@ interface HeaderProps {
   tariff?: "hobby" | "professional" | "enterprise";
   setTariff?: (tariff: "hobby" | "professional" | "enterprise") => void;
   onOpenCompatibilityMatrix?: () => void;
+  onOpenPricing?: (targetTariff?: "professional" | "enterprise") => void;
+  onOpenBenefits?: (tariff: "professional" | "enterprise") => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -46,7 +48,9 @@ export const Header: React.FC<HeaderProps> = ({
   handleAddIngredient,
   tariff,
   setTariff,
-  onOpenCompatibilityMatrix
+  onOpenCompatibilityMatrix,
+  onOpenPricing,
+  onOpenBenefits
 }) => {
   const { user, status, login, logout, changeTariff } = useAuth();
   const { locale, setLocale } = useTranslation();
@@ -147,10 +151,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      {/* Right controls: Guest Tariff Selector, Theme Switcher & User Profile OAuth */}
+      {/* Right controls: Tariff Selector, Theme Switcher & User Profile OAuth */}
       <div className="flex items-center gap-4">
-        {/* Guest Tariff Selector (if not logged in) */}
-        {!user && setTariff && (
+        {/* Tariff Selector (visible for all users) */}
+        {(setTariff || user) && (
           <div className="flex items-center bg-zinc-900/60 rounded-lg p-0.5 border border-zinc-800">
             <button
               onClick={() => handleTariffChange("hobby")}
@@ -163,20 +167,32 @@ export const Header: React.FC<HeaderProps> = ({
               Hobby
             </button>
             <button
-              onClick={() => handleTariffChange("professional")}
+              onClick={() => {
+                if (activeTariff === "professional") {
+                  if (onOpenBenefits) onOpenBenefits("professional");
+                } else {
+                  if (onOpenPricing) onOpenPricing("professional");
+                }
+              }}
               className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                 activeTariff === "professional"
-                  ? "bg-zinc-800 text-indigo-400 shadow-sm"
+                  ? "bg-zinc-800 text-indigo-400 shadow-sm font-extrabold"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
               Pro
             </button>
             <button
-              onClick={() => handleTariffChange("enterprise")}
+              onClick={() => {
+                if (activeTariff === "enterprise") {
+                  if (onOpenBenefits) onOpenBenefits("enterprise");
+                } else {
+                  if (onOpenPricing) onOpenPricing("enterprise");
+                }
+              }}
               className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
                 activeTariff === "enterprise"
-                  ? "bg-zinc-800 text-indigo-400 shadow-sm"
+                  ? "bg-zinc-800 text-indigo-400 shadow-sm font-extrabold"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >

@@ -12,6 +12,7 @@ import { Header } from './Header';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from './Sidebar';
 import { CompatibilityMatrix } from './CompatibilityMatrix';
+import { BenefitsModal } from './BenefitsModal';
 
 export const Canvas: React.FC = () => {
   const { user, status, login, changeTariff } = useAuth();
@@ -136,6 +137,8 @@ export const Canvas: React.FC = () => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showBenefitsModal, setShowBenefitsModal] = useState(false);
+  const [benefitsTariff, setBenefitsTariff] = useState<'professional' | 'enterprise'>('professional');
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [limitError, setLimitError] = useState<string | null>(null);
   const [scale, setScale] = useState(1.0);
@@ -472,6 +475,11 @@ export const Canvas: React.FC = () => {
         tariff={tariff}
         setTariff={setTariff}
         onOpenCompatibilityMatrix={() => setIsCompatibilityMatrixOpen(true)}
+        onOpenPricing={() => setShowUpgradeModal(true)}
+        onOpenBenefits={(tariff) => {
+          setBenefitsTariff(tariff);
+          setShowBenefitsModal(true);
+        }}
       />
 
       {/* Split Pane: Sidebar & Workspace Canvas */}
@@ -927,6 +935,13 @@ export const Canvas: React.FC = () => {
       <CompatibilityMatrix
         isOpen={isCompatibilityMatrixOpen}
         onClose={() => setIsCompatibilityMatrixOpen(false)}
+      />
+
+      {/* Benefits Modal */}
+      <BenefitsModal
+        isOpen={showBenefitsModal}
+        onClose={() => setShowBenefitsModal(false)}
+        tariff={benefitsTariff}
       />
     </div>
   );
