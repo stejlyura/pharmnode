@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PharmNode Studio
 
-## Getting Started
+**Облачная B2B SaaS-платформа** для виртуального формулирования и расчёта лекарственных форм и БАД.
 
-First, run the development server:
+Концепция: **Quality by Computational Design (QbCD)** — технологи визуально собирают рецептуры из ингредиентов, платформа мгновенно проверяет химическую совместимость и рассчитывает параметры таблетирования.
+
+## Быстрый старт
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Открыть [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Структура документации
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Файл | Содержание |
+| --- | --- |
+| [`docs/project-overview.md`](docs/project-overview.md) | Полный обзор проекта, структура кода, ключевые файлы |
+| [`docs/architecture/backend.md`](docs/architecture/backend.md) | Стек, API, Prisma, Redis, деплой |
+| [`docs/architecture/knowledge-base.md`](docs/architecture/knowledge-base.md) | База знаний, матрицы совместимости, скоринг |
+| [`docs/architecture/product-evolution.md`](docs/architecture/product-evolution.md) | Уровни продукта, дорожная карта |
+| [`docs/tasks/todo.md`](docs/tasks/todo.md) | Список задач, статус блоков |
+| [`docs/deployment/setup-guide.md`](docs/deployment/setup-guide.md) | Настройка ключей, деплой на Vercel |
 
-## Learn More
+## Стек
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js** (App Router) + **TypeScript**
+- **Prisma** + **PostgreSQL** (Neon / Supabase)
+- **Redis** (Upstash)
+- **NextAuth.js** (Google + GitHub OAuth)
+- **Stripe** (биллинг)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Ключевые возможности
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- 🧪 Node-Based Canvas для визуальной сборки рецептур
+- ⚗️ Проверка химической совместимости (35 химических классов)
+- 📊 Физико-химические расчёты (коэффициент Хауснера, индекс Карра, пористость)
+- 💊 Симуляция таблетирования (геометрия матрицы, вес партии)
+- 💰 Экономические расчёты (себестоимость таблетки)
+- 🌙 Тёмная / Светлая темы
+- 📄 Экспорт GMP-отчётов в PDF
 
-## Deploy on Vercel
+## Тарифы
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Тариф | Цена | Ингредиентов |
+| --- | --- | --- |
+| Hobby | Бесплатно | 3 |
+| Professional | $149/мес | 15 |
+| Enterprise | Custom | ∞ |

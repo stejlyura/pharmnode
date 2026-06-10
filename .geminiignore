@@ -1,0 +1,33 @@
+# Файлы и директории, игнорируемые Gemini AI
+
+# Архив устаревших материалов
+docs/archive/
+
+# Генерируемые директории
+.next/
+node_modules/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Чувствительные данные (никогда не читать)
+.env
+.env.local
+.env.production
+
+# Lockfiles (не редактировать)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Бинарные и медиа файлы
+public/
+*.png
+*.jpg
+*.ico
+*.svg
+
+# HTML промо-файлы (не относятся к кодовой базе)
+Ptomotion.html
+
+# Prisma клиент (генерируется автоматически)
+prisma/migrations/
