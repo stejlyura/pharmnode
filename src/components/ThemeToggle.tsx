@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
+import { useTranslation } from "../context/I18nContext";
 
 export const ThemeToggle: React.FC = () => {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [mounted, setMounted] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setMounted(true);
@@ -46,7 +48,7 @@ export const ThemeToggle: React.FC = () => {
       onClick={toggleTheme}
       className="w-8 h-8 rounded-lg bg-zinc-900/60 border border-zinc-800 flex items-center justify-center text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/80 transition-all cursor-pointer theme-element"
       aria-label="Toggle theme"
-      title={theme === "dark" ? "Переключить на светлую тему" : "Переключить на темную тему"}
+      title={theme === "dark" ? t("theme_light") : t("theme_dark")}
     >
       {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
     </button>

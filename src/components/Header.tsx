@@ -29,11 +29,11 @@ interface HeaderProps {
   setShowAddMenu?: (show: boolean) => void;
   remainingIngredients?: any[];
   handleAddIngredient?: (id: number) => void;
-  tariff?: "hobby" | "professional" | "enterprise";
-  setTariff?: (tariff: "hobby" | "professional" | "enterprise") => void;
+  tariff?: "hobby" | "professional";
+  setTariff?: (tariff: "hobby" | "professional") => void;
   onOpenCompatibilityMatrix?: () => void;
-  onOpenPricing?: (targetTariff?: "professional" | "enterprise") => void;
-  onOpenBenefits?: (tariff: "professional" | "enterprise") => void;
+  onOpenPricing?: (targetTariff?: "professional") => void;
+  onOpenBenefits?: (tariff: "professional") => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBenefits
 }) => {
   const { user, status, login, logout, changeTariff } = useAuth();
-  const { locale, setLocale } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
   const [showLoginMenu, setShowLoginMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
     setShowProfileMenu(false);
   };
 
-  const handleTariffChange = (newTariff: "hobby" | "professional" | "enterprise") => {
+  const handleTariffChange = (newTariff: "hobby" | "professional") => {
     if (user) {
       changeTariff(newTariff);
     } else if (setTariff) {
@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800' 
                   : 'text-zinc-600 cursor-not-allowed'
               }`}
-              title="Отменить (Cmd+Z)"
+              title={t('header_undo')}
             >
               <Undo2 size={16} />
             </button>
@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800' 
                   : 'text-zinc-600 cursor-not-allowed'
               }`}
-              title="Повторить (Cmd+Y)"
+              title={t('header_redo')}
             >
               <Redo2 size={16} />
             </button>
@@ -130,10 +130,10 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'bg-zinc-900 border-zinc-800 text-indigo-400 shadow-inner' 
                   : 'bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-zinc-200'
               }`}
-              title={showAddMenu ? "Скрыть панель веществ" : "Показать панель веществ"}
+              title={showAddMenu ? t('header_hide_components') : t('header_show_components')}
             >
               <Sidebar size={15} />
-              <span className="hidden sm:inline">Панель веществ</span>
+              <span className="hidden sm:inline">{t('header_components_panel')}</span>
             </button>
           )}
 
@@ -142,10 +142,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenCompatibilityMatrix}
               className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-zinc-200 transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer theme-element"
-              title="Открыть матрицу совместимости ингредиентов"
+              title={t('header_open_matrix')}
             >
               <Grid size={15} />
-              <span className="hidden sm:inline">Справочник совместимости</span>
+              <span className="hidden sm:inline">{t('header_compatibility_guide')}</span>
             </button>
           )}
         </div>
@@ -182,29 +182,13 @@ export const Header: React.FC<HeaderProps> = ({
             >
               Pro
             </button>
-            <button
-              onClick={() => {
-                if (activeTariff === "enterprise") {
-                  if (onOpenBenefits) onOpenBenefits("enterprise");
-                } else {
-                  if (onOpenPricing) onOpenPricing("enterprise");
-                }
-              }}
-              className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
-                activeTariff === "enterprise"
-                  ? "bg-zinc-800 text-indigo-400 shadow-sm font-extrabold"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Enterprise
-            </button>
           </div>
         )}
 
         <button
           onClick={() => setLocale(locale === "ru-RU" ? "en-US" : "ru-RU")}
           className="px-2.5 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 transition-colors cursor-pointer theme-element"
-          title="Переключить язык (EN/RU)"
+          title={t("header_switch_lang")}
         >
           {locale === "ru-RU" ? "RU" : "EN"}
         </button>
@@ -245,12 +229,12 @@ export const Header: React.FC<HeaderProps> = ({
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl p-2 flex flex-col gap-1 z-50">
                 <div className="px-2.5 py-2 border-b border-zinc-800/80 mb-1">
-                  <span className="text-[10px] text-zinc-500 block leading-tight">Подключен как ({user.provider})</span>
+                  <span className="text-[10px] text-zinc-500 block leading-tight">{t('header_logged_in_as')} ({user.provider})</span>
                   <span className="text-xs font-bold text-zinc-200 block truncate mt-0.5">{user.email}</span>
                 </div>
 
                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider px-2 py-1 block">
-                  Переключить тариф
+                  {t('header_switch_plan')}
                 </span>
                 
                 <button
@@ -272,19 +256,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <Sparkles size={11} className="text-indigo-400 animate-pulse" />
                     Pro
                   </span>
-                  <span className="text-[9px] bg-zinc-850 px-1 py-0.2 rounded text-zinc-500">$149</span>
-                </button>
-                <button
-                  onClick={() => handleTariffChange("enterprise")}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-zinc-800 transition-colors flex items-center justify-between cursor-pointer ${
-                    user.tariff === "enterprise" ? "text-indigo-400 font-bold" : "text-zinc-300"
-                  }`}
-                >
-                  <span className="flex items-center gap-1">
-                    <ShieldCheck size={11} className="text-emerald-400" />
-                    Enterprise
-                  </span>
-                  <span className="text-[9px] bg-zinc-850 px-1 py-0.2 rounded text-zinc-500">Custom</span>
+                  <span className="text-[9px] bg-zinc-850 px-1 py-0.2 rounded text-zinc-500">$19</span>
                 </button>
 
                 <div className="border-t border-zinc-800/80 my-1 pt-1">
@@ -294,14 +266,14 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <User size={12} className="text-zinc-500" />
-                    Панель администратора
+                    {t('header_admin_panel')}
                   </Link>
                   <button
                     onClick={handleLogoutClick}
                     className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-rose-400 hover:bg-rose-500/5 hover:text-rose-300 transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <LogOut size={12} />
-                    Выйти
+                    {t('header_logout')}
                   </button>
                 </div>
               </div>
@@ -314,13 +286,13 @@ export const Header: React.FC<HeaderProps> = ({
               className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-100 text-zinc-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer theme-element"
             >
               <LogIn size={13} />
-              Войти
+              {t('header_sign_in')}
             </button>
 
             {showLoginMenu && (
               <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl p-2.5 flex flex-col gap-1.5 z-50">
                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider px-1 block mb-1">
-                  Аутентификация / Вход
+                  {t('header_auth_title')}
                 </span>
                 
                 <button
@@ -337,17 +309,11 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="w-4 h-4 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-[9px] font-bold">Git</div>
                   <span>GitHub Mock (Pro)</span>
                 </button>
-                <button
-                  onClick={() => handleMockLogin("mock-microsoft")}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-zinc-800 text-zinc-200 transition-colors flex items-center gap-2 cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
-                >
-                  <div className="w-4 h-4 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-[9px] font-bold">MS</div>
-                  <span>Microsoft Mock (Enterprise)</span>
-                </button>
+
 
                 <div className="border-t border-zinc-800/80 my-1 pt-1.5 flex flex-col gap-1">
                   <span className="text-[8px] text-zinc-500 leading-normal px-1">
-                    * Для демо-режима пароли не требуются. Выберите аккаунт для симуляции соответствующего тарифа.
+                    {t('header_demo_note')}
                   </span>
                 </div>
               </div>

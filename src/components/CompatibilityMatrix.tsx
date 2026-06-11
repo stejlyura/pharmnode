@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { baseIngredientsMatrix, Ingredient } from "../types/pharm";
 import { CHEMICAL_CLASSES, getCompatibilityRule } from "../lib/chemicalRules";
 import { X, Check, AlertTriangle, Info, HelpCircle } from "lucide-react";
+import { useTranslation } from "../context/I18nContext";
 
 interface CompatibilityMatrixProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface CompatibilityMatrixProps {
 }
 
 export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const [selectedCell, setSelectedCell] = useState<{
     ing1: Ingredient;
     ing2: Ingredient;
@@ -51,15 +53,15 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
 
   const getChemicalClassName = (classId: number) => {
     const cls = CHEMICAL_CLASSES.find(c => c.id === classId);
-    return cls ? cls.name : `Класс ${classId}`;
+    return cls ? cls.name : `${t('matrix_class_fallback')} ${classId}`;
   };
 
   const getCompatibilityDetails = (ing1: Ingredient, ing2: Ingredient) => {
     if (ing1.id === ing2.id) {
       return {
         status: "same",
-        title: "Тот же ингредиент",
-        desc: "Компонент полностью совместим сам с собой.",
+        title: t('matrix_same'),
+        desc: t('matrix_same_desc'),
         colorClass: "bg-zinc-800 text-zinc-400"
       };
     }
@@ -80,23 +82,23 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
     if ((ing1.role === "glidant" && ing2.role === "lubricant") || (ing1.role === "lubricant" && ing2.role === "glidant")) {
       return {
         status: "synergy",
-        title: "Высокая совместимость (Синергия)",
-        desc: "Технологический синергизм: совместное использование скользящего вещества и лубриканта снижает межчастичное трение смеси и адгезию к пуансонам пресса.",
+        title: t('matrix_synergy_title'),
+        desc: t('matrix_synergy_glidant_lubricant'),
         colorClass: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer"
       };
     } else if ((ing1.role === "dry-binder" && ing2.role === "filler") || (ing1.role === "filler" && ing2.role === "dry-binder")) {
       return {
         status: "synergy",
-        title: "Высокая совместимость (Синергия)",
-        desc: "Структурный синергизм: комбинация пластически деформируемого сухого связующего с хрупко разрушаемым наполнителем создает прочный каркас таблетки.",
+        title: t('matrix_synergy_title'),
+        desc: t('matrix_synergy_binder_filler'),
         colorClass: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer"
       };
     }
 
     return {
       status: "compatible",
-      title: "Совместимы",
-      desc: "Химические конфликты не обнаружены. Вещества стабильны при совместном хранении в сухом виде при комнатной температуре.",
+      title: t('matrix_compatible'),
+      desc: t('matrix_compatible_desc'),
       colorClass: "bg-zinc-900/60 text-zinc-300 border border-zinc-800/80 hover:bg-zinc-800 hover:border-zinc-700 cursor-pointer"
     };
   };
@@ -110,10 +112,10 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
           <div>
             <h2 className="text-base font-bold text-zinc-100 flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-              Матрица химической совместимости веществ
+              {t('matrix_title')}
             </h2>
             <p className="text-[11px] text-zinc-500 mt-0.5">
-              Справочная сетка перекрестных взаимодействий фармацевтических ингредиентов
+              {t('matrix_subtitle')}
             </p>
           </div>
           <button
@@ -135,7 +137,7 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                   <tr>
                     {/* Corner Header cell */}
                     <th className="p-2 text-[10px] font-bold text-zinc-600 text-left border border-zinc-900 w-32 sticky left-0 bg-zinc-950 z-10">
-                      Ингредиент
+                      {t('matrix_ingredient')}
                     </th>
                     {baseIngredientsMatrix.map((ing) => (
                       <th
@@ -193,7 +195,7 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
           <div className="w-full lg:w-80 bg-zinc-900/10 p-6 flex flex-col gap-4 overflow-y-auto shrink-0 select-none">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
               <Info size={14} className="text-indigo-400" />
-              Детали взаимодействия
+              {t('matrix_details')}
             </h3>
 
             {selectedCell ? (
@@ -201,15 +203,15 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                 {/* Selected components info */}
                 <div className="flex flex-col gap-2 p-3 bg-zinc-900/40 border border-zinc-850 rounded-xl">
                   <div>
-                    <span className="text-[9px] text-zinc-500 block uppercase font-mono font-bold leading-none mb-1">Компонент A</span>
+                    <span className="text-[9px] text-zinc-500 block uppercase font-mono font-bold leading-none mb-1">{t('matrix_component_a')}</span>
                     <span className="text-xs font-semibold text-zinc-200 block truncate">{selectedCell.ing1.name}</span>
-                    <span className="text-[9px] text-zinc-400 font-mono block">Класс: {getChemicalClassName(selectedCell.ing1.chemicalClassId)}</span>
+                    <span className="text-[9px] text-zinc-400 font-mono block">{t('matrix_class')} {getChemicalClassName(selectedCell.ing1.chemicalClassId)}</span>
                   </div>
                   <div className="h-px bg-zinc-850/60 my-1" />
                   <div>
-                    <span className="text-[9px] text-zinc-500 block uppercase font-mono font-bold leading-none mb-1">Компонент B</span>
+                    <span className="text-[9px] text-zinc-500 block uppercase font-mono font-bold leading-none mb-1">{t('matrix_component_b')}</span>
                     <span className="text-xs font-semibold text-zinc-200 block truncate">{selectedCell.ing2.name}</span>
-                    <span className="text-[9px] text-zinc-400 font-mono block">Класс: {getChemicalClassName(selectedCell.ing2.chemicalClassId)}</span>
+                    <span className="text-[9px] text-zinc-400 font-mono block">{t('matrix_class')} {getChemicalClassName(selectedCell.ing2.chemicalClassId)}</span>
                   </div>
                 </div>
 
@@ -243,25 +245,25 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
               <div className="flex-1 flex flex-col items-center justify-center py-12 text-center border border-dashed border-zinc-850 rounded-xl bg-zinc-900/10">
                 <HelpCircle size={32} className="text-zinc-650 mb-3 animate-pulse" />
                 <span className="text-xs text-zinc-500 font-semibold px-4">
-                  Нажмите на любую ячейку в матрице для вывода подробного химического описания.
+                  {t('matrix_click_hint')}
                 </span>
               </div>
             )}
 
             {/* Legend guide */}
             <div className="mt-auto pt-4 border-t border-zinc-900 flex flex-col gap-2.5 text-[10px]">
-              <span className="text-zinc-500 uppercase tracking-wider font-bold text-[9px]">Легенда обозначений:</span>
+              <span className="text-zinc-500 uppercase tracking-wider font-bold text-[9px]">{t('matrix_legend')}</span>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-emerald-500/20 border border-emerald-500/30 rounded flex items-center justify-center"><Check size={11} className="text-emerald-400" /></div>
-                <span className="text-zinc-400">Синергизм (улучшение свойств)</span>
+                <span className="text-zinc-400">{t('matrix_synergy')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-rose-500/20 border border-rose-500/30 rounded flex items-center justify-center"><X size={11} className="text-rose-400" /></div>
-                <span className="text-zinc-400">Химический конфликт (несовместимо)</span>
+                <span className="text-zinc-400">{t('matrix_conflict')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-zinc-900/60 border border-zinc-800/80 rounded flex items-center justify-center"><span className="text-[10px] text-zinc-600">•</span></div>
-                <span className="text-zinc-400">Нейтральная совместимость</span>
+                <span className="text-zinc-400">{t('matrix_neutral')}</span>
               </div>
             </div>
 

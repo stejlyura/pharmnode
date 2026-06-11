@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { dbConnect } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "mock-secret", {
@@ -14,7 +13,7 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
     const { plan } = await request.json();
 
-    if (!plan || !["professional", "enterprise"].includes(plan)) {
+    if (!plan || plan !== "professional") {
       return NextResponse.json({ error: "Invalid plan type" }, { status: 400 });
     }
 
@@ -32,7 +31,7 @@ export async function POST(request: Request) {
                 name: `PharmNode ${plan.toUpperCase()} License`,
                 description: `Monthly B2B Virtual Formulation subscription license for ${plan} plan.`,
               },
-              unit_amount: plan === "professional" ? 14900 : 99900,
+              unit_amount: 1900,
               recurring: { interval: "month" },
             },
             quantity: 1,
@@ -49,13 +48,10 @@ export async function POST(request: Request) {
       console.warn("STRIPE_SECRET_KEY is not set. Running simulated billing checkout.");
 
       if (session?.user?.email) {
-        const db = await dbConnect();
-        if (db) {
-          await User.findOneAndUpdate(
-            { email: session.user.email },
-            { tariff: plan }
-          );
-        }
+        await prisma.user.update({
+          where: { email: session.user.email },
+          data: { tariff: plan },
+        });
       }
 
       const mockCheckoutUrl = `${host}/configurator?checkout=success&plan=${plan}&mock=true`;

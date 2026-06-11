@@ -7,15 +7,20 @@ import { Disclaimer } from './Disclaimer';
 import { PricingPanel } from './PricingPanel';
 import { baseIngredientsMatrix, Ingredient, IngredientRole } from '../types/pharm';
 import { CHEMICAL_CLASSES } from '../lib/chemicalRules';
-import { Undo2, Redo2, Plus, AlertTriangle } from 'lucide-react';
+import { Undo2, Redo2, Plus, AlertTriangle, FlaskConical } from 'lucide-react';
 import { Header } from './Header';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../context/I18nContext';
 import { Sidebar } from './Sidebar';
 import { CompatibilityMatrix } from './CompatibilityMatrix';
 import { BenefitsModal } from './BenefitsModal';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileConfigurator } from './MobileConfigurator';
 
 export const Canvas: React.FC = () => {
   const { user, status, login, changeTariff } = useAuth();
+  const { t, locale } = useTranslation();
+  const isMobile = useIsMobile();
   const [customIngredients, setCustomIngredients] = useState<Ingredient[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -36,7 +41,7 @@ export const Canvas: React.FC = () => {
   const [regForm, setRegForm] = useState({
     name: '',
     email: '',
-    tariff: 'hobby' as 'hobby' | 'professional' | 'enterprise'
+    tariff: 'hobby' as 'hobby' | 'professional'
   });
 
   const [authError, setAuthError] = useState<string | null>(null);
@@ -114,10 +119,10 @@ export const Canvas: React.FC = () => {
         if (user) {
           changeTariff(plan);
         }
-        alert(`Подписка PharmNode ${plan.toUpperCase()} успешно активирована! Благодарим за покупку.`);
+        alert(t('canvas_checkout_success').replace('{plan}', plan.toUpperCase()));
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (checkoutStatus === 'cancelled') {
-        alert("Оплата подписки отменена.");
+        alert(t('canvas_checkout_cancelled'));
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
@@ -135,10 +140,10 @@ export const Canvas: React.FC = () => {
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [dragIngredientName, setDragIngredientName] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showBenefitsModal, setShowBenefitsModal] = useState(false);
-  const [benefitsTariff, setBenefitsTariff] = useState<'professional' | 'enterprise'>('professional');
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [limitError, setLimitError] = useState<string | null>(null);
   const [scale, setScale] = useState(1.0);
@@ -259,10 +264,7 @@ export const Canvas: React.FC = () => {
     const res = addIngredientNode(id, position);
     if (!res.success) {
       if (res.reason === 'hobby-limit') {
-        setLimitError('Вы достигли лимита бесплатного тарифа (макс. 3 ингредиента на схеме).');
-        setShowUpgradeModal(true);
-      } else if (res.reason === 'professional-limit') {
-        setLimitError('Вы достигли лимита тарифа Professional (макс. 15 ингредиентов на схеме). Пожалуйста, выберите Enterprise.');
+        setLimitError(t('canvas_hobby_limit'));
         setShowUpgradeModal(true);
       }
     } else {
@@ -280,16 +282,24 @@ export const Canvas: React.FC = () => {
     if (e.dataTransfer.types.includes('application/pharmnode-node')) {
       e.dataTransfer.dropEffect = 'copy';
       setIsDraggingOver(true);
+      // Try to capture name for overlay display
+      const name = e.dataTransfer.getData('application/pharmnode-name');
+      if (name) setDragIngredientName(name);
     }
   }, []);
 
-  const handleDragLeave = useCallback(() => {
-    setIsDraggingOver(false);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    // Only hide if leaving the main workspace entirely
+    if (!workspaceRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDraggingOver(false);
+      setDragIngredientName(null);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
+    setDragIngredientName(null);
     
     const nodeType = e.dataTransfer.getData('application/pharmnode-node');
     const ingredientIdStr = e.dataTransfer.getData('text/plain');
@@ -333,14 +343,14 @@ export const Canvas: React.FC = () => {
       setIsAuthModalOpen(false);
       setAuthError(null);
     } catch (err: any) {
-      setAuthError(err.message || "Ошибка входа");
+      setAuthError(err.message || t('canvas_login_error'));
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regForm.name.trim() || !regForm.email.trim()) {
-      setAuthError("Заполните имя и email");
+      setAuthError(t('canvas_fill_name_email'));
       return;
     }
     setAuthError(null);
@@ -349,22 +359,22 @@ export const Canvas: React.FC = () => {
       setIsAuthModalOpen(false);
       setRegForm({ name: '', email: '', tariff: 'hobby' });
     } catch (err: any) {
-      setAuthError(err.message || "Ошибка регистрации");
+      setAuthError(err.message || t('canvas_reg_error'));
     }
   };
 
   const handleSubmitIngredient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addForm.name.trim()) {
-      setAddError("Название компонента не может быть пустым");
+      setAddError(t('add_error_empty_name'));
       return;
     }
     if (addForm.looseBulkDensity <= 0 || addForm.tappedBulkDensity <= 0) {
-      setAddError("Плотность должна быть положительным числом");
+      setAddError(t('add_error_density_positive'));
       return;
     }
     if (addForm.looseBulkDensity > addForm.tappedBulkDensity) {
-      setAddError("Насыпная плотность не может быть больше плотности с уплотнением");
+      setAddError(t('add_error_density_order'));
       return;
     }
     setAddError(null);
@@ -422,10 +432,10 @@ export const Canvas: React.FC = () => {
           chemicalClassId: 0
         });
       } else {
-        setAddError(data.error || "Не удалось сохранить компонент");
+        setAddError(data.error || t("canvas_save_error"));
       }
     } catch (err: any) {
-      setAddError(err.message || "Ошибка сети при добавлении компонента");
+      setAddError(err.message || t("canvas_network_error"));
     }
   };
 
@@ -459,6 +469,249 @@ export const Canvas: React.FC = () => {
     return baseIngredientsMatrix.filter(ing => !activeIds.some(id => String(id) === String(ing.id)));
   }, [nodes]);
 
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-zinc-950 theme-element">
+        <MobileConfigurator
+          nodes={nodes}
+          calculatedResults={calculatedResults}
+          tariff={tariff}
+          setTariff={setTariff}
+          onUpdateData={updateNodeData}
+          onRemove={removeNode}
+          onReplaceIngredient={handleReplaceIngredient}
+          customIngredients={customIngredients}
+          onOpenAddModal={handleOpenAddModal}
+          onAddIngredient={handleAddIngredient}
+          activeNodeIngredientIds={activeNodeIngredientIds}
+          onOpenCompatibilityMatrix={() => setIsCompatibilityMatrixOpen(true)}
+          onOpenPricing={() => setShowUpgradeModal(true)}
+          onOpenBenefits={() => setShowBenefitsModal(true)}
+        />
+
+        {/* Pricing / Plan upgrade modal */}
+        {showUpgradeModal && (
+          <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+            <PricingPanel
+              currentTariff={tariff}
+              onSelectTariff={(plan) => {
+                setTariff(plan);
+                if (user) changeTariff(plan);
+                setShowUpgradeModal(false);
+              }}
+              onClose={() => {
+                setShowUpgradeModal(false);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Add Custom Ingredient Modal */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-55 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+            <div className="w-full max-w-lg bg-zinc-950/90 border border-zinc-900 rounded-2xl shadow-2xl p-6 relative theme-element my-8">
+              <button
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  setAddError(null);
+                }}
+                className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-350 transition-colors z-45"
+              >
+                ✕
+              </button>
+              
+              <h2 className="text-lg font-bold text-zinc-100 mb-2 uppercase tracking-wide flex items-center gap-2">
+                🧪 {t('canvas_new_component')}
+              </h2>
+              <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
+                {t('canvas_new_component_desc')}
+              </p>
+
+              {addError && (
+                <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-xs text-rose-400 flex items-start gap-2">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <span>{addError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmitIngredient} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_name_label')} *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={locale === 'ru-RU' ? 'Например, Paracetamol Generic' : 'e.g., Paracetamol Generic'}
+                      value={addForm.name}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 placeholder-zinc-655 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_role_label')} *</label>
+                    <select
+                      value={addForm.role}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, role: e.target.value as any }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
+                    >
+                      <option value="active">{t('add_role_active')}</option>
+                      <option value="filler">{t('add_role_filler')}</option>
+                      <option value="dry-binder">{t('add_role_dry_binder')}</option>
+                      <option value="lubricant">{t('add_role_lubricant')}</option>
+                      <option value="glidant">{t('add_role_glidant')}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_cas_label')}</label>
+                    <input
+                      type="text"
+                      placeholder="103-90-2"
+                      value={addForm.casNumber}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, casNumber: e.target.value }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 placeholder-zinc-655 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_loose_density')} *</label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0.01"
+                      max="5.0"
+                      placeholder="0.45"
+                      value={addForm.looseBulkDensity}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, looseBulkDensity: parseFloat(e.target.value) || 0.45 }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_tapped_density')} *</label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0.01"
+                      max="5.0"
+                      placeholder="0.65"
+                      value={addForm.tappedBulkDensity}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, tappedBulkDensity: parseFloat(e.target.value) || 0.65 }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_true_density')}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      max="5.0"
+                      placeholder="1.25"
+                      value={addForm.trueDensity}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, trueDensity: parseFloat(e.target.value) || 1.25 }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_max_safe')} *</label>
+                    <input
+                      type="number"
+                      required
+                      step="0.5"
+                      min="0.1"
+                      max="100.0"
+                      placeholder="100"
+                      value={addForm.maxSafePercentage}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, maxSafePercentage: parseFloat(e.target.value) || 100 }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_cost_per_kg')} *</label>
+                    <input
+                      type="number"
+                      required
+                      step="0.1"
+                      min="0.0"
+                      placeholder="15.0"
+                      value={addForm.costPerKgUsd}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, costPerKgUsd: parseFloat(e.target.value) || 15.0 }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_compat_group')} *</label>
+                    <select
+                      value={addForm.chemicalClassId}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, chemicalClassId: parseInt(e.target.value, 10) || 0 }))}
+                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
+                    >
+                      {CHEMICAL_CLASSES.map(cls => (
+                        <option key={cls.id} value={cls.id}>
+                          {t(`chem_class_${cls.id}_cat`)}: {t(`chem_class_${cls.id}_name`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 flex items-center gap-2 bg-zinc-900/40 border border-zinc-900 p-3 rounded-lg mt-1">
+                    <input
+                      type="checkbox"
+                      id="isAllergen-mobile-canvas"
+                      checked={addForm.isAllergen}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, isAllergen: e.target.checked }))}
+                      className="accent-indigo-500 cursor-pointer"
+                    />
+                    <label htmlFor="isAllergen-mobile-canvas" className="text-xs text-zinc-300 font-medium cursor-pointer select-none">
+                      {t('canvas_allergen_label')}
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-zinc-200 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    {t('canvas_cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    {t('canvas_submit_ingredient')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <Disclaimer />
+
+        <CompatibilityMatrix
+          isOpen={isCompatibilityMatrixOpen}
+          onClose={() => setIsCompatibilityMatrixOpen(false)}
+        />
+
+        <BenefitsModal
+          isOpen={showBenefitsModal}
+          onClose={() => setShowBenefitsModal(false)}
+          tariff="professional"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-zinc-950 relative overflow-hidden select-none theme-element">
       {/* Global Header */}
@@ -476,8 +729,7 @@ export const Canvas: React.FC = () => {
         setTariff={setTariff}
         onOpenCompatibilityMatrix={() => setIsCompatibilityMatrixOpen(true)}
         onOpenPricing={() => setShowUpgradeModal(true)}
-        onOpenBenefits={(tariff) => {
-          setBenefitsTariff(tariff);
+        onOpenBenefits={() => {
           setShowBenefitsModal(true);
         }}
       />
@@ -503,10 +755,48 @@ export const Canvas: React.FC = () => {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`flex-1 relative overflow-auto transition-colors duration-200 ${
-            isDraggingOver ? 'bg-indigo-500/5' : ''
-          }`}
+          className="flex-1 relative overflow-auto"
         >
+          {/* ── Drop Zone Overlay ── */}
+          {isDraggingOver && (
+            <div
+              className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-center gap-3"
+              style={{
+                background: 'rgba(0,0,0,0.55)',
+                backdropFilter: 'blur(2px)',
+              }}
+            >
+              {/* Animated pulsing ring */}
+              <div
+                style={{
+                  width: 96, height: 96,
+                  border: '2px solid var(--primary)',
+                  borderRadius: '50%',
+                  boxShadow: '0 0 0 8px rgba(var(--primary-rgb, 5,230,159), 0.15), 0 0 30px rgba(var(--primary-rgb, 5,230,159), 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  animation: 'drop-pulse 1.2s ease-in-out infinite',
+                }}
+              >
+                <FlaskConical size={36} style={{ color: 'var(--primary)' }} />
+              </div>
+              <div className="text-center">
+                <p className="text-white font-bold text-base tracking-wide">
+                  {dragIngredientName ? t('canvas_drop_add').replace('{name}', dragIngredientName) : t('canvas_drop_release')}
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                  {t('canvas_drop_hint')}
+                </p>
+              </div>
+              {/* Dashed border hint */}
+              <div
+                className="absolute inset-4 rounded-2xl pointer-events-none"
+                style={{
+                  border: '2px dashed var(--primary)',
+                  opacity: 0.3,
+                }}
+              />
+            </div>
+          )}
           {/* Zoomable Canvas Area */}
           <div
             style={{
@@ -587,21 +877,21 @@ export const Canvas: React.FC = () => {
             <button
               onClick={() => setScale(prev => Math.max(prev - 0.1, 0.3))}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 transition-colors text-sm font-bold cursor-pointer"
-              title="Уменьшить"
+              title={t('canvas_zoom_out')}
             >
               －
             </button>
             <span 
               onClick={() => setScale(1.0)}
               className="px-2 text-[10px] font-bold text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer select-none font-mono min-w-[36px] text-center"
-              title="Сбросить масштаб"
+              title={t('canvas_zoom_reset')}
             >
               {Math.round(scale * 100)}%
             </span>
             <button
               onClick={() => setScale(prev => Math.min(prev + 0.1, 2.0))}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 transition-colors text-sm font-bold cursor-pointer"
-              title="Увеличить"
+              title={t('canvas_zoom_in')}
             >
               ＋
             </button>
@@ -656,10 +946,10 @@ export const Canvas: React.FC = () => {
             </button>
             
             <h2 className="text-lg font-bold text-zinc-100 mb-2 uppercase tracking-wide flex items-center gap-2">
-              🔐 Требуется авторизация
+              🔐 {t('canvas_auth_required')}
             </h2>
             <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
-              Чтобы создавать, настраивать и сохранять собственные компоненты в базе данных, вам необходимо войти в систему или зарегистрировать демо-профиль.
+              {t('canvas_auth_desc')}
             </p>
 
             {authError && (
@@ -672,34 +962,34 @@ export const Canvas: React.FC = () => {
             {/* Quick Mock Login Profiles */}
             <div className="flex flex-col gap-2 mb-6">
               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">
-                Быстрый вход через демо-профили:
+                {t('canvas_quick_login')}
               </span>
               <button
                 onClick={() => handleQuickLogin("mock-google")}
                 className="w-full py-2 px-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
               >
                 <div className="w-4 h-4 rounded bg-red-500/10 flex items-center justify-center text-red-400 text-[9px] font-bold">G</div>
-                <span>Вход как Dr. Fleming (Hobby)</span>
+                <span>{t('canvas_login_hobby')}</span>
               </button>
               <button
                 onClick={() => handleQuickLogin("mock-github")}
                 className="w-full py-2 px-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
               >
                 <div className="w-4 h-4 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-[9px] font-bold">Git</div>
-                <span>Вход как Fermer Tech (Pro)</span>
+                <span>{t('canvas_login_pro')}</span>
               </button>
             </div>
 
             {/* Registration Form */}
             <form onSubmit={handleRegister} className="border-t border-zinc-900 pt-4 flex flex-col gap-3">
               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">
-                Или быстрая демо-регистрация:
+                {t('canvas_or_register')}
               </span>
               <div>
-                <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Ваше имя</label>
+                <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('canvas_your_name')}</label>
                 <input
                   type="text"
-                  placeholder="Иван Иванов"
+                  placeholder={locale === 'ru-RU' ? 'Иван Иванов' : 'John Doe'}
                   value={regForm.name}
                   onChange={(e) => setRegForm(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 placeholder-zinc-650 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
@@ -716,22 +1006,21 @@ export const Canvas: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Тарифный план</label>
+                <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('canvas_plan_label')}</label>
                 <select
                   value={regForm.tariff}
                   onChange={(e) => setRegForm(prev => ({ ...prev, tariff: e.target.value as any }))}
                   className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
                 >
-                  <option value="hobby">Hobby (макс. 3 компонента)</option>
-                  <option value="professional">Professional (макс. 15 компонентов)</option>
-                  <option value="enterprise">Enterprise (без лимитов)</option>
+                  <option value="hobby">{t('canvas_hobby_option')}</option>
+                  <option value="professional">{t('canvas_pro_option')}</option>
                 </select>
               </div>
               <button
                 type="submit"
                 className="w-full py-2 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer mt-2"
               >
-                Создать аккаунт и войти
+                {t('canvas_create_account')}
               </button>
             </form>
           </div>
@@ -753,10 +1042,10 @@ export const Canvas: React.FC = () => {
             </button>
             
             <h2 className="text-lg font-bold text-zinc-100 mb-2 uppercase tracking-wide flex items-center gap-2">
-              🧪 Новый компонент
+              🧪 {t('canvas_new_component')}
             </h2>
             <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
-              Заполните характеристики и физико-химические свойства компонента. Он будет сохранен в вашей базе данных и доступен в библиотеке веществ.
+              {t('canvas_new_component_desc')}
             </p>
 
             {addError && (
@@ -767,13 +1056,13 @@ export const Canvas: React.FC = () => {
             )}
 
             <form onSubmit={handleSubmitIngredient} className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Название вещества *</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_name_label')} *</label>
                   <input
                     type="text"
                     required
-                    placeholder="Например, Paracetamol Generic"
+                    placeholder={locale === 'ru-RU' ? 'Например, Paracetamol Generic' : 'e.g., Paracetamol Generic'}
                     value={addForm.name}
                     onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
                     className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 placeholder-zinc-650 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
@@ -781,22 +1070,22 @@ export const Canvas: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Роль в формуляции *</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_role_label')} *</label>
                   <select
                     value={addForm.role}
                     onChange={(e) => setAddForm(prev => ({ ...prev, role: e.target.value as any }))}
                     className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
                   >
-                    <option value="active">Активное вещество</option>
-                    <option value="filler">Наполнитель</option>
-                    <option value="dry-binder">Сухое связующее</option>
-                    <option value="lubricant">Лубрикант</option>
-                    <option value="glidant">Скользящее вещество</option>
+                    <option value="active">{t('add_role_active')}</option>
+                    <option value="filler">{t('add_role_filler')}</option>
+                    <option value="dry-binder">{t('add_role_dry_binder')}</option>
+                    <option value="lubricant">{t('add_role_lubricant')}</option>
+                    <option value="glidant">{t('add_role_glidant')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">CAS Номер</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_cas_label')}</label>
                   <input
                     type="text"
                     placeholder="103-90-2"
@@ -807,7 +1096,7 @@ export const Canvas: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Насыпная плотность ρ (г/мл) *</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_loose_density')} *</label>
                   <input
                     type="number"
                     required
@@ -822,7 +1111,7 @@ export const Canvas: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Плотность с уплотнением ρ (г/мл) *</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_tapped_density')} *</label>
                   <input
                     type="number"
                     required
@@ -837,7 +1126,7 @@ export const Canvas: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Истинная плотность ρ (г/мл)</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_true_density')}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -851,7 +1140,7 @@ export const Canvas: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Макс. безопасный ввод (%) *</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_max_safe')} *</label>
                   <input
                     type="number"
                     required
@@ -866,7 +1155,7 @@ export const Canvas: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Стоимость за кг ($ USD) *</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_cost_per_kg')} *</label>
                   <input
                     type="number"
                     required
@@ -880,7 +1169,7 @@ export const Canvas: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">Группа совместимости *</label>
+                  <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_compat_group')} *</label>
                   <select
                     value={addForm.chemicalClassId}
                     onChange={(e) => setAddForm(prev => ({ ...prev, chemicalClassId: parseInt(e.target.value, 10) || 0 }))}
@@ -888,13 +1177,13 @@ export const Canvas: React.FC = () => {
                   >
                     {CHEMICAL_CLASSES.map(cls => (
                       <option key={cls.id} value={cls.id}>
-                        {cls.category}: {cls.name}
+                        {t(`chem_class_${cls.id}_cat`)}: {t(`chem_class_${cls.id}_name`)}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="col-span-2 flex items-center gap-2 bg-zinc-900/40 border border-zinc-900 p-3 rounded-lg mt-1">
+                <div className="col-span-1 md:col-span-2 flex items-center gap-2 bg-zinc-900/40 border border-zinc-900 p-3 rounded-lg mt-1">
                   <input
                     type="checkbox"
                     id="isAllergen"
@@ -903,7 +1192,7 @@ export const Canvas: React.FC = () => {
                     className="accent-indigo-500 cursor-pointer"
                   />
                   <label htmlFor="isAllergen" className="text-xs text-zinc-300 font-medium cursor-pointer select-none">
-                    Данное вещество является аллергеном (например, содержит лактозу, глютен и т.д.)
+                    {t('canvas_allergen_label')}
                   </label>
                 </div>
               </div>
@@ -914,13 +1203,13 @@ export const Canvas: React.FC = () => {
                   onClick={() => setIsAddModalOpen(false)}
                   className="flex-1 py-2 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-zinc-200 font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
-                  Отмена
+                  {t('canvas_cancel')}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 py-2 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
-                  Добавить компонент
+                  {t('canvas_submit_ingredient')}
                 </button>
               </div>
             </form>
@@ -941,7 +1230,7 @@ export const Canvas: React.FC = () => {
       <BenefitsModal
         isOpen={showBenefitsModal}
         onClose={() => setShowBenefitsModal(false)}
-        tariff={benefitsTariff}
+        tariff="professional"
       />
     </div>
   );

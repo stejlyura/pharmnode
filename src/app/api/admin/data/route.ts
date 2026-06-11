@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         name: "CMO Pharma Corp",
         email: "admin@cmo-corp.com",
         image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80",
-        tariff: "enterprise",
+        tariff: "professional",
         createdAt: new Date(Date.now() - 3600000 * 120).toISOString(),
       }
     ];

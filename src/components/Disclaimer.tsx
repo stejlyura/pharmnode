@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Check } from 'lucide-react';
+import { useTranslation } from '../context/I18nContext';
 
 export const Disclaimer: React.FC = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
@@ -39,29 +41,29 @@ export const Disclaimer: React.FC = () => {
           </div>
           <div>
             <h2 className="font-bold text-zinc-100 text-base">
-              Decision Support System (DSS) Agreement
+              {t('disclaimer_title')}
             </h2>
             <span className="text-[10px] text-red-400 font-semibold uppercase tracking-wider">
-              Mandatory Regulatory Notice
+              {t('disclaimer_mandatory_notice')}
             </span>
           </div>
         </div>
 
         <div className="text-xs text-zinc-300 flex flex-col gap-3 leading-relaxed max-h-72 overflow-y-auto pr-1 mt-1 border-t border-b border-zinc-800/80 py-3">
           <p className="font-bold text-zinc-100 text-xs">
-            Attention: PharmNode is a Decision Support System (DSS) only.
+            {t('disclaimer_p1')}
           </p>
           <p>
-            All mathematical calculations, physical predictions (Hausner ratio, Carr compressibility index, powder flowability classifications), and chemical compatibility reports generated on this canvas are predictive and for informational/research purposes.
+            {t('disclaimer_p2')}
           </p>
           <p className="bg-red-500/5 p-2 rounded border border-red-500/10 text-[11px] text-zinc-300 font-medium">
-            <strong>Required Laboratory Validation:</strong> All formulations require mandatory lab-scale experimental validation (using FTIR, DSC, HPLC, and USP/EP dissolution testing) prior to industrial scale-up, commercial compounding, or clinical use.
+            <strong>{t('disclaimer_p3_title')}</strong> {t('disclaimer_p3_body')}
           </p>
           <p>
-            By using this software, you confirm that you assume all risks associated with manufacturing, product stability, active substance degradation, and regulatory compliance under your local jurisdiction (e.g., US Title 21 CFR or EU Food Supplements Directive).
+            {t('disclaimer_p4')}
           </p>
           <p className="text-zinc-400 text-[11px]">
-            PharmNode developers and partners accept no liability for damages, spoiled raw batches, machine downtime, or adverse healthcare incidents resulting from computational formulations.
+            {t('disclaimer_p5')}
           </p>
         </div>
 
@@ -75,7 +77,7 @@ export const Disclaimer: React.FC = () => {
               className="mt-0.5 w-4 h-4 text-indigo-500 accent-indigo-500 bg-zinc-800 border-zinc-700 rounded focus:ring-indigo-500"
             />
             <span className="text-[11px] text-zinc-400 select-none leading-normal">
-              I accept the Terms of Use and acknowledge that PharmNode calculations require mandatory laboratory validation prior to any scale-up or production.
+              {t('disclaimer_accept')}
             </span>
           </label>
 
@@ -90,7 +92,7 @@ export const Disclaimer: React.FC = () => {
             }`}
           >
             <Check size={14} />
-            Acknowledge & Confirm
+            {t('disclaimer_confirm')}
           </button>
         </div>
       </div>

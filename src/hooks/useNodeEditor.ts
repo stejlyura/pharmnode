@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Ingredient, baseIngredientsMatrix } from '../types/pharm';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../context/I18nContext';
 import {
   calculateBlendProperties,
   calculateTableting,
@@ -88,10 +89,11 @@ const initialConnections: EditorConnection[] = [
   { id: "conn-4", source: "node-press", target: "node-output" }
 ];
 
-export type TariffType = 'hobby' | 'professional' | 'enterprise';
+export type TariffType = 'hobby' | 'professional';
 
 export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredients: Ingredient[] = []) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [tariff, setTariff] = useState<TariffType>(initialTariff);
   
   const allIngredients = useMemo(() => {
@@ -195,10 +197,6 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     
     if (tariff === 'hobby' && ingredientNodesCount >= 3) {
       return { success: false, reason: 'hobby-limit' };
-    }
-
-    if (tariff === 'professional' && ingredientNodesCount >= 15) {
-      return { success: false, reason: 'professional-limit' };
     }
 
     const newId = `node-ing-${Date.now()}`;
@@ -320,7 +318,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
       .reduce((sum, item) => sum + item.percentage, 0);
 
     // 3. Compute warnings and limits
-    const warnings = checkCompatibilityAndLimits(blendIngredients);
+    const warnings = checkCompatibilityAndLimits(blendIngredients, t);
 
     // 4. Read equipment/punch size from Press Node
     const pressNode = state.nodes.find(node => node.type === 'press');
@@ -360,7 +358,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
       activePercentage,
       allergens
     };
-  }, [state.nodes, state.connections, allIngredients]);
+  }, [state.nodes, state.connections, allIngredients, t]);
 
   return {
     nodes: state.nodes,

@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { Check, ShieldAlert, Zap, Globe, Sparkles, Building } from 'lucide-react';
+import { useTranslation } from '../context/I18nContext';
 
 interface PricingPanelProps {
-  currentTariff: 'hobby' | 'professional' | 'enterprise';
-  onSelectTariff: (tariff: 'hobby' | 'professional' | 'enterprise') => void;
+  currentTariff: 'hobby' | 'professional';
+  onSelectTariff: (tariff: 'hobby' | 'professional') => void;
   onClose?: () => void;
 }
 
@@ -14,63 +15,45 @@ export const PricingPanel: React.FC<PricingPanelProps> = ({
   onSelectTariff,
   onClose
 }) => {
+  const { t } = useTranslation();
   const plans = [
     {
       id: 'hobby' as const,
       name: 'Hobby',
       price: '$0',
       period: 'forever',
-      description: 'Для независимых технологов, студентов и малых стартапов.',
+      description: t('pricing_hobby_desc'),
       icon: <Globe className="text-zinc-400" size={18} />,
       features: [
-        { text: 'Максимум 3 ингредиента на схеме', included: true },
-        { text: 'Базовая библиотека (5 веществ)', included: true },
-        { text: 'Детерминированный анализ рисков', included: true },
-        { text: 'ИИ-рекомендации по замене', included: false },
-        { text: 'Экспорт GMP PDF отчетов', included: false },
+        { text: t('pricing_hobby_feature_1'), included: true },
+        { text: t('pricing_hobby_feature_2'), included: true },
+        { text: t('pricing_hobby_feature_3'), included: true },
+        { text: t('pricing_hobby_feature_4'), included: false },
+        { text: t('pricing_hobby_feature_5'), included: false },
       ],
       color: 'border-zinc-800 hover:border-zinc-700',
       badgeColor: 'bg-zinc-800/40 text-zinc-400 border-zinc-700/50',
-      btnText: 'Текущий тариф',
+      btnText: t('pricing_current_plan'),
       btnClass: 'bg-zinc-800 text-zinc-400 cursor-default border border-zinc-700/50'
     },
     {
       id: 'professional' as const,
       name: 'Professional',
-      price: '$149',
-      period: 'месяц',
-      description: 'Для производителей БАД и контрактных разработчиков.',
+      price: '$19',
+      period: t('pricing_month'),
+      description: t('pricing_pro_desc'),
       icon: <Zap className="text-indigo-400 animate-pulse" size={18} />,
       features: [
-        { text: 'До 15 ингредиентов в рецептуре', included: true },
-        { text: 'Полная база сырья (250+ эксципиентов)', included: true },
-        { text: 'ИИ-движок автоматического подбора', included: true },
-        { text: 'Решение химических конфликтов в клик', included: true },
-        { text: 'Экспорт GMP PDF отчетов', included: false },
+        { text: t('pricing_pro_feature_1'), included: true },
+        { text: t('pricing_pro_feature_2'), included: true },
+        { text: t('pricing_pro_feature_3'), included: true },
+        { text: t('pricing_pro_feature_4'), included: true },
+        { text: t('pricing_pro_feature_5'), included: true },
       ],
       color: 'border-indigo-500/60 shadow-[0_0_20px_rgba(99,102,241,0.15)] hover:border-indigo-500',
       badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-      btnText: 'Выбрать Pro',
+      btnText: t('pricing_upgrade_pro'),
       btnClass: 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-    },
-    {
-      id: 'enterprise' as const,
-      name: 'Enterprise / CMO',
-      price: 'Custom',
-      period: 'контракт',
-      description: 'Для крупных фармзаводов и госпитальных сетей.',
-      icon: <Building className="text-emerald-400" size={18} />,
-      features: [
-        { text: 'Безлимитное количество ингредиентов', included: true },
-        { text: 'Загрузка собственных ТУ и баз данных', included: true },
-        { text: 'Экспорт GMP/GxP отчетов в PDF', included: true },
-        { text: 'Интеграция с ERP (SAP, SAP Odoo, ERP)', included: true },
-        { text: 'Выделенные приватные ИИ-модели', included: true },
-      ],
-      color: 'border-emerald-500/40 hover:border-emerald-500',
-      badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      btnText: 'Подключить Enterprise',
-      btnClass: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
     }
   ];
 
@@ -79,22 +62,22 @@ export const PricingPanel: React.FC<PricingPanelProps> = ({
       <div className="text-center flex flex-col gap-1.5">
         <div className="flex items-center justify-center gap-1.5 text-xs text-indigo-400 uppercase tracking-widest font-bold">
           <Sparkles size={14} />
-          Коммерческие тарифные планы
+          {t('pricing_title')}
         </div>
-        <h2 className="text-lg md:text-2xl font-bold text-zinc-100">Выберите подходящую лицензию</h2>
+        <h2 className="text-lg md:text-2xl font-bold text-zinc-100">{t('pricing_subtitle')}</h2>
         <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-          Тестируйте ограничения в реальном времени. Переключение тарифов мгновенно перестраивает поведение холста и доступные ИИ-модели.
+          {t('pricing_desc')}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
         {plans.map((plan) => {
           const isCurrent = currentTariff === plan.id;
           
           let btnLabel = plan.btnText;
           let buttonStyle = plan.btnClass;
           if (isCurrent) {
-            btnLabel = 'Активный тариф';
+            btnLabel = t('pricing_active_plan');
             buttonStyle = 'bg-zinc-800 text-zinc-400 border border-zinc-700/50 cursor-default';
           }
 

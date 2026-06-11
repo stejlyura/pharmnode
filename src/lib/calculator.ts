@@ -201,29 +201,42 @@ export function calculateBatch(
  * Analyzes cross-incompatibilities and safe percentage limits for the blend.
  */
 export function checkCompatibilityAndLimits(
-  ingredients: { ingredient: Ingredient; percentage: number }[]
+  ingredients: { ingredient: Ingredient; percentage: number }[],
+  t?: (key: string) => string
 ): CompatibilityWarning[] {
   const warnings: CompatibilityWarning[] = [];
   const activeIngredients = ingredients.filter(item => item.percentage > 0);
+  const translate = t || ((key: string) => key);
 
   // 1. Check percentage limits
   for (const item of activeIngredients) {
     if (item.percentage > item.ingredient.maxSafePercentage) {
       if (item.ingredient.id === 4) { // Magnesium Stearate specific warning
+        const msg = translate('warning_magnesium_stearate_limit')
+          .replace('{pct}', item.percentage.toFixed(2))
+          .replace('{maxPct}', item.ingredient.maxSafePercentage.toFixed(2));
+        const sugg = translate('warning_magnesium_stearate_limit_sugg');
         warnings.push({
           type: 'limit',
           severity: 'error',
           ingredientId: item.ingredient.id,
-          message: `Превышение лимита: Содержание Magnesium Stearate (${item.percentage.toFixed(2)}%) превышает максимальный безопасный предел в ${item.ingredient.maxSafePercentage.toFixed(2)}%. Таблетка может получиться слишком гидрофобной и не пройти тест на растворимость (Dissolution Test USP).`,
-          suggestion: 'Используйте минимально необходимое количество лубриканта (0.5% - 1.5%).'
+          message: msg,
+          suggestion: sugg
         });
       } else {
+        const msg = translate('warning_generic_limit')
+          .replace('{name}', item.ingredient.name)
+          .replace('{pct}', item.percentage.toFixed(2))
+          .replace('{maxPct}', item.ingredient.maxSafePercentage.toFixed(2));
+        const sugg = translate('warning_generic_limit_sugg')
+          .replace('{name}', item.ingredient.name)
+          .replace('{maxPct}', item.ingredient.maxSafePercentage.toFixed(2));
         warnings.push({
           type: 'limit',
           severity: 'warning',
           ingredientId: item.ingredient.id,
-          message: `Превышение предела: Содержание ${item.ingredient.name} (${item.percentage.toFixed(2)}%) превышает максимально рекомендуемый ввод (${item.ingredient.maxSafePercentage.toFixed(2)}%).`,
-          suggestion: `Снизьте содержание ${item.ingredient.name} ниже ${item.ingredient.maxSafePercentage.toFixed(2)}% для обеспечения технологической стабильности.`
+          message: msg,
+          suggestion: sugg
         });
       }
     }
@@ -241,16 +254,26 @@ export function checkCompatibilityAndLimits(
       // Check if A is incompatible with B's class, or B is incompatible with A's class
       const rule = getCompatibilityRule(classA, classB);
       if (rule && rule.type === 'incompatible') {
-        const msg = rule.message.replace(/{nameA}/g, itemA.ingredient.name).replace(/{nameB}/g, itemB.ingredient.name);
-        const sugg = rule.suggestion.replace(/{nameA}/g, itemA.ingredient.name).replace(/{nameB}/g, itemB.ingredient.name);
+        const ruleKeyBase = `rule_${rule.classA}_${rule.classB}`;
+        let ruleTitle = translate(`${ruleKeyBase}_title`);
+        let ruleMsg = translate(`${ruleKeyBase}_message`);
+        let ruleSugg = translate(`${ruleKeyBase}_suggestion`);
+
+        // fallback if key not found
+        if (ruleTitle === `${ruleKeyBase}_title`) ruleTitle = rule.title;
+        if (ruleMsg === `${ruleKeyBase}_message`) ruleMsg = rule.message;
+        if (ruleSugg === `${ruleKeyBase}_suggestion`) ruleSugg = rule.suggestion;
+
+        const msg = ruleMsg.replace(/{nameA}/g, itemA.ingredient.name).replace(/{nameB}/g, itemB.ingredient.name);
+        const sugg = ruleSugg.replace(/{nameA}/g, itemA.ingredient.name).replace(/{nameB}/g, itemB.ingredient.name);
         
         warnings.push({
           type: 'compatibility',
           severity: rule.severity,
           ingredientId: itemA.ingredient.id,
           relatedIngredientId: itemB.ingredient.id,
-          message: `⚠️ ${rule.title}: ${msg}`,
-          suggestion: `💡 Рекомендация ИИ: ${sugg}`
+          message: `⚠️ ${ruleTitle}: ${msg}`,
+          suggestion: `💡 ${translate('card_suggestion')} ${sugg}`
         });
       }
     }

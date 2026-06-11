@@ -7,7 +7,7 @@ const UserSchema = new Schema(
     image: { type: String },
     tariff: { 
       type: String, 
-      enum: ["hobby", "professional", "enterprise"], 
+      enum: ["hobby", "professional"], 
       default: "hobby" 
     },
   },

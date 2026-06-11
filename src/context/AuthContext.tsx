@@ -8,7 +8,7 @@ export interface UserProfile {
   name: string;
   email: string;
   image?: string;
-  tariff: "hobby" | "professional" | "enterprise";
+  tariff: "hobby" | "professional";
   provider: string;
 }
 
@@ -17,10 +17,10 @@ interface AuthContextType {
   status: "authenticated" | "unauthenticated" | "loading";
   login: (
     provider: string,
-    customDetails?: { name: string; email: string; tariff?: "hobby" | "professional" | "enterprise" }
+    customDetails?: { name: string; email: string; tariff?: "hobby" | "professional" }
   ) => Promise<void>;
   logout: () => Promise<void>;
-  changeTariff: (tariff: "hobby" | "professional" | "enterprise") => void;
+  changeTariff: (tariff: "hobby" | "professional") => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,38 +42,32 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const login = async (
     provider: string,
-    customDetails?: { name: string; email: string; tariff?: "hobby" | "professional" | "enterprise" }
+    customDetails?: { name: string; email: string; tariff?: "hobby" | "professional" }
   ) => {
     if (provider.startsWith("mock-")) {
       const name = 
         customDetails?.name || (
           provider === "mock-google" 
             ? "Dr. Alexander Fleming" 
-            : provider === "mock-github" 
-            ? "Fermer Tech" 
-            : "CMO Pharma Corp"
+            : "Fermer Tech"
         );
       const email = 
         customDetails?.email || (
           provider === "mock-google" 
             ? "fleming@penicillin.org" 
-            : provider === "mock-github" 
-            ? "dev@github-pharma.com" 
-            : "admin@cmo-corp.com"
+            : "dev@github-pharma.com"
         );
       const image = 
         provider === "mock-google" 
           ? "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=150&h=150&q=80"
-          : provider === "mock-github"
-          ? "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80"
-          : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80";
+          : "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80";
       
       const newMock: UserProfile = {
         id: "mock-" + Date.now(),
         name,
         email,
         image,
-        tariff: customDetails?.tariff || (provider === "mock-microsoft" ? "enterprise" : provider === "mock-github" ? "professional" : "hobby"),
+        tariff: customDetails?.tariff || (provider === "mock-github" ? "professional" : "hobby"),
         provider: provider.replace("mock-", ""),
       };
       
@@ -93,7 +87,7 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  const changeTariff = (newTariff: "hobby" | "professional" | "enterprise") => {
+  const changeTariff = (newTariff: "hobby" | "professional") => {
     if (mockUser) {
       const updated = { ...mockUser, tariff: newTariff };
       setMockUser(updated);

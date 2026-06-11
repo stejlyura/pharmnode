@@ -10,7 +10,7 @@ interface NodeCardProps {
   node: EditorNode;
   nodes?: EditorNode[];
   calculatedResults: CalculatedResults;
-  tariff: 'hobby' | 'professional' | 'enterprise';
+  tariff: 'hobby' | 'professional';
   onUpdateData: (nodeId: string, data: Partial<EditorNode['data']>) => void;
   onRemove: (nodeId: string) => void;
   onReplaceIngredient?: (oldId: number | string, newId: number | string) => void;
@@ -44,11 +44,11 @@ export const NodeCard: React.FC<NodeCardProps> = ({
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'active': return 'Активное вещество';
-      case 'filler': return 'Наполнитель';
-      case 'dry-binder': return 'Сухое связующее';
-      case 'lubricant': return 'Лубрикант';
-      case 'glidant': return 'Скользящее вещ-во';
+      case 'active': return t('role_active_singular');
+      case 'filler': return t('role_filler_singular');
+      case 'dry-binder': return t('role_dry_binder_singular');
+      case 'lubricant': return t('role_lubricant_singular');
+      case 'glidant': return t('role_glidant_singular');
       default: return role;
     }
   };
@@ -79,18 +79,18 @@ export const NodeCard: React.FC<NodeCardProps> = ({
     switch (type) {
       case 'ingredient': {
         const ingredient = allIngredients.find(ing => String(ing.id) === String(data.ingredientId));
-        return ingredient ? ingredient.name : 'Ингредиент';
+        return ingredient ? ingredient.name : t('node_ingredient');
       }
       case 'blending':
-        return 'Смеситель';
+        return t('node_blender');
       case 'press':
-        return 'Таблетпресс';
+        return t('node_tablet_press');
       case 'cost-optimizer':
-        return 'Экономика';
+        return t('node_cost');
       case 'output':
-        return 'Выход';
+        return t('node_output');
       default:
-        return 'Нода';
+        return t('node_generic');
     }
   };
 
@@ -105,11 +105,11 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             <div className="text-zinc-200 font-bold text-[11px] truncate">{ingredient.name}</div>
             <div className="text-[9px] text-zinc-500 uppercase tracking-wide">{getRoleLabel(ingredient.role)}</div>
             <div className="mt-1.5 border-t border-zinc-800/60 pt-1.5 flex justify-between text-[10px] font-mono">
-              <span className="text-zinc-500 font-sans">Доля:</span>
+              <span className="text-zinc-500 font-sans">{t('tooltip_share')}</span>
               <span className="text-zinc-300 font-semibold">{percentage}%</span>
             </div>
             <div className="flex justify-between text-[10px] font-mono">
-              <span className="text-zinc-500 font-sans">Цена/кг:</span>
+              <span className="text-zinc-500 font-sans">{t('tooltip_price_kg')}</span>
               <span className="text-emerald-400 font-semibold">${ingredient.costPerKgUsd.toFixed(1)}</span>
             </div>
           </>
@@ -126,20 +126,20 @@ export const NodeCard: React.FC<NodeCardProps> = ({
 
         return (
           <>
-            <div className="text-zinc-200 font-bold text-[11px]">Смешивание</div>
+            <div className="text-zinc-200 font-bold text-[11px]">{t('tooltip_blending')}</div>
             <div className="mt-1.5 flex flex-col gap-1 text-[10px]">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Сумма:</span>
+                <span className="text-zinc-500">{t('tooltip_total')}</span>
                 <span className={`font-mono font-semibold ${Math.abs(totalPct - 100) < 0.01 ? 'text-emerald-400' : 'text-amber-400'}`}>
                   {totalPct.toFixed(1)}%
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Сыпучесть:</span>
+                <span className="text-zinc-500">{t('tooltip_flowability')}</span>
                 <span className={`font-mono font-bold uppercase ${ratingColor}`}>{flowability.rating}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Насыпная ρ:</span>
+                <span className="text-zinc-500">{t('tooltip_bulk_density')}</span>
                 <span className="font-mono text-zinc-300">{looseDensity.toFixed(2)} g/mL</span>
               </div>
             </div>
@@ -152,18 +152,18 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         const { recommendedWeightMg, porosity } = calculatedResults.tableting;
         return (
           <>
-            <div className="text-zinc-200 font-bold text-[11px]">Параметры пресса</div>
+            <div className="text-zinc-200 font-bold text-[11px]">{t('tooltip_press_params')}</div>
             <div className="mt-1.5 flex flex-col gap-1 text-[10px]">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Диаметр:</span>
-                <span className="font-mono text-zinc-300">{(diameter * 10).toFixed(0)} мм</span>
+                <span className="text-zinc-500">{t('tooltip_diameter')}</span>
+                <span className="font-mono text-zinc-300">{(diameter * 10).toFixed(0)} {t('unit_mm')}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Вес таб. (реком):</span>
-                <span className="font-mono text-indigo-400 font-semibold">{recommendedWeightMg.toFixed(1)} мг</span>
+                <span className="text-zinc-500">{t('tooltip_tab_weight_rec')}</span>
+                <span className="font-mono text-indigo-400 font-semibold">{recommendedWeightMg.toFixed(1)} {t('unit_mg')}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Пористость:</span>
+                <span className="text-zinc-500">{t('tooltip_porosity')}</span>
                 <span className="font-mono text-zinc-300">{(porosity * 100).toFixed(1)}%</span>
               </div>
             </div>
@@ -175,18 +175,18 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         const { costPerTabletUsd, totalBatchCostUsd } = calculatedResults.batch;
         return (
           <>
-            <div className="text-zinc-200 font-bold text-[11px]">Экономика</div>
+            <div className="text-zinc-200 font-bold text-[11px]">{t('node_cost')}</div>
             <div className="mt-1.5 flex flex-col gap-1 text-[10px]">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Цена смеси/кг:</span>
+                <span className="text-zinc-500">{t('tooltip_blend_cost_kg')}</span>
                 <span className="font-mono text-emerald-400 font-semibold">${costPerKg.toFixed(1)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Себестоимость:</span>
+                <span className="text-zinc-500">{t('tooltip_cost_per_tab')}</span>
                 <span className="font-mono text-emerald-400 font-semibold">${costPerTabletUsd.toFixed(4)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Партия:</span>
+                <span className="text-zinc-500">{t('tooltip_batch')}</span>
                 <span className="font-mono text-emerald-400 font-semibold">${totalBatchCostUsd.toFixed(1)}</span>
               </div>
             </div>
@@ -198,19 +198,19 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         const region = String(data.region ?? 'US');
         return (
           <>
-            <div className="text-zinc-200 font-bold text-[11px]">Спецификация</div>
+            <div className="text-zinc-200 font-bold text-[11px]">{t('tooltip_specification')}</div>
             <div className="mt-1.5 flex flex-col gap-1 text-[10px]">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Стандарт:</span>
+                <span className="text-zinc-500">{t('tooltip_standard')}</span>
                 <span className="font-bold text-zinc-300 font-mono">{region}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Кол-во таб.:</span>
-                <span className="font-mono text-indigo-400 font-bold">{totalTablets.toLocaleString()} шт.</span>
+                <span className="text-zinc-500">{t('tooltip_tablets')}</span>
+                <span className="font-mono text-indigo-400 font-bold">{totalTablets.toLocaleString()} {t('unit_pcs')}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Масса партии:</span>
-                <span className="font-mono text-zinc-300">{totalBatchWeightKg.toFixed(2)} кг</span>
+                <span className="text-zinc-500">{t('tooltip_batch_weight')}</span>
+                <span className="font-mono text-zinc-300">{totalBatchWeightKg.toFixed(2)} {t('unit_kg')}</span>
               </div>
             </div>
           </>
@@ -251,7 +251,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
     switch (type) {
       case 'ingredient': {
         const ingredient = allIngredients.find(ing => String(ing.id) === String(data.ingredientId));
-        if (!ingredient) return <div className="p-4 text-rose-400">Ингредиент не найден</div>;
+        if (!ingredient) return <div className="p-4 text-rose-400">{t('card_ingredient_not_found')}</div>;
 
         const percentage = data.percentage ?? 0;
         
@@ -281,7 +281,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
               <button
                 onClick={() => onRemove(id)}
                 className="text-zinc-500 hover:text-rose-400 transition-colors p-1 rounded hover:bg-zinc-800/50"
-                title="Удалить ингредиент"
+                title={t('card_remove_ingredient')}
               >
                 <Trash2 size={16} />
               </button>
@@ -289,7 +289,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
 
             <div className="mt-2">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-zinc-400">Процент ввода</span>
+                <span className="text-xs text-zinc-400">{t('card_input_percentage')}</span>
                 <span className="text-sm font-semibold text-zinc-100 font-mono">
                   {percentage}%
                 </span>
@@ -324,13 +324,13 @@ export const NodeCard: React.FC<NodeCardProps> = ({
 
             <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-zinc-800/60 text-[11px] text-zinc-500">
               <div>
-                <span>Плотность:</span>
+                <span>{t('card_density')}</span>
                 <span className="block font-mono text-zinc-300">
                   {ingredient.looseBulkDensity.toFixed(2)} → {ingredient.tappedBulkDensity.toFixed(2)} g/mL
                 </span>
               </div>
               <div>
-                <span>Цена / кг:</span>
+                <span>{t('card_price_per_kg')}</span>
                 <span className="block font-mono text-zinc-300 text-emerald-400">
                   ${ingredient.costPerKgUsd.toFixed(2)}
                 </span>
@@ -368,7 +368,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
           <div className="flex flex-col gap-3 p-4">
             <h3 className="font-semibold text-zinc-100 text-sm md:text-base flex items-center gap-2 border-b border-zinc-800 pb-2">
               <Cpu size={16} className="text-indigo-400" />
-              Смешивание смеси
+              {t('card_blend_mixing')}
             </h3>
 
             {/* Total Percentage Indicator */}
@@ -378,25 +378,25 @@ export const NodeCard: React.FC<NodeCardProps> = ({
                 : 'bg-amber-500/5 text-amber-400 border-amber-500/10'
             }`}>
               <div className="flex justify-between items-center font-semibold">
-                <span>Сумма рецептуры:</span>
+                <span>{t('card_recipe_total')}</span>
                 <span className="font-mono">{totalPct.toFixed(1)}% / 100%</span>
               </div>
               {Math.abs(totalPct - 100) > 0.01 && (
                 <p className="text-[10px] text-amber-500/80 mt-0.5">
-                  Суммарная доля ингредиентов должна быть ровно 100%
+                  {t('card_recipe_must_100')}
                 </p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-3 mt-1">
               <div className="bg-zinc-800/30 p-2 rounded border border-zinc-800/40">
-                <span className="text-[10px] text-zinc-500 block">Насыпная плотность</span>
+                <span className="text-[10px] text-zinc-500 block">{t('card_bulk_density')}</span>
                 <span className="text-xs font-semibold text-zinc-200 font-mono block mt-0.5">
                   {looseDensity.toFixed(3)} g/mL
                 </span>
               </div>
               <div className="bg-zinc-800/30 p-2 rounded border border-zinc-800/40">
-                <span className="text-[10px] text-zinc-500 block">Плотность с уплотн.</span>
+                <span className="text-[10px] text-zinc-500 block">{t('card_tapped_density')}</span>
                 <span className="text-xs font-semibold text-zinc-200 font-mono block mt-0.5">
                   {tappedDensity.toFixed(3)} g/mL
                 </span>
@@ -406,14 +406,14 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {/* Flowability evaluation */}
             <div className={`p-2.5 rounded border ${ratingBg} ${ratingColor} flex flex-col gap-1`}>
               <div className="flex justify-between items-center">
-                <span className="text-[10px] text-zinc-400">Сыпучесть смеси:</span>
+                <span className="text-[10px] text-zinc-400">{t('card_blend_flowability')}</span>
                 <span className="text-xs font-bold uppercase tracking-wider font-mono">
                   {flowability.rating}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[10px] text-zinc-500 mt-1 border-t border-zinc-800/50 pt-1">
-                <span>Хауснер: <span className="font-mono text-zinc-300">{flowability.hausner.toFixed(2)}</span></span>
-                <span>Индекс Карра: <span className="font-mono text-zinc-300">{flowability.carr.toFixed(1)}%</span></span>
+                <span>{t('card_hausner')} <span className="font-mono text-zinc-300">{flowability.hausner.toFixed(2)}</span></span>
+                <span>{t('card_carr_index')} <span className="font-mono text-zinc-300">{flowability.carr.toFixed(1)}%</span></span>
               </div>
             </div>
 
@@ -421,7 +421,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {calculatedResults.warnings.length > 0 && (
               <div className="flex flex-col gap-2 border-t border-zinc-800/50 pt-2">
                 <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-                  Предупреждения и конфликты ({calculatedResults.warnings.length}):
+                  {t('card_warnings_conflicts')} ({calculatedResults.warnings.length}):
                 </span>
                 <div className="max-h-36 overflow-y-auto flex flex-col gap-1.5 pr-1">
                   {calculatedResults.warnings.map((w, idx) => (
@@ -436,19 +436,19 @@ export const NodeCard: React.FC<NodeCardProps> = ({
                       </div>
                       {w.suggestion && (
                         <div className="flex flex-col gap-1 bg-black/20 p-1.5 rounded border border-white/5">
-                          <span className="text-[9px] text-zinc-400 font-medium">Рекомендация:</span>
+                          <span className="text-[9px] text-zinc-400 font-medium">{t('card_suggestion')}</span>
                           <span className="text-zinc-300 leading-normal">{w.suggestion}</span>
                           {w.relatedIngredientId && onReplaceIngredient && (
                             <button
                               onClick={() => {
                                 // Specific swap logic
-                                if (w.message.includes('Майяра')) {
+                                if (w.message.includes('Майяра') || w.message.includes('Maillard')) {
                                   onReplaceIngredient(w.relatedIngredientId!, 3); // Replace Lactose (2) with MCC (3)
                                 }
                               }}
                               className="mt-1 self-start px-2 py-0.5 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-[9px] font-semibold rounded border border-indigo-500/30 transition-colors cursor-pointer"
                             >
-                              Выполнить замену на MCC PH-102
+                              {t('card_replace_mcc')}
                             </button>
                           )}
                         </div>
@@ -471,15 +471,15 @@ export const NodeCard: React.FC<NodeCardProps> = ({
           <div className="flex flex-col gap-3 p-4">
             <h3 className="font-semibold text-zinc-100 text-sm md:text-base flex items-center gap-2 border-b border-zinc-800 pb-2">
               <Settings size={16} className="text-indigo-400" />
-              Пресс-оборудование
+              {t('card_press_equipment')}
             </h3>
 
             {/* Punch Diameter Slider */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-zinc-400">Диаметр пуансона</span>
+                <span className="text-xs text-zinc-400">{t('card_punch_diameter')}</span>
                 <span className="text-xs font-semibold text-zinc-200 font-mono">
-                  {diameter} см ({(diameter * 10).toFixed(0)} мм)
+                  {diameter} {t('unit_cm')} ({(diameter * 10).toFixed(0)} {t('unit_mm')})
                 </span>
               </div>
               <div className="flex gap-2 items-center">
@@ -498,9 +498,9 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {/* Fill Depth Slider */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-zinc-400">Глубина матрицы</span>
+                <span className="text-xs text-zinc-400">{t('card_fill_depth')}</span>
                 <span className="text-xs font-semibold text-zinc-200 font-mono">
-                  {depth} см
+                  {depth} {t('unit_cm')}
                 </span>
               </div>
               <div className="flex gap-2 items-center">
@@ -519,13 +519,13 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {/* Results Grid */}
             <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-zinc-800/60 text-xs">
               <div className="bg-zinc-800/20 p-2 rounded border border-zinc-800/40">
-                <span className="text-[10px] text-zinc-500 block">Объем матрицы</span>
+                <span className="text-[10px] text-zinc-500 block">{t('card_die_volume')}</span>
                 <span className="font-mono text-zinc-300 font-bold block mt-0.5">
-                  {(volume * 1000).toFixed(1)} мм³
+                  {(volume * 1000).toFixed(1)} {t('unit_mm3')}
                 </span>
               </div>
               <div className="bg-zinc-800/20 p-2 rounded border border-zinc-800/40">
-                <span className="text-[10px] text-zinc-500 block">Пористость таблетки</span>
+                <span className="text-[10px] text-zinc-500 block">{t('card_tablet_porosity')}</span>
                 <span className={`font-mono font-bold block mt-0.5 ${
                   porosity > 0.4 ? 'text-amber-400' : 'text-zinc-300'
                 }`}>
@@ -533,15 +533,15 @@ export const NodeCard: React.FC<NodeCardProps> = ({
                 </span>
               </div>
               <div className="bg-zinc-800/20 p-2 rounded border border-zinc-800/40">
-                <span className="text-[10px] text-zinc-500 block">Масса засыпки (Max)</span>
+                <span className="text-[10px] text-zinc-500 block">{t('card_fill_weight_max')}</span>
                 <span className="font-mono text-zinc-300 font-bold block mt-0.5">
-                  {maxWeightMg.toFixed(2)} мг
+                  {maxWeightMg.toFixed(2)} {t('unit_mg')}
                 </span>
               </div>
               <div className="bg-zinc-800/20 p-2 rounded border border-zinc-800/40">
-                <span className="text-[10px] text-zinc-500 block">Вес таблетки (Реком.)</span>
+                <span className="text-[10px] text-zinc-500 block">{t('card_tablet_weight_rec')}</span>
                 <span className="font-mono text-indigo-400 font-bold block mt-0.5">
-                  {recommendedWeightMg.toFixed(2)} мг
+                  {recommendedWeightMg.toFixed(2)} {t('unit_mg')}
                 </span>
               </div>
             </div>
@@ -557,24 +557,24 @@ export const NodeCard: React.FC<NodeCardProps> = ({
           <div className="flex flex-col gap-3 p-4">
             <h3 className="font-semibold text-zinc-100 text-sm md:text-base flex items-center gap-2 border-b border-zinc-800 pb-2">
               <DollarSign size={16} className="text-emerald-400" />
-              Оптимизатор затрат
+              {t('card_cost_optimizer')}
             </h3>
 
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400">Себестоимость смеси:</span>
+                <span className="text-zinc-400">{t('card_blend_cost')}</span>
                 <span className="font-mono text-emerald-400 font-semibold">
-                  ${costPerKg.toFixed(2)} / кг
+                  ${costPerKg.toFixed(2)} / {t('unit_kg')}
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400">Затраты на таблетку:</span>
+                <span className="text-zinc-400">{t('card_cost_per_tablet')}</span>
                 <span className="font-mono text-emerald-400 font-semibold">
                   ${costPerTabletUsd.toFixed(5)}
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-400">Стоимость партии:</span>
+                <span className="text-zinc-400">{t('card_batch_cost')}</span>
                 <span className="font-mono text-emerald-400 font-semibold">
                   ${totalBatchCostUsd.toFixed(2)}
                 </span>
@@ -584,29 +584,29 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {/* AI suggestions container */}
             <div className="mt-2 border-t border-zinc-800/50 pt-2 flex flex-col gap-2">
               <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
-                ИИ-рекомендации по замене
+                {t('card_ai_suggestions')}
               </span>
 
               {tariff === 'hobby' ? (
                 <div className="p-3 bg-indigo-500/5 rounded border border-indigo-500/10 flex flex-col gap-2 items-center text-center">
                   <p className="text-[10px] text-zinc-400 leading-normal">
-                    ИИ-движок оптимизации себестоимости и рекомендации по замене заблокированы в бесплатном тарифе
+                    {t('card_ai_locked')}
                   </p>
                   <button
                     onClick={onUpgradeClick}
                     className="w-full py-1.5 px-3 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white text-[10px] font-bold rounded shadow transition-all cursor-pointer"
                   >
-                    Upgrade to Pro
+                    {t('card_upgrade_pro')}
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">
                   <div className="p-2 bg-emerald-500/5 rounded border border-emerald-500/10 text-[10px] text-zinc-300">
-                    <span className="font-bold text-emerald-400 block mb-0.5">Экономия на связующих:</span>
-                    Замените Microcrystalline Cellulose PH-102 на дженерик MCC или разбавитель с сохранением насыпной плотности.
+                    <span className="font-bold text-emerald-400 block mb-0.5">{t('card_binder_savings')}</span>
+                    {t('card_binder_savings_desc')}
                   </div>
                   <div className="p-2 bg-zinc-800/40 rounded border border-zinc-800/50 text-[10px] text-zinc-400">
-                    Рекомендаций больше нет. Рецептура экономически оптимальна.
+                    {t('card_no_more_suggestions')}
                   </div>
                 </div>
               )}
@@ -631,12 +631,12 @@ export const NodeCard: React.FC<NodeCardProps> = ({
           <div className="flex flex-col gap-3 p-4">
             <h3 className="font-semibold text-zinc-100 text-sm md:text-base flex items-center gap-2 border-b border-zinc-800 pb-2">
               <FileText size={16} className="text-indigo-400" />
-              Готовый продукт / Маркировка
+              {t('card_final_product')}
             </h3>
 
             {/* Region Toggle Standard */}
             <div className="flex items-center justify-between text-[11px] bg-zinc-800/30 p-2 rounded border border-zinc-800/50 text-zinc-100">
-              <span className="text-zinc-400 font-medium">Стандарт региона:</span>
+              <span className="text-zinc-400 font-medium">{t('card_region_standard')}</span>
               <div className="flex bg-zinc-900 rounded p-0.5 border border-zinc-800">
                 <button
                   onClick={() => {
@@ -666,9 +666,9 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {/* Active Raw Material Input */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-zinc-400">Масса активного сырья</span>
+                <span className="text-xs text-zinc-400">{t('card_active_raw_weight')}</span>
                 <span className="text-xs font-semibold text-zinc-200 font-mono">
-                  {activeRawWeightG} г
+                  {activeRawWeightG} {t('unit_g')}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -700,27 +700,27 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {/* Batch stats details */}
             <div className="flex flex-col gap-1.5 bg-zinc-900/40 p-2.5 rounded border border-zinc-800/50 text-xs">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Доля активного:</span>
+                <span className="text-zinc-500">{t('card_active_share')}</span>
                 <span className="font-mono text-zinc-300 font-semibold">
                   {calculatedResults.activePercentage.toFixed(1)}%
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Реком. вес таблетки:</span>
+                <span className="text-zinc-500">{t('card_rec_tablet_weight')}</span>
                 <span className="font-mono text-zinc-300 font-semibold">
-                  {recommendedWeightMg.toFixed(2)} мг
+                  {recommendedWeightMg.toFixed(2)} {t('unit_mg')}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Кол-во таблеток:</span>
+                <span className="text-zinc-500">{t('card_tablets_count')}</span>
                 <span className="font-mono text-indigo-400 font-bold">
-                  {totalTablets.toLocaleString()} шт.
+                  {totalTablets.toLocaleString()} {t('unit_pcs')}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Масса всей партии:</span>
+                <span className="text-zinc-500">{t('card_total_batch_weight')}</span>
                 <span className="font-mono text-zinc-300 font-semibold">
-                  {totalBatchWeightKg.toFixed(4)} кг
+                  {totalBatchWeightKg.toFixed(4)} {t('unit_kg')}
                 </span>
               </div>
             </div>
@@ -776,7 +776,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             {/* Export GMP Report Button */}
             <button
               onClick={() => {
-                const hasAccessToPdf = tariff === 'professional' || tariff === 'enterprise';
+                const hasAccessToPdf = tariff === 'professional';
                 if (!hasAccessToPdf) {
                   if (onUpgradeClick) onUpgradeClick();
                 } else {
@@ -784,13 +784,13 @@ export const NodeCard: React.FC<NodeCardProps> = ({
                 }
               }}
               className={`w-full py-2 px-3 text-xs font-bold rounded shadow transition-all cursor-pointer flex justify-center items-center gap-1.5 ${
-                !(tariff === 'professional' || tariff === 'enterprise')
+                tariff !== 'professional'
                   ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-300 border border-zinc-700/50'
                   : 'bg-indigo-500 hover:bg-indigo-600 text-white'
               }`}
             >
-              Экспорт GMP отчета (PDF)
-              {!(tariff === 'professional' || tariff === 'enterprise') && (
+              {t('card_export_gmp')}
+              {tariff !== 'professional' && (
                 <span className="text-[9px] bg-zinc-700 px-1.5 py-0.5 rounded text-zinc-400 font-semibold uppercase tracking-wider scale-90">
                   Pro
                 </span>
@@ -801,7 +801,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
       }
 
       default:
-        return <div className="p-4 text-zinc-400">Неизвестный тип ноды</div>;
+        return <div className="p-4 text-zinc-400">{t('card_unknown_node')}</div>;
     }
   };
 
@@ -810,19 +810,19 @@ export const NodeCard: React.FC<NodeCardProps> = ({
     switch (type) {
       case 'ingredient': {
         const ingredient = allIngredients.find(ing => String(ing.id) === String(data.ingredientId));
-        if (ingredient?.role === 'active') return { accent: 'bg-rose-500', label: 'Активное вещество' };
-        return { accent: 'bg-zinc-600', label: 'Вспомогательное вещество' };
+        if (ingredient?.role === 'active') return { accent: 'bg-rose-500', label: t('card_active_substance') };
+        return { accent: 'bg-zinc-600', label: t('card_excipient') };
       }
       case 'blending':
-        return { accent: 'bg-indigo-500', label: 'Смеситель' };
+        return { accent: 'bg-indigo-500', label: t('card_blender_label') };
       case 'press':
-        return { accent: 'bg-amber-500', label: 'Таблетпресс' };
+        return { accent: 'bg-amber-500', label: t('card_press_label') };
       case 'cost-optimizer':
-        return { accent: 'bg-emerald-500', label: 'Калькулятор экономики' };
+        return { accent: 'bg-emerald-500', label: t('card_cost_label') };
       case 'output':
-        return { accent: 'bg-violet-500', label: 'Выход / Спецификация' };
+        return { accent: 'bg-violet-500', label: t('card_output_label') };
       default:
-        return { accent: 'bg-zinc-700', label: 'Нода' };
+        return { accent: 'bg-zinc-700', label: t('node_generic') };
     }
   };
 
@@ -896,7 +896,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
       {/* Top Drag Handle Bar */}
       <div
         className="h-3 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/5 rounded-t-xl transition-colors duration-150"
-        title="Перетащить ноду"
+        title={t('card_drag_node')}
         data-drag-handle="true"
         data-node-id={id}
       >
@@ -917,7 +917,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
             onToggleExpand(false);
           }}
           className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 rounded hover:bg-zinc-800/50 cursor-pointer"
-          title="Свернуть ноду"
+          title={t('card_collapse_node')}
         >
           <Minimize2 size={12} />
         </button>

@@ -99,4 +99,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ### API Design
 - Авторизация через NextAuth, тариф хранится в `User.tariff`
 - Ограничения тарифов проверяются в Route Handlers, не в UI
-- `hobby` → 3 ингредиента; `professional` → 15; `enterprise` → unlimited
+- `hobby` → 3 ingredients; `professional` → unlimited
