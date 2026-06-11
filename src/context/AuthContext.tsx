@@ -93,7 +93,7 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       setMockUser(updated);
       localStorage.setItem("pharmnode_mock_user", JSON.stringify(updated));
     } else if (session?.user) {
-      (session as any).user.tariff = newTariff;
+      session.user.tariff = newTariff;
       setMockUser(null); 
     }
   };
@@ -108,11 +108,11 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     activeStatus = "authenticated";
   } else if (nextAuthStatus === "authenticated" && session?.user) {
     activeUser = {
-      id: (session.user as any).id || "nextauth-user-id",
+      id: session.user.id || "nextauth-user-id",
       name: session.user.name || "OAuth User",
       email: session.user.email || "",
       image: session.user.image || undefined,
-      tariff: (session.user as any).tariff || "hobby",
+      tariff: (session.user.tariff as "hobby" | "professional") || "hobby",
       provider: "oauth",
     };
     activeStatus = "authenticated";

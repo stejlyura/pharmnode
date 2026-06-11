@@ -1,6 +1,6 @@
 import React from 'react';
 import { EditorNode, CalculatedResults } from '../hooks/useNodeEditor';
-import { baseIngredientsMatrix, Ingredient } from '../types/pharm';
+import { Ingredient } from '../types/pharm';
 import { Trash2, AlertTriangle, DollarSign, Cpu, FileText, Settings, Sparkles, Layers, Minimize2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/I18nContext';
@@ -17,7 +17,8 @@ interface NodeCardProps {
   onUpgradeClick?: () => void;
   isExpanded: boolean;
   onToggleExpand: (expanded: boolean) => void;
-  customIngredients?: Ingredient[];
+  /** All available ingredients (standard + custom), already merged by parent */
+  allIngredients: Ingredient[];
 }
 
 export const NodeCard: React.FC<NodeCardProps> = ({
@@ -31,16 +32,12 @@ export const NodeCard: React.FC<NodeCardProps> = ({
   onUpgradeClick,
   isExpanded,
   onToggleExpand,
-  customIngredients = []
+  allIngredients,
 }) => {
   const { id, type, position, data } = node;
   const { user } = useAuth();
   const { t, setLocale } = useTranslation();
   const [isHovered, setIsHovered] = React.useState(false);
-
-  const allIngredients = React.useMemo(() => {
-    return [...baseIngredientsMatrix, ...customIngredients];
-  }, [customIngredients]);
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -780,7 +777,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
                 if (!hasAccessToPdf) {
                   if (onUpgradeClick) onUpgradeClick();
                 } else {
-                  generateGMPReport(nodes || [node], calculatedResults, user, region, customIngredients);
+                  generateGMPReport(nodes || [node], calculatedResults, user, region, allIngredients);
                 }
               }}
               className={`w-full py-2 px-3 text-xs font-bold rounded shadow transition-all cursor-pointer flex justify-center items-center gap-1.5 ${

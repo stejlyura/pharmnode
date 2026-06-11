@@ -38,6 +38,7 @@ export async function POST(request: Request) {
           },
         ],
         mode: "subscription",
+        metadata: { plan },
         success_url: `${host}/configurator?checkout=success&plan=${plan}`,
         cancel_url: `${host}/configurator?checkout=cancelled`,
         customer_email: session?.user?.email || undefined,

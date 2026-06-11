@@ -1,13 +1,12 @@
 import { jsPDF } from "jspdf";
 import { CalculatedResults } from "../hooks/useNodeEditor";
-import { baseIngredientsMatrix } from "../types/pharm";
 
 export function generateGMPReport(
   nodes: any[],
   calculatedResults: CalculatedResults,
   user: any,
   region: string,
-  customIngredients: any[] = []
+  allIngredients: any[]
 ) {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -87,7 +86,6 @@ export function generateGMPReport(
 
   doc.setFont("helvetica", "normal");
   ingredientNodes.forEach((node: any, idx: number) => {
-    const allIngredients = [...baseIngredientsMatrix, ...customIngredients];
     const ing = allIngredients.find((i) => String(i.id) === String(node.data.ingredientId));
     if (ing) {
       if (idx % 2 === 1) {

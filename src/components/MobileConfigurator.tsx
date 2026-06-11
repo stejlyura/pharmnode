@@ -17,7 +17,7 @@ interface MobileConfiguratorProps {
   onUpdateData: (nodeId: string, data: Partial<EditorNode['data']>) => void;
   onRemove: (nodeId: string) => void;
   onReplaceIngredient?: (oldId: number | string, newId: number | string) => void;
-  customIngredients?: Ingredient[];
+  allIngredients?: Ingredient[];
   onOpenAddModal: () => void;
   onAddIngredient: (id: number | string) => void;
   activeNodeIngredientIds: (number | string)[];
@@ -34,7 +34,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
   onUpdateData,
   onRemove,
   onReplaceIngredient,
-  customIngredients = [],
+  allIngredients = [],
   onOpenAddModal,
   onAddIngredient,
   activeNodeIngredientIds,
@@ -142,7 +142,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
                   onRemove={onRemove}
                   onReplaceIngredient={onReplaceIngredient}
                   onUpgradeClick={handleUpgradeClick}
-                  customIngredients={customIngredients}
+                  allIngredients={allIngredients}
                 />
               ))}
             </div>
@@ -167,7 +167,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onRemove={onRemove}
             onReplaceIngredient={onReplaceIngredient}
             onUpgradeClick={handleUpgradeClick}
-            customIngredients={customIngredients}
+            allIngredients={allIngredients}
           />
         )}
 
@@ -189,7 +189,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onRemove={onRemove}
             onReplaceIngredient={onReplaceIngredient}
             onUpgradeClick={handleUpgradeClick}
-            customIngredients={customIngredients}
+            allIngredients={allIngredients}
           />
         )}
 
@@ -210,7 +210,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
               onRemove={onRemove}
               onReplaceIngredient={onReplaceIngredient}
               onUpgradeClick={handleUpgradeClick}
-              customIngredients={customIngredients}
+              allIngredients={allIngredients}
             />
           </>
         )}
@@ -233,7 +233,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onRemove={onRemove}
             onReplaceIngredient={onReplaceIngredient}
             onUpgradeClick={handleUpgradeClick}
-            customIngredients={customIngredients}
+            allIngredients={allIngredients}
           />
         )}
       </main>
@@ -254,7 +254,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
         onClose={() => setIsSheetOpen(false)}
         activeNodeIngredientIds={activeNodeIngredientIds}
         onAddIngredient={onAddIngredient}
-        customIngredients={customIngredients}
+        allIngredients={allIngredients}
         onOpenAddModal={onOpenAddModal}
       />
     </div>

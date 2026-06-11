@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Ingredient, baseIngredientsMatrix } from '../types/pharm';
+import { Ingredient } from '../types/pharm';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/I18nContext';
 import {
@@ -97,19 +97,81 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
   const [tariff, setTariff] = useState<TariffType>(initialTariff);
   
   const allIngredients = useMemo(() => {
-    return [...baseIngredientsMatrix, ...customIngredients];
+    return customIngredients;
   }, [customIngredients]);
   
   const [state, setState] = useState<HistoryState>({
     nodes: initialNodes,
     connections: initialConnections
   });
+  const isMockUser = !user?.id ? false : user.id.startsWith('mock-');
+
+  // Load initial state from localStorage (guest/mock)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storageKey = user ? `pharmnode_canvas_state_${user.id}` : 'pharmnode_canvas_state';
+      if (!user || isMockUser) {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored) as HistoryState;
+            if (parsed && Array.isArray(parsed.nodes) && Array.isArray(parsed.connections)) {
+              setState(parsed);
+            }
+          } catch (e) {
+            console.error("Failed to parse canvas state from localStorage", e);
+          }
+        }
+      }
+    }
+  }, [user, isMockUser]);
+
+  // Load latest recipe from DB when a real user logs in
+  useEffect(() => {
+    if (!user || isMockUser) return;
+
+    let cancelled = false;
+
+    async function loadLatestRecipe() {
+      try {
+        const res = await fetch('/api/recipes');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && Array.isArray(data.recipes) && data.recipes.length > 0 && !cancelled) {
+          const latest = data.recipes[0];
+          setState({
+            nodes: latest.nodes,
+            connections: latest.connections
+          });
+          setPast([]);
+          setFuture([]);
+        }
+      } catch (err) {
+        console.error("Failed to load latest recipe:", err);
+      }
+    }
+
+    loadLatestRecipe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isMockUser]);
 
   // Autosave canvas state debounced by 2 seconds
   useEffect(() => {
-    if (!user) return;
-
     const handler = setTimeout(async () => {
+      // 1. Guest or Mock User -> Save to localStorage
+      if (!user || isMockUser) {
+        const storageKey = user ? `pharmnode_canvas_state_${user.id}` : 'pharmnode_canvas_state';
+        localStorage.setItem(storageKey, JSON.stringify({
+          nodes: state.nodes,
+          connections: state.connections
+        }));
+        return;
+      }
+
+      // 2. Real User -> Save to Server DB
       try {
         const response = await fetch('/api/recipes', {
           method: 'POST',
@@ -125,7 +187,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
         });
         const data = await response.json();
         if (data.success) {
-          console.log("Canvas autosaved successfully:", data);
+          console.log("Canvas autosaved successfully to DB:", data);
         }
       } catch (err) {
         console.error("Autosave request failed:", err);
@@ -133,7 +195,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     }, 2000);
 
     return () => clearTimeout(handler);
-  }, [state.nodes, state.connections, user]);
+  }, [state.nodes, state.connections, user, isMockUser]);
 
   const [past, setPast] = useState<HistoryState[]>([]);
   const [future, setFuture] = useState<HistoryState[]>([]);
@@ -360,6 +422,12 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     };
   }, [state.nodes, state.connections, allIngredients, t]);
 
+  const setCanvasState = useCallback((nodes: EditorNode[], connections: EditorConnection[]) => {
+    setState({ nodes, connections });
+    setPast([]);
+    setFuture([]);
+  }, []);
+
   return {
     nodes: state.nodes,
     connections: state.connections,
@@ -375,6 +443,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     undo,
     redo,
     canUndo: past.length > 0,
-    canRedo: future.length > 0
+    canRedo: future.length > 0,
+    setCanvasState
   };
 }

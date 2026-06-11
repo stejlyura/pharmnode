@@ -6,6 +6,7 @@ import { NodeCard } from './NodeCard';
 import { Disclaimer } from './Disclaimer';
 import { PricingPanel } from './PricingPanel';
 import { baseIngredientsMatrix, Ingredient, IngredientRole } from '../types/pharm';
+import { useIngredients } from '../hooks/useIngredients';
 import { CHEMICAL_CLASSES } from '../lib/chemicalRules';
 import { Undo2, Redo2, Plus, AlertTriangle, FlaskConical } from 'lucide-react';
 import { Header } from './Header';
@@ -21,7 +22,14 @@ export const Canvas: React.FC = () => {
   const { user, status, login, changeTariff } = useAuth();
   const { t, locale } = useTranslation();
   const isMobile = useIsMobile();
-  const [customIngredients, setCustomIngredients] = useState<Ingredient[]>([]);
+
+  // Load ingredients via hook (API → fallback to hardcoded matrix)
+  const isMockUser = !!user?.id?.startsWith('mock-');
+  const { ingredients: allIngredients, standardIngredients, customIngredients, refetch: refetchIngredients } = useIngredients(
+    user?.id,
+    isMockUser
+  );
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCompatibilityMatrixOpen, setIsCompatibilityMatrixOpen] = useState(false);
@@ -47,43 +55,6 @@ export const Canvas: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
-  // Load custom ingredients from database or localstorage
-  const fetchCustomIngredients = useCallback(async () => {
-    if (!user) {
-      setCustomIngredients([]);
-      return;
-    }
-    
-    // In mock mode, we fallback to localStorage
-    if (user.id.startsWith("mock-")) {
-      const stored = localStorage.getItem(`pharmnode_custom_ingredients_${user.id}`);
-      if (stored) {
-        try {
-          setCustomIngredients(JSON.parse(stored));
-        } catch (e) {
-          console.error("Error parsing stored custom ingredients:", e);
-        }
-      } else {
-        setCustomIngredients([]);
-      }
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/ingredients?userId=${user.id}`);
-      const data = await res.json();
-      if (data.success) {
-        setCustomIngredients(data.ingredients || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch custom ingredients:", err);
-    }
-  }, [user]);
-
-  React.useEffect(() => {
-    fetchCustomIngredients();
-  }, [fetchCustomIngredients]);
-
   const {
     nodes,
     connections,
@@ -98,7 +69,7 @@ export const Canvas: React.FC = () => {
     redo,
     canUndo,
     canRedo
-  } = useNodeEditor('hobby', customIngredients);
+  } = useNodeEditor('hobby', allIngredients);
 
   // Sync canvas editor's tariff with active user's tariff
   React.useEffect(() => {
@@ -407,16 +378,18 @@ export const Canvas: React.FC = () => {
       });
       const data = await response.json();
       if (data.success) {
-        let finalIng: Ingredient;
+        // For mock users: persist to localStorage so useIngredients hook can read it
         if (user?.id.startsWith("mock-") || data.mock) {
-          finalIng = { ...newIngredient, id: data.ingredient.id };
-          const updated = [...customIngredients, finalIng];
-          setCustomIngredients(updated);
-          localStorage.setItem(`pharmnode_custom_ingredients_${user?.id}`, JSON.stringify(updated));
-        } else {
-          finalIng = data.ingredient;
-          setCustomIngredients(prev => [...prev, finalIng]);
+          const finalIng: Ingredient = { ...newIngredient, id: data.ingredient.id };
+          const stored = localStorage.getItem(`pharmnode_custom_ingredients_${user?.id}`) ?? '[]';
+          const existing: Ingredient[] = JSON.parse(stored);
+          localStorage.setItem(
+            `pharmnode_custom_ingredients_${user?.id}`,
+            JSON.stringify([...existing, finalIng])
+          );
         }
+        // Trigger hook to reload ingredients from source
+        refetchIngredients();
         setIsAddModalOpen(false);
         // Reset form
         setAddForm({
@@ -466,7 +439,8 @@ export const Canvas: React.FC = () => {
     const activeIds = nodes
       .filter(n => n.type === 'ingredient')
       .map(n => n.data.ingredientId);
-    return baseIngredientsMatrix.filter(ing => !activeIds.some(id => String(id) === String(ing.id)));
+    return allIngredients.filter(ing => !activeIds.some(id => String(id) === String(ing.id)));
+
   }, [nodes]);
 
   if (isMobile) {
@@ -480,7 +454,7 @@ export const Canvas: React.FC = () => {
           onUpdateData={updateNodeData}
           onRemove={removeNode}
           onReplaceIngredient={handleReplaceIngredient}
-          customIngredients={customIngredients}
+          allIngredients={allIngredients}
           onOpenAddModal={handleOpenAddModal}
           onAddIngredient={handleAddIngredient}
           activeNodeIngredientIds={activeNodeIngredientIds}
@@ -701,6 +675,7 @@ export const Canvas: React.FC = () => {
         <CompatibilityMatrix
           isOpen={isCompatibilityMatrixOpen}
           onClose={() => setIsCompatibilityMatrixOpen(false)}
+          ingredients={allIngredients}
         />
 
         <BenefitsModal
@@ -742,6 +717,7 @@ export const Canvas: React.FC = () => {
           activeNodeIngredientIds={activeNodeIngredientIds}
           onAddIngredient={handleAddIngredient}
           customIngredients={customIngredients}
+          standardIngredients={standardIngredients}
           onOpenAddModal={handleOpenAddModal}
         />
 
@@ -866,7 +842,7 @@ export const Canvas: React.FC = () => {
                       [node.id]: expanded
                     }));
                   }}
-                  customIngredients={customIngredients}
+                  allIngredients={allIngredients}
                 />
               ))}
             </div>
@@ -1224,6 +1200,7 @@ export const Canvas: React.FC = () => {
       <CompatibilityMatrix
         isOpen={isCompatibilityMatrixOpen}
         onClose={() => setIsCompatibilityMatrixOpen(false)}
+        ingredients={allIngredients}
       />
 
       {/* Benefits Modal */}

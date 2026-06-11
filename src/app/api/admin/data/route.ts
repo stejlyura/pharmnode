@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// ─── GET /api/admin/data ──────────────────────────────────────────────────────
+// Admin panel endpoint. Protected by HTTP Basic Auth.
+// Query params:
+//   ?page=1     → page number (1-indexed, default: 1)
+//   ?limit=20   → items per page (default: 20, max: 100)
 export async function GET(request: Request) {
   try {
+    // ── Basic Auth ───────────────────────────────────────────────────────────
     const authHeader = request.headers.get("authorization");
-    
+
     const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "PasswordforAdmin123";
-    const expectedAuth = "Basic " + Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`).toString("base64");
-    
+    const expectedAuth =
+      "Basic " + Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`).toString("base64");
+
     if (!authHeader || authHeader !== expectedAuth) {
       return new Response("Unauthorized", {
         status: 401,
@@ -16,118 +23,94 @@ export async function GET(request: Request) {
       });
     }
 
-    const mockUsers = [
-      {
-        _id: "mock-user-1",
-        name: "Dr. Alexander Fleming",
-        email: "fleming@penicillin.org",
-        image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=150&h=150&q=80",
-        tariff: "hobby",
-        createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-      },
-      {
-        _id: "mock-user-2",
-        name: "Fermer Tech",
-        email: "dev@github-pharma.com",
-        image: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80",
-        tariff: "professional",
-        createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-      },
-      {
-        _id: "mock-user-3",
-        name: "CMO Pharma Corp",
-        email: "admin@cmo-corp.com",
-        image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80",
-        tariff: "professional",
-        createdAt: new Date(Date.now() - 3600000 * 120).toISOString(),
-      }
-    ];
+    // ── Pagination params ────────────────────────────────────────────────────
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
+    const skip = (page - 1) * limit;
 
-    const mockRecipes = [
-      {
-        _id: "mock-recipe-1",
-        userId: "mock-user-2",
-        name: "Heart-Condition Amlodipine Formulation",
-        nodes: [
-          { id: "node-1", type: "ingredient", data: { ingredientId: 1, percentage: 12.5 } },
-          { id: "node-2", type: "ingredient", data: { ingredientId: 2, percentage: 87.5 } },
-          { id: "node-blending", type: "blending", data: {} }
-        ],
-        connections: [
-          { id: "conn-1", source: "node-1", target: "node-blending" },
-          { id: "conn-2", source: "node-2", target: "node-blending" }
-        ],
-        createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-        updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      },
-      {
-        _id: "mock-recipe-2",
-        userId: "mock-user-3",
-        name: "Multi-Vitamin Supplement Formula v3",
-        nodes: [
-          { id: "node-1", type: "ingredient", data: { ingredientId: 3, percentage: 40 } },
-          { id: "node-2", type: "ingredient", data: { ingredientId: 4, percentage: 60 } },
-          { id: "node-blending", type: "blending", data: {} }
-        ],
-        connections: [
-          { id: "conn-1", source: "node-1", target: "node-blending" }
-        ],
-        createdAt: new Date(Date.now() - 3600000 * 96).toISOString(),
-        updatedAt: new Date(Date.now() - 3600000 * 80).toISOString(),
-      }
-    ];
-
-    const mockIngredients = [
-      {
-        _id: "mock-ing-1",
-        userId: "mock-user-3",
-        name: "Super-Binder Excipient Alpha",
-        role: "dry-binder",
-        casNumber: "9004-34-6",
-        looseBulkDensity: 0.32,
-        tappedBulkDensity: 0.45,
-        costPerKgUsd: 14.50,
-        createdAt: new Date(Date.now() - 3600000 * 90).toISOString(),
-      }
-    ];
-
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json({
-        databaseOnline: false,
-        users: mockUsers,
-        recipes: mockRecipes,
-        customIngredients: mockIngredients,
-      });
-    }
-
+    // ── DB queries ───────────────────────────────────────────────────────────
     try {
-      // Database is connected, fetch actual collections
-      const dbUsers = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
-      const dbRecipes = await prisma.recipe.findMany({ orderBy: { updatedAt: "desc" } });
-      const dbIngredients = await prisma.customIngredient.findMany({ orderBy: { createdAt: "desc" } });
+      const [totalUsers, totalRecipes, totalIngredients, dbUsers, dbRecipes, dbIngredients] =
+        await Promise.all([
+          prisma.user.count(),
+          prisma.recipe.count(),
+          prisma.customIngredient.count(),
+          prisma.user.findMany({
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+              tariff: true,
+              createdAt: true,
+            },
+          }),
+          prisma.recipe.findMany({
+            orderBy: { updatedAt: "desc" },
+            skip,
+            take: limit,
+            select: {
+              id: true,
+              userId: true,
+              name: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          }),
+          prisma.customIngredient.findMany({
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+            select: {
+              id: true,
+              userId: true,
+              name: true,
+              role: true,
+              casNumber: true,
+              looseBulkDensity: true,
+              tappedBulkDensity: true,
+              costPerKgUsd: true,
+              createdAt: true,
+            },
+          }),
+        ]);
 
-      // Map id to _id for backward compatibility with frontend admin page
-      const users = dbUsers.map(u => ({ ...u, _id: u.id }));
-      const recipes = dbRecipes.map(r => ({ ...r, _id: r.id }));
-      const customIngredients = dbIngredients.map(ing => ({ ...ing, _id: ing.id }));
+      // Map id → _id for backward compatibility with admin frontend
+      const users = dbUsers.map((u) => ({ ...u, _id: u.id }));
+      const recipes = dbRecipes.map((r) => ({ ...r, _id: r.id }));
+      const customIngredients = dbIngredients.map((ing) => ({ ...ing, _id: ing.id }));
 
       return NextResponse.json({
         databaseOnline: true,
+        pagination: {
+          page,
+          limit,
+          totalUsers,
+          totalRecipes,
+          totalIngredients,
+        },
         users,
         recipes,
         customIngredients,
       });
     } catch (dbErr) {
-      console.warn("Postgres query failed, returning mock data:", dbErr);
+      console.warn("Postgres query failed:", dbErr);
+      // DB is unavailable — return empty arrays with flag, no hardcoded fake data
       return NextResponse.json({
         databaseOnline: false,
-        users: mockUsers,
-        recipes: mockRecipes,
-        customIngredients: mockIngredients,
+        pagination: { page, limit, totalUsers: 0, totalRecipes: 0, totalIngredients: 0 },
+        users: [],
+        recipes: [],
+        customIngredients: [],
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Admin data route error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

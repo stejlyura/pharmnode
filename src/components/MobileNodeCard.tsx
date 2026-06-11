@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { EditorNode, CalculatedResults } from '../hooks/useNodeEditor';
-import { baseIngredientsMatrix, Ingredient } from '../types/pharm';
+import { Ingredient } from '../types/pharm';
 import { Trash2, AlertTriangle, DollarSign, Cpu, FileText, Settings, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/I18nContext';
@@ -17,7 +17,7 @@ interface MobileNodeCardProps {
   onRemove: (nodeId: string) => void;
   onReplaceIngredient?: (oldId: number | string, newId: number | string) => void;
   onUpgradeClick?: () => void;
-  customIngredients?: Ingredient[];
+  allIngredients: Ingredient[];
 }
 
 export const MobileNodeCard: React.FC<MobileNodeCardProps> = ({
@@ -29,15 +29,11 @@ export const MobileNodeCard: React.FC<MobileNodeCardProps> = ({
   onRemove,
   onReplaceIngredient,
   onUpgradeClick,
-  customIngredients = []
+  allIngredients = []
 }) => {
   const { user } = useAuth();
   const { t, locale, setLocale } = useTranslation();
   const { id, type, data } = node;
-
-  const allIngredients = React.useMemo(() => {
-    return [...baseIngredientsMatrix, ...customIngredients];
-  }, [customIngredients]);
 
   // Determine warnings for this specific node
   const nodeWarnings = React.useMemo(() => {
@@ -576,7 +572,7 @@ export const MobileNodeCard: React.FC<MobileNodeCardProps> = ({
                 if (tariff !== 'professional') {
                   if (onUpgradeClick) onUpgradeClick();
                 } else {
-                  generateGMPReport(nodes || [node], calculatedResults, user, region, customIngredients);
+                  generateGMPReport(nodes || [node], calculatedResults, user, region, allIngredients);
                 }
               }}
               className={`w-full py-2.5 px-3 text-xs font-bold rounded-lg shadow-md transition-all cursor-pointer flex justify-center items-center gap-2 ${

@@ -48,3 +48,26 @@ model CustomIngredient {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+model Ingredient {
+  id                    Int      @id
+  name                  String
+  casNumber             String?
+  role                  String   // active, filler, lubricant, glidant, dry-binder
+  chemicalClassId       Int
+  looseBulkDensity      Float
+  tappedBulkDensity     Float
+  trueDensity           Float?
+  averageParticleSizeUm Float?
+  isAllergen            Boolean  @default(false)
+  benefit               Float    @default(0)
+  risk                  Float    @default(0)
+  cost                  Float    @default(0) // cost field from KB
+  costPerKgUsd          Float    @default(0) // kept for codebase compatibility
+  stability             Float    @default(0)
+  manufacturability     Float    @default(0)
+  maxSafePercentage     Float    @default(100)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+

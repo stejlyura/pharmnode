@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { baseIngredientsMatrix, Ingredient, IngredientRole } from '../types/pharm';
+import { Ingredient, IngredientRole } from '../types/pharm';
 import { useTranslation } from '../context/I18nContext';
 import {
   Search,
@@ -20,7 +20,7 @@ interface MobileIngredientSheetProps {
   onClose: () => void;
   activeNodeIngredientIds: (number | string)[];
   onAddIngredient: (id: number | string) => void;
-  customIngredients: Ingredient[];
+  allIngredients: Ingredient[];
   onOpenAddModal: () => void;
 }
 
@@ -69,7 +69,7 @@ export const MobileIngredientSheet: React.FC<MobileIngredientSheetProps> = ({
   onClose,
   activeNodeIngredientIds,
   onAddIngredient,
-  customIngredients = [],
+  allIngredients = [],
   onOpenAddModal
 }) => {
   const { t } = useTranslation();
@@ -97,9 +97,7 @@ export const MobileIngredientSheet: React.FC<MobileIngredientSheetProps> = ({
     setOpenCategories(prev => ({ ...prev, [role]: !prev[role] }));
   };
 
-  const allIngredients = useMemo(() => {
-    return [...baseIngredientsMatrix, ...customIngredients];
-  }, [customIngredients]);
+
 
   const filteredIngredients = useMemo(() => {
     if (!searchQuery) return allIngredients;

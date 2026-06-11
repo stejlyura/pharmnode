@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { baseIngredientsMatrix, Ingredient, IngredientRole } from '../types/pharm';
+import { Ingredient, IngredientRole, baseIngredientsMatrix } from '../types/pharm';
 import { useTranslation } from '../context/I18nContext';
 import {
   Search,
@@ -25,6 +25,8 @@ interface SidebarProps {
   activeNodeIngredientIds: (number | string)[];
   onAddIngredient: (id: number | string) => void;
   customIngredients: Ingredient[];
+  /** Standard ingredients from DB (falls back to baseIngredientsMatrix if empty) */
+  standardIngredients?: Ingredient[];
   onOpenAddModal: () => void;
 }
 
@@ -81,6 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeNodeIngredientIds,
   onAddIngredient,
   customIngredients = [],
+  standardIngredients,
   onOpenAddModal,
 }) => {
   const { t } = useTranslation();
@@ -115,8 +118,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const allIngredients = React.useMemo(() => {
-    return [...baseIngredientsMatrix, ...customIngredients];
-  }, [customIngredients]);
+    // Use DB-loaded standard ingredients if available, else fall back to hardcoded matrix
+    const base = (standardIngredients && standardIngredients.length > 0)
+      ? standardIngredients
+      : baseIngredientsMatrix;
+    return [...base, ...customIngredients];
+  }, [customIngredients, standardIngredients]);
 
   const filteredIngredients = allIngredients.filter(ing => {
     if (!searchQuery) return true;

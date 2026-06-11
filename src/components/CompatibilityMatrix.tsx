@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { baseIngredientsMatrix, Ingredient } from "../types/pharm";
+import { Ingredient } from "../types/pharm";
 import { CHEMICAL_CLASSES, getCompatibilityRule } from "../lib/chemicalRules";
 import { X, Check, AlertTriangle, Info, HelpCircle } from "lucide-react";
 import { useTranslation } from "../context/I18nContext";
@@ -9,9 +9,10 @@ import { useTranslation } from "../context/I18nContext";
 interface CompatibilityMatrixProps {
   isOpen: boolean;
   onClose: () => void;
+  ingredients: Ingredient[];
 }
 
-export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen, onClose }) => {
+export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen, onClose, ingredients = [] }) => {
   const { t } = useTranslation();
   const [selectedCell, setSelectedCell] = useState<{
     ing1: Ingredient;
@@ -139,7 +140,7 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                     <th className="p-2 text-[10px] font-bold text-zinc-600 text-left border border-zinc-900 w-32 sticky left-0 bg-zinc-950 z-10">
                       {t('matrix_ingredient')}
                     </th>
-                    {baseIngredientsMatrix.map((ing) => (
+                    {ingredients.map((ing) => (
                       <th
                         key={ing.id}
                         className="p-2 text-[9px] font-bold text-zinc-400 text-center border border-zinc-900 w-16 select-none"
@@ -153,7 +154,7 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                   </tr>
                 </thead>
                 <tbody>
-                  {baseIngredientsMatrix.map((ingRow) => (
+                  {ingredients.map((ingRow) => (
                     <tr key={ingRow.id} className="hover:bg-zinc-900/10">
                       {/* Row Header */}
                       <td className="p-2 text-[10px] font-bold text-zinc-300 border border-zinc-900 sticky left-0 bg-zinc-950 z-10 truncate max-w-[130px]" title={ingRow.name}>
@@ -161,7 +162,7 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                       </td>
                       
                       {/* Cells */}
-                      {baseIngredientsMatrix.map((ingCol) => {
+                      {ingredients.map((ingCol) => {
                         const cellInfo = getCompatibilityDetails(ingRow, ingCol);
                         const isSelected = selectedCell && 
                                            ((selectedCell.ing1.id === ingRow.id && selectedCell.ing2.id === ingCol.id) ||

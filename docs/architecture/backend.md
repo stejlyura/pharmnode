@@ -17,15 +17,8 @@
 - **Prisma ORM** — работа с БД
 - Рекомендуемые хостинги: **Neon.tech**, **Supabase**
 
-### Кэш
-- **Redis** (Upstash Redis для serverless)
-
-### Фоновые задачи
-- **BullMQ** (при масштабировании)
-
 ### ORM / Модели
 - **Prisma** — основная БД (`User`, `Recipe`, `CustomIngredient`)
-- Mongoose схема (`src/models/CustomIngredient.ts`) — историческая, не используется
 
 ---
 
@@ -33,14 +26,19 @@
 
 | Метод | Путь | Описание |
 | --- | --- | --- |
-| GET, POST | `/api/ingredients` | Получение/создание пользовательских ингредиентов |
-| POST | `/api/recipes` | Сохранение и обновление рецептур |
+| GET | `/api/ingredients?type=standard\|custom\|all` | Получение ингредиентов по типу (стандартные/пользовательские/все) |
+| POST | `/api/ingredients` | Создание пользовательского ингредиента с валидацией |
+| GET | `/api/recipes` | Получение сохраненных рецептур пользователя |
+| POST | `/api/recipes` | Сохранение/обновление текущей рецептуры холста |
+| DELETE | `/api/recipes` | Удаление рецептуры по её ID |
 | ALL | `/api/auth/[...nextauth]` | OAuth авторизация (NextAuth.js) |
-| POST | `/api/checkout` | Stripe биллинг |
-| GET | `/api/admin/data` | Данные для admin-панели |
+| POST | `/api/checkout` | Stripe биллинг (создание сессии оплаты) |
+| POST | `/api/webhook/stripe` | Обработка вебхуков от Stripe (обновление тарифов) |
+| GET | `/api/admin/data` | Данные для панели администратора |
 
 **Особенности API:**
-- Валидация входных данных (плотности, цены, роли)
+- Валидация входных данных (плотности, цены, роли) в `src/lib/validation.ts`
+- Проверка лимитов тарифов (Hobby vs Pro) в `src/lib/tariffLimits.ts`
 - Санитизация строк (защита от XSS)
 - Для локальной разработки — mock-провайдеры авторизации
 
@@ -78,35 +76,10 @@ model CustomIngredient {
 | --- | --- |
 | [`calculator.ts`](../../src/lib/calculator.ts) | Физико-химические расчеты: сыпучесть, пористость, таблетирование, партии |
 | [`chemicalRules.ts`](../../src/lib/chemicalRules.ts) | 35 химических классов + правила совместимости |
+| [`validation.ts`](../../src/lib/validation.ts) | Санитизация и валидация входящих данных для API |
+| [`tariffLimits.ts`](../../src/lib/tariffLimits.ts) | Функция проверки лимитов Hobby тарифа (3 ингредиента, 1 рецептура) |
 | [`auth.ts`](../../src/lib/auth.ts) | Конфигурация NextAuth / Auth.js |
 | [`prisma.ts`](../../src/lib/prisma.ts) | Singleton Prisma Client для serverless |
-
----
-
-## Система кэширования (Redis)
-
-### Ключи кэша
-
-| Тип | Ключ | TTL |
-| --- | --- | --- |
-| Ингредиент | `ingredient:{id}` | 24 ч |
-| Совместимость | `compatibility:{idA}:{idB}` | — |
-| Готовая формула | `formula:sleep`, `formula:immune` | — |
-| Граф ингредиента | `ingredient_graph:{id}` | — |
-
-### Предрасчёт данных
-
-Ночные фоновые задачи рассчитывают популярные комбинации:
-```text
-A + B, A + C, A + D → результаты сохраняются
-```
-
-### Materialized Views (PostgreSQL)
-
-```sql
-CREATE MATERIALIZED VIEW top_sleep_ingredients;
-REFRESH MATERIALIZED VIEW top_sleep_ingredients;
-```
 
 ---
 
@@ -120,7 +93,6 @@ Vercel
 └── Backend (Next.js API)
 
 Neon PostgreSQL
-Upstash Redis
 ```
 
 ### Build Command для Vercel
@@ -140,42 +112,3 @@ npx prisma generate && next build
 | `STRIPE_WEBHOOK_SECRET` | Webhook секрет Stripe |
 | `GOOGLE_CLIENT_ID/SECRET` | OAuth Google |
 | `GITHUB_ID/SECRET` | OAuth GitHub |
-
----
-
-## Архитектура при масштабировании
-
-```text
-Frontend (Next.js)
-    ↓
-Backend (NestJS) ← добавляется при росте
-    ↓
-BullMQ Workers
-    ↓
-Redis Cache
-    ↓
-PostgreSQL
-```
-
-**NestJS добавляется только при появлении:**
-- Сложных фоновых задач и очередей
-- Больших объёмов данных
-- Отдельных клиентов (Web, Mobile, Partner API)
-
----
-
-## Монорепозиторий (планируемая структура)
-
-```text
-pharmnode/
-app/
-├── frontend
-├── api
-└── admin
-
-packages/
-├── shared-types
-├── scoring-engine
-├── validation
-└── utils
-```

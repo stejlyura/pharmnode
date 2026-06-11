@@ -13,6 +13,13 @@ export interface Ingredient {
   isAllergen?: boolean;
   costPerKgUsd: number;
   maxSafePercentage: number;
+  
+  // Knowledge Base fields
+  benefit?: number;
+  risk?: number;
+  cost?: number;
+  stability?: number;
+  manufacturability?: number;
 }
 
 export const baseIngredientsMatrix: Ingredient[] = [
@@ -28,7 +35,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 50,
     isAllergen: false,
     costPerKgUsd: 450.00,
-    maxSafePercentage: 20.00
+    maxSafePercentage: 20.00,
+    benefit: 80,
+    risk: 20,
+    cost: 450.00,
+    stability: 75,
+    manufacturability: 70
   },
   {
     id: 2,
@@ -42,7 +54,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 75,
     isAllergen: true,
     costPerKgUsd: 4.50,
-    maxSafePercentage: 90.00
+    maxSafePercentage: 90.00,
+    benefit: 5,
+    risk: 15,
+    cost: 4.50,
+    stability: 85,
+    manufacturability: 90
   },
   {
     id: 3,
@@ -56,7 +73,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 100,
     isAllergen: false,
     costPerKgUsd: 8.20,
-    maxSafePercentage: 95.00
+    maxSafePercentage: 95.00,
+    benefit: 10,
+    risk: 5,
+    cost: 8.20,
+    stability: 95,
+    manufacturability: 95
   },
   {
     id: 4,
@@ -70,7 +92,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 10,
     isAllergen: false,
     costPerKgUsd: 12.00,
-    maxSafePercentage: 1.50
+    maxSafePercentage: 1.50,
+    benefit: 5,
+    risk: 10,
+    cost: 12.00,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 5,
@@ -84,7 +111,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 0.015,
     isAllergen: false,
     costPerKgUsd: 18.50,
-    maxSafePercentage: 2.00
+    maxSafePercentage: 2.00,
+    benefit: 5,
+    risk: 5,
+    cost: 18.50,
+    stability: 95,
+    manufacturability: 90
   },
   {
     id: 6,
@@ -98,7 +130,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 60,
     isAllergen: false,
     costPerKgUsd: 15.00,
-    maxSafePercentage: 50.00
+    maxSafePercentage: 50.00,
+    benefit: 85,
+    risk: 15,
+    cost: 15.00,
+    stability: 80,
+    manufacturability: 85
   },
   {
     id: 7,
@@ -112,7 +149,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 50,
     isAllergen: false,
     costPerKgUsd: 22.00,
-    maxSafePercentage: 40.00
+    maxSafePercentage: 40.00,
+    benefit: 80,
+    risk: 20,
+    cost: 22.00,
+    stability: 80,
+    manufacturability: 80
   },
   {
     id: 8,
@@ -126,7 +168,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 80,
     isAllergen: false,
     costPerKgUsd: 18.00,
-    maxSafePercentage: 30.00
+    maxSafePercentage: 30.00,
+    benefit: 85,
+    risk: 10,
+    cost: 18.00,
+    stability: 70,
+    manufacturability: 75
   },
   {
     id: 9,
@@ -140,7 +187,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 150,
     isAllergen: false,
     costPerKgUsd: 7.50,
-    maxSafePercentage: 85.00
+    maxSafePercentage: 85.00,
+    benefit: 10,
+    risk: 5,
+    cost: 7.50,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 10,
@@ -154,7 +206,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 90,
     isAllergen: false,
     costPerKgUsd: 3.80,
-    maxSafePercentage: 80.00
+    maxSafePercentage: 80.00,
+    benefit: 5,
+    risk: 10,
+    cost: 3.80,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 11,
@@ -168,7 +225,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 50,
     isAllergen: false,
     costPerKgUsd: 14.50,
-    maxSafePercentage: 6.00
+    maxSafePercentage: 6.00,
+    benefit: 10,
+    risk: 5,
+    cost: 14.50,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 12,
@@ -182,7 +244,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 20,
     isAllergen: false,
     costPerKgUsd: 9.80,
-    maxSafePercentage: 3.00
+    maxSafePercentage: 3.00,
+    benefit: 5,
+    risk: 10,
+    cost: 9.80,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 13,
@@ -196,7 +263,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 25,
     isAllergen: false,
     costPerKgUsd: 5.20,
-    maxSafePercentage: 5.00
+    maxSafePercentage: 5.00,
+    benefit: 5,
+    risk: 10,
+    cost: 5.20,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 14,
@@ -210,7 +282,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 70,
     isAllergen: false,
     costPerKgUsd: 10.00,
-    maxSafePercentage: 40.00
+    maxSafePercentage: 40.00,
+    benefit: 75,
+    risk: 25,
+    cost: 10.00,
+    stability: 75,
+    manufacturability: 80
   },
   {
     id: 15,
@@ -224,7 +301,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 50,
     isAllergen: false,
     costPerKgUsd: 25.00,
-    maxSafePercentage: 30.00
+    maxSafePercentage: 30.00,
+    benefit: 70,
+    risk: 20,
+    cost: 25.00,
+    stability: 85,
+    manufacturability: 85
   },
   {
     id: 16,
@@ -238,7 +320,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 80,
     isAllergen: false,
     costPerKgUsd: 12.00,
-    maxSafePercentage: 85.00
+    maxSafePercentage: 85.00,
+    benefit: 85,
+    risk: 15,
+    cost: 12.00,
+    stability: 85,
+    manufacturability: 80
   },
   {
     id: 17,
@@ -252,7 +339,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 30,
     isAllergen: false,
     costPerKgUsd: 1200.00,
-    maxSafePercentage: 1.00
+    maxSafePercentage: 1.00,
+    benefit: 90,
+    risk: 5,
+    cost: 1200.00,
+    stability: 65,
+    manufacturability: 70
   },
   {
     id: 18,
@@ -266,7 +358,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 15,
     isAllergen: false,
     costPerKgUsd: 2.50,
-    maxSafePercentage: 80.00
+    maxSafePercentage: 80.00,
+    benefit: 5,
+    risk: 5,
+    cost: 2.50,
+    stability: 95,
+    manufacturability: 85
   },
   {
     id: 19,
@@ -280,7 +377,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 150,
     isAllergen: false,
     costPerKgUsd: 6.00,
-    maxSafePercentage: 70.00
+    maxSafePercentage: 70.00,
+    benefit: 10,
+    risk: 5,
+    cost: 6.00,
+    stability: 85,
+    manufacturability: 80
   },
   {
     id: 20,
@@ -294,7 +396,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 100,
     isAllergen: false,
     costPerKgUsd: 2.00,
-    maxSafePercentage: 80.00
+    maxSafePercentage: 80.00,
+    benefit: 5,
+    risk: 5,
+    cost: 2.00,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 21,
@@ -308,7 +415,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 50,
     isAllergen: false,
     costPerKgUsd: 28.00,
-    maxSafePercentage: 10.00
+    maxSafePercentage: 10.00,
+    benefit: 10,
+    risk: 5,
+    cost: 28.00,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 22,
@@ -322,7 +434,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 80,
     isAllergen: false,
     costPerKgUsd: 32.00,
-    maxSafePercentage: 30.00
+    maxSafePercentage: 30.00,
+    benefit: 10,
+    risk: 5,
+    cost: 32.00,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 23,
@@ -336,7 +453,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 65,
     isAllergen: false,
     costPerKgUsd: 6.50,
-    maxSafePercentage: 20.00
+    maxSafePercentage: 20.00,
+    benefit: 10,
+    risk: 5,
+    cost: 6.50,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 24,
@@ -350,7 +472,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 40,
     isAllergen: false,
     costPerKgUsd: 16.00,
-    maxSafePercentage: 8.00
+    maxSafePercentage: 8.00,
+    benefit: 10,
+    risk: 5,
+    cost: 16.00,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 25,
@@ -364,7 +491,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 20,
     isAllergen: false,
     costPerKgUsd: 45.00,
-    maxSafePercentage: 2.00
+    maxSafePercentage: 2.00,
+    benefit: 5,
+    risk: 5,
+    cost: 45.00,
+    stability: 90,
+    manufacturability: 85
   },
   {
     id: 26,
@@ -378,6 +510,11 @@ export const baseIngredientsMatrix: Ingredient[] = [
     averageParticleSizeUm: 100,
     isAllergen: false,
     costPerKgUsd: 14.00,
-    maxSafePercentage: 5.00
+    maxSafePercentage: 5.00,
+    benefit: 5,
+    risk: 5,
+    cost: 14.00,
+    stability: 90,
+    manufacturability: 85
   }
 ];
