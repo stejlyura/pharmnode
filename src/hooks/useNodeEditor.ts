@@ -91,10 +91,11 @@ const initialConnections: EditorConnection[] = [
 
 export type TariffType = 'hobby' | 'professional';
 
-export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredients: Ingredient[] = []) {
+export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredients: Ingredient[] = [], initialRecipeId?: string | null) {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [tariff, setTariff] = useState<TariffType>(initialTariff);
+  const [recipeId, setRecipeId] = useState<string | null>(initialRecipeId || null);
   
   const allIngredients = useMemo(() => {
     return customIngredients;
@@ -126,37 +127,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     }
   }, [user, isMockUser]);
 
-  // Load latest recipe from DB when a real user logs in
-  useEffect(() => {
-    if (!user || isMockUser) return;
-
-    let cancelled = false;
-
-    async function loadLatestRecipe() {
-      try {
-        const res = await fetch('/api/recipes');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.success && Array.isArray(data.recipes) && data.recipes.length > 0 && !cancelled) {
-          const latest = data.recipes[0];
-          setState({
-            nodes: latest.nodes,
-            connections: latest.connections
-          });
-          setPast([]);
-          setFuture([]);
-        }
-      } catch (err) {
-        console.error("Failed to load latest recipe:", err);
-      }
-    }
-
-    loadLatestRecipe();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, isMockUser]);
+  // Removed loadLatestRecipe effect since Canvas will load the specific recipe if requested
 
   // Autosave canvas state debounced by 2 seconds
   useEffect(() => {
@@ -173,21 +144,30 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
 
       // 2. Real User -> Save to Server DB
       try {
+        const payload: any = {
+          nodes: state.nodes,
+          connections: state.connections,
+          userId: user.id,
+          name: "Autosaved Recipe"
+        };
+        if (recipeId) {
+          payload.recipeId = recipeId;
+        }
+
         const response = await fetch('/api/recipes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            nodes: state.nodes,
-            connections: state.connections,
-            userId: user.id,
-            name: "Autosaved Recipe"
-          }),
+          body: JSON.stringify(payload),
         });
         const data = await response.json();
         if (data.success) {
           console.log("Canvas autosaved successfully to DB:", data);
+          if (data.recipeId && data.recipeId !== recipeId) {
+            setRecipeId(data.recipeId);
+            window.history.replaceState({}, '', `/configurator?recipeId=${data.recipeId}`);
+          }
         }
       } catch (err) {
         console.error("Autosave request failed:", err);
@@ -444,6 +424,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     redo,
     canUndo: past.length > 0,
     canRedo: future.length > 0,
-    setCanvasState
+    setCanvasState,
+    recipeId
   };
 }

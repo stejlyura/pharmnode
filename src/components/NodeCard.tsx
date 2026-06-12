@@ -319,19 +319,60 @@ export const NodeCard: React.FC<NodeCardProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-zinc-800/60 text-[11px] text-zinc-500">
-              <div>
-                <span>{t('card_density')}</span>
-                <span className="block font-mono text-zinc-300">
-                  {ingredient.looseBulkDensity.toFixed(2)} → {ingredient.tappedBulkDensity.toFixed(2)} g/mL
-                </span>
-              </div>
-              <div>
-                <span>{t('card_price_per_kg')}</span>
-                <span className="block font-mono text-zinc-300 text-emerald-400">
-                  ${ingredient.costPerKgUsd.toFixed(2)}
-                </span>
-              </div>
+            <div className="mt-2 pt-2 border-t border-zinc-800/60 text-[11px]">
+              {ingredient.dilutionScale ? (
+                <div className="flex flex-col gap-1.5 text-zinc-400">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-500">{t('card_dilution_scale') || 'Разведение'}:</span>
+                    <span className="font-semibold text-zinc-200 font-mono bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">{ingredient.dilutionScale}</span>
+                  </div>
+                  {ingredient.source && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">{t('card_source') || 'Источник'}:</span>
+                      <span className="text-zinc-300 text-right truncate max-w-[180px]">{ingredient.source}</span>
+                    </div>
+                  )}
+                  {ingredient.dosageForm && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">{t('card_dosage_form') || 'Форма выпуска'}:</span>
+                      <span className="text-zinc-300 text-right">{ingredient.dosageForm}</span>
+                    </div>
+                  )}
+                  {ingredient.applicationArea && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">{t('card_application_area') || 'Область применения'}:</span>
+                      <span className="text-zinc-300 text-right truncate max-w-[160px]">{ingredient.applicationArea}</span>
+                    </div>
+                  )}
+                  {ingredient.processingTech && (
+                    <div className="flex flex-col gap-0.5 mt-1 bg-zinc-900/40 p-1.5 rounded border border-zinc-850">
+                      <span className="text-zinc-500 text-[9px] uppercase font-bold tracking-wider">{t('card_processing_tech') || 'Технология'}:</span>
+                      <span className="text-zinc-350 leading-relaxed text-[10px]">{ingredient.processingTech}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between mt-1 pt-1.5 border-t border-zinc-900/60">
+                    <span className="text-zinc-500">{t('card_price_per_kg')}</span>
+                    <span className="font-mono text-emerald-400 font-semibold">
+                      ${ingredient.costPerKgUsd.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 text-zinc-500">
+                  <div>
+                    <span>{t('card_density')}</span>
+                    <span className="block font-mono text-zinc-300">
+                      {ingredient.looseBulkDensity.toFixed(2)} → {ingredient.tappedBulkDensity.toFixed(2)} g/mL
+                    </span>
+                  </div>
+                  <div>
+                    <span>{t('card_price_per_kg')}</span>
+                    <span className="block font-mono text-zinc-300 text-emerald-400">
+                      ${ingredient.costPerKgUsd.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {nodeWarnings.map((w, idx) => (

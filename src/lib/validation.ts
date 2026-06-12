@@ -28,3 +28,23 @@ export function validatePercentage(value: unknown, fieldName = "Процент")
   }
   return num;
 }
+
+export function validateDilutionScale(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const sanitized = sanitizeString(value);
+  if (!sanitized) return null;
+  if (sanitized.length > 50) {
+    throw new Error("Степень разведения не должна превышать 50 символов");
+  }
+  return sanitized;
+}
+
+export function validateOptionalString(value: unknown, maxLength = 255, fieldName = "Поле"): string | null {
+  if (value === undefined || value === null) return null;
+  const sanitized = sanitizeString(value);
+  if (!sanitized) return null;
+  if (sanitized.length > maxLength) {
+    throw new Error(`${fieldName} не должно превышать ${maxLength} символов`);
+  }
+  return sanitized;
+}

@@ -45,6 +45,11 @@ model CustomIngredient {
   incompatibleWith  Int[]    @default([])
   compatibleWith    Int[]    @default([])
   isAllergen        Boolean  @default(false)
+  source            String?
+  dilutionScale     String?
+  dosageForm        String?
+  applicationArea   String?
+  processingTech    String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -67,6 +72,11 @@ model Ingredient {
   stability             Float    @default(0)
   manufacturability     Float    @default(0)
   maxSafePercentage     Float    @default(100)
+  source                String?
+  dilutionScale         String?
+  dosageForm            String?
+  applicationArea       String?
+  processingTech        String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

@@ -109,14 +109,36 @@ export function calculateBlendProperties(
   let trueDensitySum = 0;
   let costSum = 0;
 
+  // Filter out ingredients with dilutionScale for density calculation, as they don't linearly contribute to bulk densities
+  const standardIngredientsForDensity = ingredients.filter(item => !item.ingredient.dilutionScale);
+  const densityTotalPercentage = standardIngredientsForDensity.reduce((sum, item) => sum + item.percentage, 0);
+  const densityScale = densityTotalPercentage > 0 ? 100 / densityTotalPercentage : 0;
+
   for (const item of ingredients) {
     const normalizedPercentage = item.percentage * scale; // Adjust percentages so they sum to 100%
     const fraction = normalizedPercentage / 100;
     
-    looseDensitySum += item.ingredient.looseBulkDensity * fraction;
-    tappedDensitySum += item.ingredient.tappedBulkDensity * fraction;
-    trueDensitySum += (item.ingredient.trueDensity || item.ingredient.tappedBulkDensity) * fraction;
     costSum += item.ingredient.costPerKgUsd * fraction;
+  }
+
+  if (standardIngredientsForDensity.length > 0) {
+    for (const item of standardIngredientsForDensity) {
+      const normalizedPercentage = item.percentage * densityScale;
+      const fraction = normalizedPercentage / 100;
+      
+      looseDensitySum += item.ingredient.looseBulkDensity * fraction;
+      tappedDensitySum += item.ingredient.tappedBulkDensity * fraction;
+      trueDensitySum += (item.ingredient.trueDensity || item.ingredient.tappedBulkDensity) * fraction;
+    }
+  } else {
+    for (const item of ingredients) {
+      const normalizedPercentage = item.percentage * scale;
+      const fraction = normalizedPercentage / 100;
+      
+      looseDensitySum += item.ingredient.looseBulkDensity * fraction;
+      tappedDensitySum += item.ingredient.tappedBulkDensity * fraction;
+      trueDensitySum += (item.ingredient.trueDensity || item.ingredient.tappedBulkDensity) * fraction;
+    }
   }
 
   const flowability = calculateFlowability(looseDensitySum, tappedDensitySum);
@@ -280,4 +302,32 @@ export function checkCompatibilityAndLimits(
   }
 
   return warnings;
+}
+
+/**
+ * Performs specific calculations for complex or homeopathic components with non-standard concentration/dilution.
+ * Homeopathic components might not participate in standard mass/volume calculations directly.
+ */
+export function calculateComplexComponent(
+  ingredient: Ingredient,
+  percentage: number
+): {
+  isComplex: boolean;
+  dilutionScale?: string;
+  effectiveActiveDoseMg: number;
+  note: string;
+} {
+  const isComplex = !!ingredient.dilutionScale;
+  if (!isComplex) {
+    return { isComplex: false, effectiveActiveDoseMg: 0, note: "Standard ingredient" };
+  }
+
+  const scale = ingredient.dilutionScale || "";
+  
+  return {
+    isComplex: true,
+    dilutionScale: scale,
+    effectiveActiveDoseMg: 0,
+    note: `Компонент ${ingredient.name} разведен по шкале ${scale}. Химическая масса действующего вещества пренебрежимо мала.`
+  };
 }

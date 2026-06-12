@@ -274,7 +274,7 @@ export default function LandingPage() {
           <ThemeToggle />
 
           <Link
-            href="/configurator"
+            href="/projects"
             className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all flex items-center gap-1 group theme-element"
           >
             {dict.btn_open}
@@ -300,7 +300,7 @@ export default function LandingPage() {
 
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
           <Link
-            href="/configurator"
+            href="/projects"
             className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-500/20 transition-all flex items-center gap-2 group theme-element"
           >
             {dict.hero_cta}
@@ -613,7 +613,7 @@ export default function LandingPage() {
         </p>
         <div className="mt-8">
           <Link
-            href="/configurator"
+            href="/projects"
             className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/25 transition-all group theme-element"
           >
             {dict.cta_btn}

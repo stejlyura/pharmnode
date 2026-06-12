@@ -20,6 +20,13 @@ export interface Ingredient {
   cost?: number;
   stability?: number;
   manufacturability?: number;
+
+  // Level 1 Homeopathic / Complex Formulation fields
+  source?: string;
+  dilutionScale?: string;
+  dosageForm?: string;
+  applicationArea?: string;
+  processingTech?: string;
 }
 
 export const baseIngredientsMatrix: Ingredient[] = [

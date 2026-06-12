@@ -90,20 +90,26 @@ export function useRecipes(userId?: string | null, isMockUser?: boolean): UseRec
     async (
       nodes: EditorNode[],
       connections: EditorConnection[],
-      name = "Autosaved Recipe"
+      name = "Autosaved Recipe",
+      recipeId?: string
     ): Promise<{ success: boolean; recipeId?: string }> => {
       if (!userId) return { success: false };
 
       if (isMockUser) {
         // Mock mode: no-op success
-        return { success: true, recipeId: "mock-recipe" };
+        return { success: true, recipeId: recipeId || "mock-recipe" };
       }
 
       try {
+        const payload: any = { nodes, connections, name, userId };
+        if (recipeId) {
+          payload.recipeId = recipeId;
+        }
+
         const res = await fetch("/api/recipes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nodes, connections, name, userId }),
+          body: JSON.stringify(payload),
         });
 
         const data = await res.json();

@@ -24,6 +24,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const recipeId = searchParams.get("id");
+
+    if (recipeId) {
+      const recipe = await prisma.recipe.findUnique({
+        where: { id: recipeId }
+      });
+
+      if (!recipe || recipe.userId !== activeUserId) {
+        return NextResponse.json({ error: "Recipe not found or forbidden" }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, recipe });
+    }
+
     const recipes = await prisma.recipe.findMany({
       where: { userId: activeUserId },
       orderBy: { updatedAt: "desc" },
@@ -81,14 +95,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Upsert per user ──────────────────────────────────────────────────────
-    let dbRecipe = await prisma.recipe.findFirst({
-      where: { userId: activeUserId },
-    });
+    // ── Update or Create ─────────────────────────────────────────────────────
+    let dbRecipe;
 
-    if (dbRecipe) {
+    const recipeId = body.recipeId as string | undefined;
+
+    if (recipeId) {
+      // Validate ownership
+      const existing = await prisma.recipe.findUnique({ where: { id: recipeId } });
+      if (!existing || existing.userId !== activeUserId) {
+        return NextResponse.json({ error: "Recipe not found or forbidden" }, { status: 404 });
+      }
+
       dbRecipe = await prisma.recipe.update({
-        where: { id: dbRecipe.id },
+        where: { id: recipeId },
         data: { name: recipeName, nodes, connections },
       });
     } else {

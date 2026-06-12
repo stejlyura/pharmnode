@@ -17,9 +17,12 @@ import { CompatibilityMatrix } from './CompatibilityMatrix';
 import { BenefitsModal } from './BenefitsModal';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileConfigurator } from './MobileConfigurator';
+import { useSearchParams } from 'next/navigation';
 
 export const Canvas: React.FC = () => {
   const { user, status, login, changeTariff } = useAuth();
+  const searchParams = useSearchParams();
+  const initialRecipeId = searchParams.get('recipeId');
   const { t, locale } = useTranslation();
   const isMobile = useIsMobile();
 
@@ -43,7 +46,12 @@ export const Canvas: React.FC = () => {
     costPerKgUsd: 10,
     maxSafePercentage: 100,
     isAllergen: false,
-    chemicalClassId: 0
+    chemicalClassId: 0,
+    source: '',
+    dilutionScale: '',
+    dosageForm: '',
+    applicationArea: '',
+    processingTech: ''
   });
 
   const [regForm, setRegForm] = useState({
@@ -68,8 +76,26 @@ export const Canvas: React.FC = () => {
     undo,
     redo,
     canUndo,
-    canRedo
-  } = useNodeEditor('hobby', allIngredients);
+    canRedo,
+    setCanvasState
+  } = useNodeEditor('hobby', allIngredients, initialRecipeId);
+
+  // Fetch initial recipe if recipeId is provided
+  React.useEffect(() => {
+    if (!initialRecipeId) return;
+    async function fetchRecipe() {
+      try {
+        const res = await fetch(`/api/recipes?id=${initialRecipeId}`);
+        const data = await res.json();
+        if (data.success && data.recipe) {
+          setCanvasState(data.recipe.nodes, data.recipe.connections);
+        }
+      } catch (err) {
+        console.error("Failed to load recipe:", err);
+      }
+    }
+    fetchRecipe();
+  }, [initialRecipeId, setCanvasState]);
 
   // Sync canvas editor's tariff with active user's tariff
   React.useEffect(() => {
@@ -101,11 +127,14 @@ export const Canvas: React.FC = () => {
 
   // Dragging state
   const dragInfo = useRef<{
-    nodeId: string;
+    type: 'node' | 'pan';
+    nodeId?: string;
     startX: number;
     startY: number;
-    nodeStartX: number;
-    nodeStartY: number;
+    nodeStartX?: number;
+    nodeStartY?: number;
+    scrollStartX?: number;
+    scrollStartY?: number;
   } | null>(null);
 
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -197,6 +226,7 @@ export const Canvas: React.FC = () => {
       
       if (node) {
         dragInfo.current = {
+          type: 'node',
           nodeId: node.id,
           startX: e.clientX,
           startY: e.clientY,
@@ -204,28 +234,47 @@ export const Canvas: React.FC = () => {
           nodeStartY: node.position.y
         };
         e.preventDefault();
+        return;
       }
     }
+
+    // Panning (drag background)
+    dragInfo.current = {
+      type: 'pan',
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollStartX: workspaceRef.current?.scrollLeft || 0,
+      scrollStartY: workspaceRef.current?.scrollTop || 0
+    };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (dragInfo.current) {
       const info = dragInfo.current;
-      const deltaX = (e.clientX - info.startX) / scale;
-      const deltaY = (e.clientY - info.startY) / scale;
-      
-      // Update node position in state without recording history (fluid drag)
-      updateNodePosition(info.nodeId, info.nodeStartX + deltaX, info.nodeStartY + deltaY, false);
+      if (info.type === 'node' && info.nodeId) {
+        const deltaX = (e.clientX - info.startX) / scale;
+        const deltaY = (e.clientY - info.startY) / scale;
+        
+        // Update node position in state without recording history (fluid drag)
+        updateNodePosition(info.nodeId, (info.nodeStartX || 0) + deltaX, (info.nodeStartY || 0) + deltaY, false);
+      } else if (info.type === 'pan' && workspaceRef.current) {
+        const deltaX = e.clientX - info.startX;
+        const deltaY = e.clientY - info.startY;
+        workspaceRef.current.scrollLeft = (info.scrollStartX || 0) - deltaX;
+        workspaceRef.current.scrollTop = (info.scrollStartY || 0) - deltaY;
+      }
     }
   };
 
   const handleMouseUp = () => {
     if (dragInfo.current) {
       const info = dragInfo.current;
-      // Record position in history on drag end
-      const finalNode = nodes.find(n => n.id === info.nodeId);
-      if (finalNode) {
-        updateNodePosition(info.nodeId, finalNode.position.x, finalNode.position.y, true);
+      if (info.type === 'node' && info.nodeId) {
+        // Record position in history on drag end
+        const finalNode = nodes.find(n => n.id === info.nodeId);
+        if (finalNode) {
+          updateNodePosition(info.nodeId, finalNode.position.x, finalNode.position.y, true);
+        }
       }
       dragInfo.current = null;
     }
@@ -362,7 +411,12 @@ export const Canvas: React.FC = () => {
       costPerKgUsd: Number(addForm.costPerKgUsd),
       maxSafePercentage: Number(addForm.maxSafePercentage),
       isAllergen: addForm.isAllergen,
-      chemicalClassId: chemClassId
+      chemicalClassId: chemClassId,
+      source: addForm.source.trim() || undefined,
+      dilutionScale: addForm.dilutionScale.trim() || undefined,
+      dosageForm: addForm.dosageForm.trim() || undefined,
+      applicationArea: addForm.applicationArea.trim() || undefined,
+      processingTech: addForm.processingTech.trim() || undefined
     };
 
     try {
@@ -402,7 +456,12 @@ export const Canvas: React.FC = () => {
           costPerKgUsd: 10,
           maxSafePercentage: 100,
           isAllergen: false,
-          chemicalClassId: 0
+          chemicalClassId: 0,
+          source: '',
+          dilutionScale: '',
+          dosageForm: '',
+          applicationArea: '',
+          processingTech: ''
         });
       } else {
         setAddError(data.error || t("canvas_save_error"));
@@ -648,6 +707,62 @@ export const Canvas: React.FC = () => {
                       {t('canvas_allergen_label')}
                     </label>
                   </div>
+
+                  <div className="col-span-1 md:col-span-2 border-t border-zinc-900 pt-3 mt-1">
+                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">{t('add_homeopathy_section')}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_dilution_scale')}</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. C30, D10, LM1"
+                          value={addForm.dilutionScale}
+                          onChange={(e) => setAddForm(prev => ({ ...prev, dilutionScale: e.target.value }))}
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_source')}</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Apis Mellifica, Arnica"
+                          value={addForm.source}
+                          onChange={(e) => setAddForm(prev => ({ ...prev, source: e.target.value }))}
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_dosage_form')}</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Granules, Drops, Trituration"
+                          value={addForm.dosageForm}
+                          onChange={(e) => setAddForm(prev => ({ ...prev, dosageForm: e.target.value }))}
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_application_area')}</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Allergy, Cold, Pain"
+                          value={addForm.applicationArea}
+                          onChange={(e) => setAddForm(prev => ({ ...prev, applicationArea: e.target.value }))}
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                        />
+                      </div>
+                      <div className="col-span-1 md:col-span-2">
+                        <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_processing_tech')}</label>
+                        <textarea
+                          rows={2}
+                          placeholder="e.g. Succussion 10 times, Trituration in Lactose"
+                          value={addForm.processingTech}
+                          onChange={(e) => setAddForm(prev => ({ ...prev, processingTech: e.target.value }))}
+                          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-4">
@@ -688,7 +803,7 @@ export const Canvas: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-zinc-950 relative overflow-hidden select-none theme-element">
+    <div className="flex-1 flex flex-col h-full bg-zinc-950 relative overflow-hidden select-none theme-element">
       {/* Global Header */}
       <Header
         showCanvasControls={true}
@@ -731,7 +846,7 @@ export const Canvas: React.FC = () => {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className="flex-1 relative overflow-auto"
+          className="flex-1 relative overflow-hidden"
         >
           {/* ── Drop Zone Overlay ── */}
           {isDraggingOver && (
@@ -1170,6 +1285,62 @@ export const Canvas: React.FC = () => {
                   <label htmlFor="isAllergen" className="text-xs text-zinc-300 font-medium cursor-pointer select-none">
                     {t('canvas_allergen_label')}
                   </label>
+                </div>
+
+                <div className="col-span-1 md:col-span-2 border-t border-zinc-900 pt-3 mt-1">
+                  <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">{t('add_homeopathy_section')}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_dilution_scale')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. C30, D10, LM1"
+                        value={addForm.dilutionScale}
+                        onChange={(e) => setAddForm(prev => ({ ...prev, dilutionScale: e.target.value }))}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_source')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Apis Mellifica, Arnica"
+                        value={addForm.source}
+                        onChange={(e) => setAddForm(prev => ({ ...prev, source: e.target.value }))}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_dosage_form')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Granules, Drops, Trituration"
+                        value={addForm.dosageForm}
+                        onChange={(e) => setAddForm(prev => ({ ...prev, dosageForm: e.target.value }))}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_application_area')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Allergy, Cold, Pain"
+                        value={addForm.applicationArea}
+                        onChange={(e) => setAddForm(prev => ({ ...prev, applicationArea: e.target.value }))}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_processing_tech')}</label>
+                      <textarea
+                        rows={2}
+                        placeholder="e.g. Succussion 10 times, Trituration in Lactose"
+                        value={addForm.processingTech}
+                        onChange={(e) => setAddForm(prev => ({ ...prev, processingTech: e.target.value }))}
+                        className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -30,6 +30,11 @@ async function main() {
         stability: ing.stability || 0,
         manufacturability: ing.manufacturability || 0,
         maxSafePercentage: ing.maxSafePercentage || 100,
+        source: (ing as any).source || null,
+        dilutionScale: (ing as any).dilutionScale || null,
+        dosageForm: (ing as any).dosageForm || null,
+        applicationArea: (ing as any).applicationArea || null,
+        processingTech: (ing as any).processingTech || null,
       },
     });
   }

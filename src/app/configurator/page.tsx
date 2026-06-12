@@ -1,5 +1,6 @@
 import { Canvas } from "@/components/Canvas";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "PharmNode Studio - Virtual Formulation Canvas",
@@ -8,8 +9,10 @@ export const metadata: Metadata = {
 
 export default function ConfiguratorPage() {
   return (
-    <div className="flex-1 flex flex-col min-h-screen">
-      <Canvas />
+    <div className="h-screen w-screen overflow-hidden flex flex-col">
+      <Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500">Loading Canvas...</div>}>
+        <Canvas />
+      </Suspense>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sanitizeString, validateRole, validateDensity, validatePercentage } from "@/lib/validation";
+import { sanitizeString, validateRole, validateDensity, validatePercentage, validateOptionalString, validateDilutionScale } from "@/lib/validation";
 import { checkTariffLimit } from "@/lib/tariffLimits";
 
 // ─── Tariff limits (enforced server-side only) ────────────────────────────────
@@ -103,6 +103,11 @@ export async function POST(request: Request) {
       maxSafePercentage,
       isAllergen,
       userId,
+      source,
+      dilutionScale,
+      dosageForm,
+      applicationArea,
+      processingTech,
     } = body;
 
     // ── Mock dev support ────────────────────────────────────────────────────
@@ -127,6 +132,11 @@ export async function POST(request: Request) {
     let parsedTrue: number;
     let parsedCost: number;
     let parsedMaxSafe: number;
+    let validatedSource: string | null = null;
+    let validatedDilutionScale: string | null = null;
+    let validatedDosageForm: string | null = null;
+    let validatedApplicationArea: string | null = null;
+    let validatedProcessingTech: string | null = null;
 
     try {
       cleanName = sanitizeString(name);
@@ -153,6 +163,12 @@ export async function POST(request: Request) {
       }
 
       parsedMaxSafe = validatePercentage(maxSafePercentage ?? 100, "Максимальный безопасный процент");
+
+      validatedSource = validateOptionalString(source, 255, "Источник вещества");
+      validatedDilutionScale = validateDilutionScale(dilutionScale);
+      validatedDosageForm = validateOptionalString(dosageForm, 255, "Форма выпуска");
+      validatedApplicationArea = validateOptionalString(applicationArea, 255, "Область применения");
+      validatedProcessingTech = validateOptionalString(processingTech, 255, "Технология производства");
     } catch (validationErr: any) {
       return NextResponse.json({ error: validationErr.message }, { status: 400 });
     }
@@ -185,6 +201,11 @@ export async function POST(request: Request) {
         costPerKgUsd: parsedCost,
         maxSafePercentage: parsedMaxSafe,
         isAllergen: !!isAllergen,
+        source: validatedSource,
+        dilutionScale: validatedDilutionScale,
+        dosageForm: validatedDosageForm,
+        applicationArea: validatedApplicationArea,
+        processingTech: validatedProcessingTech,
       },
     });
 
