@@ -373,6 +373,61 @@ export const NodeCard: React.FC<NodeCardProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Supplement/OTC Info (Level 2) */}
+              {(ingredient.effects?.length || ingredient.contraindications?.length || ingredient.sideEffects?.length) ? (
+                <div className="mt-2.5 pt-2.5 border-t border-zinc-800/60 flex flex-col gap-2 text-[11px]">
+                  {ingredient.effects && ingredient.effects.length > 0 && (
+                    <div>
+                      <span className="text-zinc-500 font-medium block mb-1">{t('card_effects_label')}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {ingredient.effects.map((eff, idx) => (
+                          <span key={idx} className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[10px]">
+                            {eff}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {ingredient.contraindications && ingredient.contraindications.length > 0 && (
+                    <div>
+                      <span className="text-zinc-500 font-medium block mb-1">{t('card_contraindications_label')}</span>
+                      <div className="flex flex-col gap-0.5">
+                        {ingredient.contraindications.map((contra, idx) => (
+                          <div key={idx} className="text-rose-450 flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-rose-500" />
+                            <span>{contra}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {ingredient.sideEffects && ingredient.sideEffects.length > 0 && (
+                    <div>
+                      <span className="text-zinc-500 font-medium block mb-1">{t('card_side_effects_label')}</span>
+                      <div className="flex flex-col gap-1 font-mono text-[10px]">
+                        {ingredient.sideEffects.map((se, idx) => {
+                          let dotColor = 'bg-green-500';
+                          if (se.severity === 'medium') dotColor = 'bg-amber-500';
+                          if (se.severity === 'high') dotColor = 'bg-rose-500';
+                          
+                          return (
+                            <div key={idx} className="flex items-center justify-between text-zinc-300">
+                              <span className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                {se.name}
+                              </span>
+                              <span className="text-zinc-500">({se.frequency})</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             {nodeWarnings.map((w, idx) => (
@@ -785,6 +840,125 @@ export const NodeCard: React.FC<NodeCardProps> = ({
               </div>
             )}
 
+            {/* Premium Recipe Analysis/Scoring Panel */}
+            {calculatedResults.scoring && (
+              <div className="bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/85 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    {t('card_recipe_analysis')}
+                  </span>
+                  <div className="flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/25">
+                    <span className="text-[10px] text-zinc-400 font-medium">{t('card_overall_rating')}</span>
+                    <span className="text-xs font-extrabold text-indigo-400 font-mono">
+                      {calculatedResults.scoring.score}/100
+                    </span>
+                  </div>
+                </div>
+
+                {/* Score component values */}
+                <div className="grid grid-cols-4 gap-1.5 text-center text-[9px] text-zinc-400">
+                  <div className="bg-zinc-950/40 p-1 rounded border border-zinc-850">
+                    <span className="block text-zinc-500">{t('card_score_benefit')}</span>
+                    <span className="font-mono font-bold text-emerald-400">{calculatedResults.scoring.benefitScore}</span>
+                  </div>
+                  <div className="bg-zinc-950/40 p-1 rounded border border-zinc-850">
+                    <span className="block text-zinc-500">{t('card_score_stability')}</span>
+                    <span className="font-mono font-bold text-indigo-400">{calculatedResults.scoring.stabilityScore}</span>
+                  </div>
+                  <div className="bg-zinc-950/40 p-1 rounded border border-zinc-850">
+                    <span className="block text-zinc-500">{t('card_score_manufacturability')}</span>
+                    <span className="font-mono font-bold text-amber-400">{calculatedResults.scoring.manufacturabilityScore}</span>
+                  </div>
+                  <div className="bg-zinc-950/40 p-1 rounded border border-zinc-850">
+                    <span className="block text-zinc-500">{t('card_score_risks')}</span>
+                    <span className="font-mono font-bold text-rose-400">{calculatedResults.scoring.riskScore}</span>
+                  </div>
+                </div>
+
+                {/* Overdoses warnings */}
+                {calculatedResults.scoring.overdoses.length > 0 && (
+                  <div className="bg-rose-500/10 border border-rose-500/25 p-2 rounded-lg text-[10px] text-rose-455 flex flex-col gap-1">
+                    <span className="font-bold flex items-center gap-1">
+                      <AlertTriangle size={12} />
+                      {t('card_overdose_title')}
+                    </span>
+                    {calculatedResults.scoring.overdoses.map((o, idx) => (
+                      <div key={idx} className="font-mono text-[9px]">
+                        • {o.name}: {o.doseMg.toFixed(1)} mg ({o.maxDoseMg} mg max)
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Penalty details list */}
+                {calculatedResults.scoring.penalties.length > 0 && (
+                  <div className="flex flex-col gap-1 bg-zinc-950/30 p-2 rounded-lg border border-zinc-850/60 text-[9px] text-zinc-400">
+                    <span className="font-bold text-zinc-500 uppercase tracking-wide text-[8px]">{t('card_penalties_title')}</span>
+                    {calculatedResults.scoring.penalties.map((p, idx) => (
+                      <div key={idx} className="flex justify-between gap-2">
+                        <span className="truncate max-w-[200px] leading-tight">• {p.reason}</span>
+                        <span className="font-mono text-rose-455">-{p.deduction}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Aggregated Effects */}
+                {calculatedResults.scoring.aggregatedEffects.length > 0 && (
+                  <div className="flex flex-col gap-1 text-[10px]">
+                    <span className="text-zinc-500 font-medium">{t('card_aggregated_effects')}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {calculatedResults.scoring.aggregatedEffects.map((eff, idx) => (
+                        <span key={idx} className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded text-[9px]">
+                          {eff}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Aggregated Contraindications */}
+                {calculatedResults.scoring.aggregatedContraindications.length > 0 && (
+                  <div className="flex flex-col gap-1 text-[10px]">
+                    <span className="text-zinc-500 font-medium">{t('card_aggregated_contraindications')}</span>
+                    <div className="flex flex-col gap-0.5 text-amber-500/95 font-sans">
+                      {calculatedResults.scoring.aggregatedContraindications.map((contra, idx) => (
+                        <div key={idx} className="flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-amber-500" />
+                          <span>{contra}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Aggregated Side Effects */}
+                {calculatedResults.scoring.aggregatedSideEffects.length > 0 && (
+                  <div className="flex flex-col gap-1.5 text-[10px]">
+                    <span className="text-zinc-500 font-medium">{t('card_side_effects_label')}</span>
+                    <div className="grid grid-cols-2 gap-1.5 font-mono text-[9px]">
+                      {calculatedResults.scoring.aggregatedSideEffects.map((se, idx) => {
+                        let dotColor = 'bg-green-500';
+                        if (se.severity === 'medium') dotColor = 'bg-amber-500';
+                        if (se.severity === 'high') dotColor = 'bg-rose-500';
+
+                        return (
+                          <div key={idx} className="flex items-center justify-between bg-zinc-950/45 p-1 rounded border border-zinc-850 text-zinc-300">
+                            <span className="flex items-center gap-1 truncate max-w-[100px]">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+                              {se.name}
+                            </span>
+                            <span className="text-zinc-550 shrink-0 text-[8px]">({se.frequency})</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Dynamic FDA/EFSA Label Design Box */}
             <div className="bg-zinc-900 p-2.5 rounded border border-zinc-800 text-[9px] font-sans flex flex-col gap-1.5">
               <div className="border-b border-zinc-800 pb-1 text-center font-bold text-zinc-300 uppercase tracking-wider text-[10px]">
@@ -901,7 +1075,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         {type !== 'ingredient' && (
           <div
             className="absolute left-[-6px] top-[50%] w-3 h-3 rounded-full bg-zinc-950 border-2 border-zinc-700 shadow-inner flex items-center justify-center"
-            title="Входной порт"
+            title={t('port_input') || 'Input Port'}
             style={{ transform: 'translateY(-50%)' }}
           >
             <div className="w-1 h-1 rounded-full bg-zinc-400" />
@@ -912,7 +1086,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         {type !== 'output' && (
           <div
             className="absolute right-[-6px] top-[50%] w-3 h-3 rounded-full bg-zinc-950 border-2 border-zinc-700 shadow-inner flex items-center justify-center"
-            title="Выходной порт"
+            title={t('port_output') || 'Output Port'}
             style={{ transform: 'translateY(-50%)' }}
           >
             <div className="w-1 h-1 rounded-full bg-zinc-400 hover:bg-indigo-400 transition-colors" />
@@ -925,6 +1099,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
   return (
     <div
       id={`node-card-${id}`}
+      data-node-type={type}
       style={{
         transform: `translate(${position.x}px, ${position.y}px)`,
         position: 'absolute',
@@ -969,7 +1144,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
       {type !== 'ingredient' && (
         <div
           className="absolute left-[-6px] top-[50%] w-3 h-3 rounded-full bg-zinc-950 border-2 border-zinc-700 shadow-inner flex items-center justify-center"
-          title="Входной порт"
+          title={t('port_input') || 'Input Port'}
           style={{ transform: 'translateY(-50%)' }}
         >
           <div className="w-1 h-1 rounded-full bg-zinc-400" />
@@ -980,7 +1155,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
       {type !== 'output' && (
         <div
           className="absolute right-[-6px] top-[50%] w-3 h-3 rounded-full bg-zinc-950 border-2 border-zinc-700 shadow-inner flex items-center justify-center"
-          title="Выходной порт"
+          title={t('port_output') || 'Output Port'}
           style={{ transform: 'translateY(-50%)' }}
         >
           <div className="w-1 h-1 rounded-full bg-zinc-400 hover:bg-indigo-400 transition-colors" />

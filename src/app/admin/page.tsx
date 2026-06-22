@@ -14,9 +14,13 @@ import {
   Beaker,
   UserCheck,
   CheckCircle2,
-  HardDrive
+  HardDrive,
+  Shield,
+  FileText
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/context/AuthContext";
+
 
 interface DbUser {
   _id: string;
@@ -31,8 +35,8 @@ interface DbRecipe {
   _id: string;
   userId: string;
   name: string;
-  nodes: any[];
-  connections: any[];
+  nodes: Record<string, unknown>[];
+  connections: Record<string, unknown>[];
   updatedAt?: string;
 }
 
@@ -48,7 +52,19 @@ interface DbIngredient {
   createdAt?: string;
 }
 
+interface DbAuditLog {
+  id: string;
+  userId: string | null;
+  email: string | null;
+  action: string;
+  details: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
 export default function AdminPage() {
+  const { status, user, logout } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -60,17 +76,13 @@ export default function AdminPage() {
   const [ingredients, setIngredients] = useState<DbIngredient[]>([]);
   
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "recipes" | "ingredients">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "recipes" | "ingredients" | "audit">("users");
   const [selectedRecipe, setSelectedRecipe] = useState<DbRecipe | null>(null);
-
-  // Check if already authenticated on client side
-  useEffect(() => {
-    const token = localStorage.getItem("pharmnode_admin_auth_token");
-    if (token) {
-      setIsAuthorized(true);
-      fetchDatabaseData(token);
-    }
-  }, []);
+  
+  const [auditLogs, setAuditLogs] = useState<DbAuditLog[]>([]);
+  const [auditLoggingEnabled, setAuditLoggingEnabled] = useState(false);
+  const [updatingSettings, setUpdatingSettings] = useState(false);
+  const [selectedAuditLog, setSelectedAuditLog] = useState<DbAuditLog | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,42 +99,41 @@ export default function AdminPage() {
       if (response.ok) {
         localStorage.setItem("pharmnode_admin_auth_token", authHeader);
         setIsAuthorized(true);
-        const data = await response.json();
-        setDbStatus(data.databaseOnline);
-        setUsers(data.users || []);
-        setRecipes(data.recipes || []);
-        setIngredients(data.customIngredients || []);
+        await fetchDatabaseData(authHeader);
       } else {
-        setLoginError("Неверный логин или пароль администратора.");
+        setLoginError("Invalid administrator username or password.");
       }
     } catch (err) {
-      setLoginError("Ошибка авторизации на сервере или соединения с базой.");
+      setLoginError("Authentication error or database connection failure.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem("pharmnode_admin_auth_token");
     setIsAuthorized(false);
     setUsers([]);
     setRecipes([]);
     setIngredients([]);
+    setAuditLogs([]);
+    setSelectedAuditLog(null);
+    if (status === "authenticated") {
+      await logout();
+    }
   };
 
   const fetchDatabaseData = async (token?: string) => {
     setLoading(true);
     try {
       const authHeader = token || localStorage.getItem("pharmnode_admin_auth_token");
-      if (!authHeader) {
-        handleLogout();
-        return;
+      const headers: Record<string, string> = {};
+      if (authHeader) {
+        headers["Authorization"] = authHeader;
       }
       
       const response = await fetch("/api/admin/data", {
-        headers: {
-          "Authorization": authHeader
-        }
+        headers
       });
 
       if (response.ok) {
@@ -131,8 +142,30 @@ export default function AdminPage() {
         setUsers(data.users || []);
         setRecipes(data.recipes || []);
         setIngredients(data.customIngredients || []);
+
+        // Fetch settings
+        try {
+          const settingsRes = await fetch("/api/admin/settings", { headers });
+          if (settingsRes.ok) {
+            const settingsData = await settingsRes.json();
+            setAuditLoggingEnabled(settingsData.auditLoggingEnabled || false);
+          }
+        } catch (err) {
+          console.error("Failed to load admin settings:", err);
+        }
+
+        // Fetch audit logs
+        try {
+          const auditRes = await fetch("/api/admin/audit-logs", { headers });
+          if (auditRes.ok) {
+            const auditData = await auditRes.json();
+            setAuditLogs(auditData.auditLogs || []);
+          }
+        } catch (err) {
+          console.error("Failed to load audit logs:", err);
+        }
       } else {
-        setLoginError("Ошибка авторизации на сервере. Пожалуйста, войдите снова.");
+        setLoginError("Server authorization failed. Please log in again.");
         handleLogout();
       }
     } catch (err) {
@@ -141,6 +174,115 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
+
+  const handleToggleAuditLogging = async () => {
+    setUpdatingSettings(true);
+    try {
+      const authHeader = localStorage.getItem("pharmnode_admin_auth_token");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      if (authHeader) {
+        headers["Authorization"] = authHeader;
+      }
+      
+      const newValue = !auditLoggingEnabled;
+      const response = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          key: "audit_logging_enabled",
+          value: newValue
+        })
+      });
+
+      if (response.ok) {
+        setAuditLoggingEnabled(newValue);
+      } else {
+        alert("Failed to update audit logging configuration.");
+      }
+    } catch (err) {
+      console.error("Error updating settings:", err);
+      alert("An error occurred while updating settings.");
+    } finally {
+      setUpdatingSettings(false);
+    }
+  };
+
+  // Check if already authenticated on client side
+  useEffect(() => {
+    const token = localStorage.getItem("pharmnode_admin_auth_token");
+    if (token) {
+      setTimeout(() => {
+        setIsAuthorized(true);
+        fetchDatabaseData(token);
+      }, 0);
+    } else if (status === "authenticated" && user?.email === "admin@pharmnode.com") {
+      setTimeout(() => {
+        setIsAuthorized(true);
+        fetchDatabaseData();
+      }, 0);
+    }
+  }, [status, user]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-indigo-500 theme-element">
+        <div className="w-8 h-8 rounded-full border border-zinc-800 border-t-indigo-500 animate-spin mb-4" />
+        <span className="text-xs text-zinc-400 font-mono tracking-widest uppercase">Checking security configuration...</span>
+      </div>
+    );
+  }
+
+  // 403 Forbidden Screen if user is logged in but is not admin
+  if (status === "authenticated" && user?.email !== "admin@pharmnode.com") {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans theme-element relative overflow-hidden items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[radial-gradient(var(--grid-dot)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none opacity-30" />
+        
+        <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl relative text-center">
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-red-500 via-rose-600 to-amber-500 rounded-t-2xl" />
+          
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 mb-3 border border-red-500/20 animate-pulse">
+              <AlertCircle size={24} />
+            </div>
+            <h2 className="text-xl font-bold text-zinc-100 font-sans">403 - Access Denied</h2>
+            <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
+              You do not have the required administrative permissions to access the PharmNode System Core.
+            </p>
+          </div>
+
+          <div className="bg-zinc-950/60 border border-zinc-850 p-4 rounded-xl text-left text-xs font-mono text-zinc-400 mb-6 leading-relaxed">
+            <div className="flex justify-between border-b border-zinc-900 pb-1.5 mb-1.5">
+              <span>Active Account:</span>
+              <span className="text-zinc-200">{user?.name || "User"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Email:</span>
+              <span className="text-zinc-300">{user?.email}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            <Link
+              href="/projects"
+              className="w-full py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-350 hover:text-zinc-150 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <ArrowLeft size={14} />
+              Return to Projects
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 text-red-450 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              Logout / Switch Account
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthorized) {
     return (
@@ -154,13 +296,13 @@ export default function AdminPage() {
             <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-3 border border-indigo-500/20">
               <Lock size={20} />
             </div>
-            <h2 className="text-xl font-bold text-zinc-100">Вход в панель администратора</h2>
-            <p className="text-xs text-zinc-500 mt-1">Требуется авторизация в системе PharmNode</p>
+            <h2 className="text-xl font-bold text-zinc-100">Administrator Panel Login</h2>
+            <p className="text-xs text-zinc-500 mt-1">Authorized access only. Log in with admin credentials.</p>
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div>
-              <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Имя пользователя</label>
+              <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Username</label>
               <input
                 type="text"
                 required
@@ -172,7 +314,7 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Пароль</label>
+              <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Password</label>
               <input
                 type="password"
                 required
@@ -194,18 +336,19 @@ export default function AdminPage() {
               type="submit"
               className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 cursor-pointer mt-2"
             >
-              Подтвердить вход
+              Confirm Login
             </button>
           </form>
 
           <Link href="/" className="mt-6 flex items-center justify-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
             <ArrowLeft size={13} />
-            Вернуться на главную
+            Back to Home
           </Link>
         </div>
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans theme-element relative overflow-hidden">
@@ -233,7 +376,7 @@ export default function AdminPage() {
           
           <button
             onClick={() => fetchDatabaseData()}
-            title="Обновить базы данных"
+            title="Refresh Databases"
             className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -243,7 +386,7 @@ export default function AdminPage() {
             onClick={handleLogout}
             className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
           >
-            Выйти
+            Logout
           </button>
         </div>
       </header>
@@ -277,7 +420,7 @@ export default function AdminPage() {
               <Users size={18} />
             </div>
             <div>
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Всего Пользователей</span>
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Total Users</span>
               <span className="text-lg font-extrabold font-mono text-zinc-200 block leading-tight">
                 {users.length}
               </span>
@@ -290,7 +433,7 @@ export default function AdminPage() {
               <FileCode size={18} />
             </div>
             <div>
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Сохранено Рецептур</span>
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Saved Recipes</span>
               <span className="text-lg font-extrabold font-mono text-zinc-200 block leading-tight">
                 {recipes.length}
               </span>
@@ -303,7 +446,7 @@ export default function AdminPage() {
               <Beaker size={18} />
             </div>
             <div>
-              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Свой ингредиенты</span>
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Custom Ingredients</span>
               <span className="text-lg font-extrabold font-mono text-zinc-200 block leading-tight">
                 {ingredients.length}
               </span>
@@ -343,6 +486,16 @@ export default function AdminPage() {
           >
             CustomIngredients ({ingredients.length})
           </button>
+          <button
+            onClick={() => setActiveTab("audit")}
+            className={`px-6 py-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+              activeTab === "audit" 
+                ? "border-indigo-500 text-indigo-400" 
+                : "border-transparent text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            Audit Logs / Логи аудита ({auditLogs.length})
+          </button>
         </div>
 
         {/* Collections Viewer Panel */}
@@ -368,7 +521,7 @@ export default function AdminPage() {
                   <tbody className="divide-y divide-zinc-900">
                     {users.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-zinc-500 italic">Пользователи не найдены в базе данных</td>
+                        <td colSpan={5} className="p-8 text-center text-zinc-500 italic">No users found in database</td>
                       </tr>
                     ) : (
                       users.map((u) => (
@@ -427,7 +580,7 @@ export default function AdminPage() {
                     <tbody className="divide-y divide-zinc-900">
                       {recipes.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="p-8 text-center text-zinc-500 italic">Рецепты не найдены в базе данных</td>
+                          <td colSpan={4} className="p-8 text-center text-zinc-500 italic">No recipes found in database</td>
                         </tr>
                       ) : (
                         recipes.map((r) => (
@@ -445,7 +598,7 @@ export default function AdminPage() {
                             <td className="p-4 font-mono text-[10px] text-zinc-500 select-all">{r.userId}</td>
                             <td className="p-4 text-zinc-400">
                               <span className="block font-mono text-[10px]">
-                                {r.nodes?.length || 0} нод • {r.connections?.length || 0} связей
+                                {r.nodes?.length || 0} nodes • {r.connections?.length || 0} connections
                               </span>
                             </td>
                             <td className="p-4 text-zinc-500 font-mono">
@@ -464,7 +617,7 @@ export default function AdminPage() {
                 <div className="flex justify-between items-center pb-2 border-b border-zinc-800/80">
                   <h3 className="font-bold text-xs text-zinc-300 flex items-center gap-1.5">
                     <FileCode size={14} className="text-indigo-400" />
-                    Редактор Схемы (JSON Schema Viewer)
+                    Recipe Canvas Structure (JSON Schema)
                   </h3>
                   {selectedRecipe && (
                     <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-mono">
@@ -490,13 +643,13 @@ export default function AdminPage() {
                 ) : (
                   <div className="py-24 text-center text-zinc-500 italic text-xs flex flex-col items-center gap-2">
                     <Database size={20} className="text-zinc-700" />
-                    <span>Выберите рецептуру слева для просмотра структуры холста</span>
+                    <span>Select a recipe formulation from the left to view canvas node structure</span>
                   </div>
                 )}
               </div>
 
             </div>
-          ) : (
+          ) : activeTab === "ingredients" ? (
             /* Custom Ingredients Table */
             <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
@@ -514,7 +667,7 @@ export default function AdminPage() {
                   <tbody className="divide-y divide-zinc-900">
                     {ingredients.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-zinc-500 italic">Пользовательские ингредиенты не обнаружены</td>
+                        <td colSpan={6} className="p-8 text-center text-zinc-500 italic">No custom ingredients found in database</td>
                       </tr>
                     ) : (
                       ingredients.map((ing) => (
@@ -526,7 +679,7 @@ export default function AdminPage() {
                               {ing.role}
                             </span>
                           </td>
-                          <td className="p-4 text-zinc-300 font-mono">
+                          <td className="p-4 text-zinc-350 font-mono">
                             {ing.looseBulkDensity.toFixed(2)} → {ing.tappedBulkDensity.toFixed(2)} g/mL
                           </td>
                           <td className="p-4 text-emerald-400 font-bold font-mono">
@@ -540,6 +693,153 @@ export default function AdminPage() {
                 </table>
               </div>
             </div>
+          ) : (
+            /* Audit Logs Panel */
+            <div className="flex flex-col gap-6">
+              {/* Compliance settings card */}
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Shield size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-zinc-200">
+                      B2B Security & System Audit Logs
+                    </h3>
+                    <p className="text-xs text-zinc-500 mt-1 max-w-xl leading-relaxed">
+                      При включенном аудите система записывает ключевые события безопасности: авторизацию, изменения подписок, создание/экспорт/удаление рецептур, а также IP-адреса и устройства пользователей.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${auditLoggingEnabled ? "text-indigo-400 animate-pulse" : "text-zinc-500"}`}>
+                    {auditLoggingEnabled ? "Auditing Active" : "Auditing Disabled"}
+                  </span>
+                  
+                  <button
+                    onClick={handleToggleAuditLogging}
+                    disabled={updatingSettings}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      auditLoggingEnabled ? "bg-indigo-500" : "bg-zinc-800"
+                    } ${updatingSettings ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        auditLoggingEnabled ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Logs table and detail viewer split */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                {/* Left Audit Logs List */}
+                <div className="lg:col-span-7 bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto max-h-[500px]">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-zinc-950/80 border-b border-zinc-800 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                          <th className="p-4">Timestamp</th>
+                          <th className="p-4">Action</th>
+                          <th className="p-4">User Email</th>
+                          <th className="p-4">IP Address</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-900">
+                        {auditLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="p-8 text-center text-zinc-500 italic">No audit logs found in database</td>
+                          </tr>
+                        ) : (
+                          auditLogs.map((log) => (
+                            <tr 
+                              key={log.id} 
+                              onClick={() => setSelectedAuditLog(log)}
+                              className={`hover:bg-white/5 transition-colors cursor-pointer ${
+                                selectedAuditLog?.id === log.id ? "bg-indigo-500/5 border-l-2 border-l-indigo-500" : ""
+                              }`}
+                            >
+                              <td className="p-4 text-zinc-400 font-mono text-[10px]">
+                                {new Date(log.createdAt).toLocaleString()}
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
+                                  log.action.includes("delete") || log.action.includes("revoke")
+                                    ? "bg-rose-500/10 text-rose-450 border-rose-500/20"
+                                    : log.action.includes("save") || log.action.includes("create")
+                                    ? "bg-emerald-500/10 text-emerald-450 border-emerald-500/20"
+                                    : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                }`}>
+                                  {log.action}
+                                </span>
+                              </td>
+                              <td className="p-4 font-mono text-[10px] text-zinc-350 select-all">{log.email || "Guest"}</td>
+                              <td className="p-4 font-mono text-[10px] text-zinc-500">{log.ipAddress || "N/A"}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Right Log Inspector */}
+                <div className="lg:col-span-5 bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 flex flex-col gap-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-zinc-800/80">
+                    <h3 className="font-bold text-xs text-zinc-300 flex items-center gap-1.5">
+                      <FileText size={14} className="text-indigo-400" />
+                      Log Event Metadata Inspector
+                    </h3>
+                  </div>
+
+                  {selectedAuditLog ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="bg-zinc-950/60 border border-zinc-850 p-3.5 rounded-lg text-xs leading-relaxed flex flex-col gap-2 font-mono">
+                        <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+                          <span className="text-zinc-550">Event ID:</span>
+                          <span className="text-zinc-300 select-all">{selectedAuditLog.id}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+                          <span className="text-zinc-550">User ID:</span>
+                          <span className="text-zinc-300 select-all">{selectedAuditLog.userId || "N/A"}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+                          <span className="text-zinc-550">Email:</span>
+                          <span className="text-indigo-400 select-all">{selectedAuditLog.email || "Guest"}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+                          <span className="text-zinc-550">Action:</span>
+                          <span className="text-emerald-450 font-bold">{selectedAuditLog.action}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+                          <span className="text-zinc-550">IP Address:</span>
+                          <span className="text-zinc-350">{selectedAuditLog.ipAddress || "N/A"}</span>
+                        </div>
+                        <div className="flex flex-col border-b border-zinc-900 pb-1.5">
+                          <span className="text-zinc-550 mb-0.5">User-Agent:</span>
+                          <span className="text-zinc-400 text-[10px] break-all leading-normal">{selectedAuditLog.userAgent || "N/A"}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-zinc-550 mb-0.5">Details/Payload:</span>
+                          <span className="text-zinc-300 font-sans text-xs bg-zinc-950/90 p-2 border border-zinc-900 rounded select-text whitespace-pre-wrap leading-normal">
+                            {selectedAuditLog.details || "No details provided"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-24 text-center text-zinc-500 italic text-xs flex flex-col items-center gap-2">
+                      <Shield size={20} className="text-zinc-750" />
+                      <span>Select a log entry from the list to view compliance payload and details</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
           )}
         </div>
 
@@ -547,15 +847,20 @@ export default function AdminPage() {
 
       {/* Footer */}
       <footer className="border-t border-zinc-900 py-6 px-6 bg-zinc-950/80 backdrop-blur-md text-xs text-zinc-500 text-center mt-auto theme-element">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Beaker size={14} className="text-zinc-500" />
-            <span>PharmNode Admin Console &copy; 2026</span>
+        <div className="max-w-7xl mx-auto flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <Beaker size={14} className="text-zinc-500" />
+              <span>PharmNode Admin Console &copy; 2026</span>
+            </div>
+            <Link href="/configurator" className="text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 font-semibold">
+              Return to Studio
+              <ArrowLeft size={12} className="rotate-180" />
+            </Link>
           </div>
-          <Link href="/configurator" className="text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 font-semibold">
-            Вернуться в студию
-            <ArrowLeft size={12} className="rotate-180" />
-          </Link>
+          <div className="text-[10px] text-zinc-650 border-t border-zinc-900 pt-3 text-center leading-relaxed">
+            Дисклеймер: Алгоритмы и расчеты платформы носят вычислительный характер и не заменяют сертифицированные лабораторные испытания. Платформа не несет юридической ответственности за произведенные физические партии.
+          </div>
         </div>
       </footer>
     </div>

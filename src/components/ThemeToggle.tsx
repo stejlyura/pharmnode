@@ -10,22 +10,26 @@ export const ThemeToggle: React.FC = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
-    setMounted(true);
     const savedTheme = localStorage.getItem("pharmnode-theme") as "light" | "dark" | null;
+    let initialTheme: "light" | "dark" = "dark";
     if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.setAttribute("data-theme", savedTheme);
+      initialTheme = savedTheme;
     } else {
       // Check if root already has data-theme attribute set by layout blocking script
       const activeTheme = document.documentElement.getAttribute("data-theme") as "light" | "dark" | null;
       if (activeTheme) {
-        setTheme(activeTheme);
+        initialTheme = activeTheme;
       } else {
         const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        setTheme(systemTheme);
-        document.documentElement.setAttribute("data-theme", systemTheme);
+        initialTheme = systemTheme;
       }
     }
+
+    setTimeout(() => {
+      setTheme(initialTheme);
+      document.documentElement.setAttribute("data-theme", initialTheme);
+      setMounted(true);
+    }, 0);
   }, []);
 
   const toggleTheme = () => {

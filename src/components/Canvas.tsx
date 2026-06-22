@@ -16,12 +16,17 @@ import { Sidebar } from './Sidebar';
 import { CompatibilityMatrix } from './CompatibilityMatrix';
 import { BenefitsModal } from './BenefitsModal';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { WizardModal } from './WizardModal';
 import { MobileConfigurator } from './MobileConfigurator';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { trackEvent } from '@/lib/analytics';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
 
 export const Canvas: React.FC = () => {
-  const { user, status, login, changeTariff } = useAuth();
+  const { user, status, login, changeTariff, startSubscriptionPolling } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialRecipeId = searchParams.get('recipeId');
   const { t, locale } = useTranslation();
   const isMobile = useIsMobile();
@@ -51,7 +56,10 @@ export const Canvas: React.FC = () => {
     dilutionScale: '',
     dosageForm: '',
     applicationArea: '',
-    processingTech: ''
+    processingTech: '',
+    effects: '',
+    contraindications: '',
+    sideEffects: [] as { name: string; frequency: string; severity: 'low' | 'medium' | 'high' }[]
   });
 
   const [regForm, setRegForm] = useState({
@@ -80,9 +88,37 @@ export const Canvas: React.FC = () => {
     setCanvasState
   } = useNodeEditor('hobby', allIngredients, initialRecipeId);
 
+  // Redirect to projects list if no recipeId is specified
+  React.useEffect(() => {
+    if (!initialRecipeId) {
+      router.push('/projects');
+    }
+  }, [initialRecipeId, router]);
+
   // Fetch initial recipe if recipeId is provided
   React.useEffect(() => {
     if (!initialRecipeId) return;
+
+    if (isMockUser) {
+      // Load from localStorage
+      const storedKey = `pharmnode_recipes_mock_${user?.id}`;
+      const stored = localStorage.getItem(storedKey);
+      if (stored) {
+        try {
+          const recipes = JSON.parse(stored) as { id: string; name: string; nodes: EditorNode[]; connections: { id: string; source: string; target: string }[] }[];
+          const found = recipes.find((r) => r.id === initialRecipeId);
+          if (found) {
+            setCanvasState(found.nodes, found.connections);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse mock recipes from localStorage", e);
+        }
+      }
+      console.error("Mock recipe not found in localStorage:", initialRecipeId);
+      return;
+    }
+
     async function fetchRecipe() {
       try {
         const res = await fetch(`/api/recipes?id=${initialRecipeId}`);
@@ -95,7 +131,7 @@ export const Canvas: React.FC = () => {
       }
     }
     fetchRecipe();
-  }, [initialRecipeId, setCanvasState]);
+  }, [initialRecipeId, isMockUser, user?.id, setCanvasState]);
 
   // Sync canvas editor's tariff with active user's tariff
   React.useEffect(() => {
@@ -104,17 +140,19 @@ export const Canvas: React.FC = () => {
     }
   }, [user?.tariff, setTariff]);
 
-  // Check for Stripe checkout success/cancelled query params
+  // Check for Paddle checkout success/cancelled query params
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const checkoutStatus = params.get('checkout');
-      const plan = params.get('plan') as any;
+      const plan = params.get('plan') as "hobby" | "professional" | null;
 
       if (checkoutStatus === 'success' && plan) {
         setTariff(plan);
         if (user) {
           changeTariff(plan);
+          // Start background polling to check if payment webhook completed and active session synchronized
+          startSubscriptionPolling();
         }
         alert(t('canvas_checkout_success').replace('{plan}', plan.toUpperCase()));
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -123,7 +161,7 @@ export const Canvas: React.FC = () => {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
-  }, [user, changeTariff, setTariff]);
+  }, [user, changeTariff, setTariff, startSubscriptionPolling]);
 
   // Dragging state
   const dragInfo = useRef<{
@@ -144,9 +182,120 @@ export const Canvas: React.FC = () => {
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showBenefitsModal, setShowBenefitsModal] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [limitError, setLimitError] = useState<string | null>(null);
   const [scale, setScale] = useState(1.0);
+
+  const startOnboardingTour = useCallback(() => {
+    const isRu = locale === 'ru-RU';
+    
+    const driverObj = driver({
+      showProgress: true,
+      allowClose: true,
+      nextBtnText: isRu ? 'Далее →' : 'Next →',
+      prevBtnText: isRu ? '← Назад' : '← Prev',
+      doneBtnText: isRu ? 'Завершить' : 'Done',
+      steps: [
+        {
+          element: undefined,
+          popover: {
+            title: isRu ? 'Добро пожаловать в PharmNode!' : 'Welcome to PharmNode!',
+            description: isRu 
+              ? 'Давайте пройдем короткий интерактивный тур, чтобы узнать, как проектировать рецептуры и симулировать производство таблеток.'
+              : 'Let\'s take a quick 1-minute interactive tour to learn how to design formulations and simulate tablet manufacturing.',
+            side: 'bottom',
+            align: 'start'
+          }
+        },
+        {
+          element: '#sidebar-container',
+          popover: {
+            title: isRu ? 'Библиотека ингредиентов' : 'Ingredients Library',
+            description: isRu
+              ? 'Здесь содержатся активные вещества (АФС) и вспомогательные компоненты. Перетаскивайте их на холст или кликайте для добавления.'
+              : 'Access pre-populated APIs, excipients, fillers, and binders. Drag components onto the canvas or click them to add.',
+            side: 'right',
+            align: 'start'
+          },
+          onHighlightStarted: () => {
+            setIsSidebarOpen(true);
+          }
+        },
+        {
+          element: '#canvas-workspace',
+          popover: {
+            title: isRu ? 'Рабочая область холста' : 'Node Canvas Workspace',
+            description: isRu
+              ? 'Это интерактивное пространство для проектирования. Соединяйте ноды линиями, перемещайте их и регулируйте проценты ввода.'
+              : 'Connect ingredients, manage positions, and adjust input values to run real-time mathematical simulations.',
+            side: 'bottom',
+            align: 'start'
+          }
+        },
+        {
+          element: '[data-node-type="blending"]',
+          popover: {
+            title: isRu ? 'Смеситель сырья' : 'Blending Node',
+            description: isRu
+              ? 'Объединяет все входящие ингредиенты и рассчитывает средние свойства порошка. Здесь же работает матрица химической совместимости.'
+              : 'Gathers inputs and evaluates raw blend parameters. Real-time chemical compatibility matrix runs here to detect material conflicts.',
+            side: 'right',
+            align: 'start'
+          }
+        },
+        {
+          element: '[data-node-type="press"]',
+          popover: {
+            title: isRu ? 'Симулятор таблетпресса' : 'Tablet Press Simulator',
+            description: isRu
+              ? 'Задает параметры матрицы пуансона (диаметр и глубину), рассчитывая пористость, объем и рекомендуемый вес таблетки.'
+              : 'Configure equipment parameters here, such as die diameter and depth, to simulate tablet geometries and porosity index.',
+            side: 'right',
+            align: 'start'
+          }
+        },
+        {
+          element: '[data-node-type="output"]',
+          popover: {
+            title: isRu ? 'Выпуск и экономика партии' : 'Batch Yield & Economics',
+            description: isRu
+              ? 'Показывает конечные расчеты: размер партии в таблетках, общую массу сырья, себестоимость и цену таблетки.'
+              : 'Calculates total tablet yields, batch weights, and unit pricing analysis based on active ingredient dose targets.',
+            side: 'left',
+            align: 'start'
+          }
+        },
+        {
+          element: '#header-wizard-btn',
+          popover: {
+            title: isRu ? 'Мастер рецептур' : 'Smart Design Helpers',
+            description: isRu
+              ? 'Нажмите на Мастер для быстрой загрузки стандартных моделей рецептур. Рядом находятся Матрица совместимости и выбор языков.'
+              : 'Use the Formulation Wizard to instantly load pre-modeled configurations, or click the Compatibility Matrix to inspect conflicts.',
+            side: 'bottom',
+            align: 'start'
+          }
+        }
+      ]
+    });
+
+    driverObj.drive();
+    localStorage.setItem('pharmnode-onboarding-done', 'true');
+  }, [locale]);
+
+  // Auto-launch tour for new sessions
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const done = localStorage.getItem('pharmnode-onboarding-done');
+      if (!done) {
+        const timer = setTimeout(() => {
+          startOnboardingTour();
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [startOnboardingTour]);
 
   // Handle wheel events for zooming (trackpad pinch-to-zoom uses Ctrl + wheel)
   React.useEffect(() => {
@@ -297,6 +446,71 @@ export const Canvas: React.FC = () => {
     handleAddIngredientAt(id);
   }, [handleAddIngredientAt]);
 
+  const handleGenerateFromWizard = useCallback((generatedIngs: { id: number | string; name: string; role: string; percentage: number }[], dosageForm: string) => {
+    // 1. Build nodes and connections
+    const newNodes = generatedIngs.map((ing, i) => ({
+      id: `node-ing-${i + 1}`,
+      type: 'ingredient' as const,
+      position: { x: 100, y: 50 + i * 200 },
+      data: {
+        ingredientId: ing.id,
+        percentage: ing.percentage
+      }
+    }));
+
+    const blendingY = Math.max(250, 50 + ((generatedIngs.length - 1) * 200) / 2);
+
+    const generatedNodes = [
+      ...newNodes,
+      {
+        id: "node-blending",
+        type: "blending" as const,
+        position: { x: 450, y: blendingY },
+        data: {}
+      },
+      {
+        id: "node-press",
+        type: "press" as const,
+        position: { x: 750, y: blendingY },
+        data: { diameterCm: 0.3, depthCm: 0.5, dosageForm }
+      },
+      {
+        id: "node-output",
+        type: "output" as const,
+        position: { x: 1050, y: blendingY },
+        data: { activeRawWeightG: 10 }
+      }
+    ];
+
+    const generatedConnections = [
+      ...newNodes.map((node, i) => ({
+        id: `conn-ing-${i + 1}`,
+        source: node.id,
+        target: 'node-blending'
+      })),
+      { id: `conn-blending-press`, source: 'node-blending', target: 'node-press' },
+      { id: `conn-press-output`, source: 'node-press', target: 'node-output' }
+    ];
+
+    // 2. Reset canvas state
+    setCanvasState(generatedNodes, generatedConnections);
+
+    // Track wizard recipe creation
+    trackEvent('project_created', {
+      recipeId: 'wizard-generated',
+      name: `Wizard Formula (${dosageForm})`,
+      ingredientCount: generatedIngs.length,
+      dosageForm,
+      locale
+    });
+
+    // 3. Show success alert
+    alert(t("wizard_success"));
+
+    // 4. Close modal
+    setIsWizardOpen(false);
+  }, [setCanvasState, t, locale]);
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.types.includes('application/pharmnode-node')) {
@@ -362,8 +576,9 @@ export const Canvas: React.FC = () => {
       await login(provider);
       setIsAuthModalOpen(false);
       setAuthError(null);
-    } catch (err: any) {
-      setAuthError(err.message || t('canvas_login_error'));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('canvas_login_error');
+      setAuthError(msg);
     }
   };
 
@@ -378,8 +593,9 @@ export const Canvas: React.FC = () => {
       await login("mock-google", { name: regForm.name.trim(), email: regForm.email.trim(), tariff: regForm.tariff });
       setIsAuthModalOpen(false);
       setRegForm({ name: '', email: '', tariff: 'hobby' });
-    } catch (err: any) {
-      setAuthError(err.message || t('canvas_reg_error'));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('canvas_reg_error');
+      setAuthError(msg);
     }
   };
 
@@ -401,6 +617,15 @@ export const Canvas: React.FC = () => {
 
     const chemClassId = Number(addForm.chemicalClassId);
 
+    const parsedEffects = addForm.effects
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    const parsedContraindications = addForm.contraindications
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
     const newIngredient: Omit<Ingredient, 'id'> = {
       name: addForm.name.trim(),
       role: addForm.role,
@@ -416,7 +641,10 @@ export const Canvas: React.FC = () => {
       dilutionScale: addForm.dilutionScale.trim() || undefined,
       dosageForm: addForm.dosageForm.trim() || undefined,
       applicationArea: addForm.applicationArea.trim() || undefined,
-      processingTech: addForm.processingTech.trim() || undefined
+      processingTech: addForm.processingTech.trim() || undefined,
+      effects: parsedEffects,
+      contraindications: parsedContraindications,
+      sideEffects: addForm.sideEffects
     };
 
     try {
@@ -461,13 +689,23 @@ export const Canvas: React.FC = () => {
           dilutionScale: '',
           dosageForm: '',
           applicationArea: '',
-          processingTech: ''
+          processingTech: '',
+          effects: '',
+          contraindications: '',
+          sideEffects: []
         });
       } else {
+        // Redirect to premium paywall on tariff limit exceeded
+        if (data.code === "TARIFF_LIMIT_REACHED") {
+          setIsAddModalOpen(false);
+          router.push("/premium-required");
+          return;
+        }
         setAddError(data.error || t("canvas_save_error"));
       }
-    } catch (err: any) {
-      setAddError(err.message || t("canvas_network_error"));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t("canvas_network_error");
+      setAddError(msg);
     }
   };
 
@@ -585,7 +823,7 @@ export const Canvas: React.FC = () => {
                     <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_role_label')} *</label>
                     <select
                       value={addForm.role}
-                      onChange={(e) => setAddForm(prev => ({ ...prev, role: e.target.value as any }))}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, role: e.target.value as IngredientRole }))}
                       className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
                     >
                       <option value="active">{t('add_role_active')}</option>
@@ -761,6 +999,104 @@ export const Canvas: React.FC = () => {
                           className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
                         />
                       </div>
+                      
+                      <div className="col-span-1 md:col-span-2 border-t border-zinc-900 pt-3 mt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                              {t('add_effects_label')}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={t('add_effects_placeholder')}
+                              value={addForm.effects}
+                              onChange={(e) => setAddForm(prev => ({ ...prev, effects: e.target.value }))}
+                              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                              {t('add_contraindications_label')}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={t('add_contraindications_placeholder')}
+                              value={addForm.contraindications}
+                              onChange={(e) => setAddForm(prev => ({ ...prev, contraindications: e.target.value }))}
+                              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="col-span-1 md:col-span-2 border-t border-zinc-900 pt-3 mt-1">
+                        <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">
+                          {t('add_side_effects_title')}
+                        </h4>
+                        <div className="flex flex-col gap-2.5">
+                          {addForm.sideEffects.map((se, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-zinc-900/40 p-2 rounded-lg border border-zinc-900">
+                              <input
+                                type="text"
+                                placeholder={t('add_side_effect_name')}
+                                value={se.name}
+                                onChange={(e) => {
+                                  const newSE = [...addForm.sideEffects];
+                                  newSE[idx].name = e.target.value;
+                                  setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-200 rounded text-xs focus:outline-none focus:border-indigo-500"
+                              />
+                              <input
+                                type="text"
+                                placeholder={t('add_side_effect_freq')}
+                                value={se.frequency}
+                                onChange={(e) => {
+                                  const newSE = [...addForm.sideEffects];
+                                  newSE[idx].frequency = e.target.value;
+                                  setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                                }}
+                                className="w-24 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-200 rounded text-xs focus:outline-none focus:border-indigo-500"
+                              />
+                              <select
+                                value={se.severity}
+                                onChange={(e) => {
+                                  const newSE = [...addForm.sideEffects];
+                                  newSE[idx].severity = e.target.value as 'low' | 'medium' | 'high';
+                                  setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                                }}
+                                className="bg-zinc-900 border border-zinc-800 text-zinc-200 rounded text-xs px-2 py-1.5 focus:outline-none"
+                              >
+                                <option value="low">{t('card_severity_low')}</option>
+                                <option value="medium">{t('card_severity_medium')}</option>
+                                <option value="high">{t('card_severity_high')}</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newSE = addForm.sideEffects.filter((_, sIdx) => sIdx !== idx);
+                                  setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                                }}
+                                className="px-2 py-1 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded text-[10px] font-bold cursor-pointer"
+                              >
+                                {t('add_btn_remove_side_effect')}
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddForm(prev => ({
+                                ...prev,
+                                sideEffects: [...prev.sideEffects, { name: '', frequency: '', severity: 'low' }]
+                              }));
+                            }}
+                            className="self-start px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/20 rounded text-xs font-bold cursor-pointer"
+                          >
+                            {t('add_btn_add_side_effect')}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -822,6 +1158,8 @@ export const Canvas: React.FC = () => {
         onOpenBenefits={() => {
           setShowBenefitsModal(true);
         }}
+        onOpenWizard={() => setIsWizardOpen(true)}
+        onStartTour={startOnboardingTour}
       />
 
       {/* Split Pane: Sidebar & Workspace Canvas */}
@@ -838,6 +1176,7 @@ export const Canvas: React.FC = () => {
 
         {/* Main Drag & Drop Workspace */}
         <main
+          id="canvas-workspace"
           ref={workspaceRef}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -1100,7 +1439,7 @@ export const Canvas: React.FC = () => {
                 <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('canvas_plan_label')}</label>
                 <select
                   value={regForm.tariff}
-                  onChange={(e) => setRegForm(prev => ({ ...prev, tariff: e.target.value as any }))}
+                  onChange={(e) => setRegForm(prev => ({ ...prev, tariff: e.target.value as "hobby" | "professional" }))}
                   className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
                 >
                   <option value="hobby">{t('canvas_hobby_option')}</option>
@@ -1164,7 +1503,7 @@ export const Canvas: React.FC = () => {
                   <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">{t('add_role_label')} *</label>
                   <select
                     value={addForm.role}
-                    onChange={(e) => setAddForm(prev => ({ ...prev, role: e.target.value as any }))}
+                    onChange={(e) => setAddForm(prev => ({ ...prev, role: e.target.value as IngredientRole }))}
                     className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
                   >
                     <option value="active">{t('add_role_active')}</option>
@@ -1340,6 +1679,104 @@ export const Canvas: React.FC = () => {
                         className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
                       />
                     </div>
+                    
+                    <div className="col-span-1 md:col-span-2 border-t border-zinc-900 pt-3 mt-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                            {t('add_effects_label')}
+                          </label>
+                          <input
+                            type="text"
+                            placeholder={t('add_effects_placeholder')}
+                            value={addForm.effects}
+                            onChange={(e) => setAddForm(prev => ({ ...prev, effects: e.target.value }))}
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                            {t('add_contraindications_label')}
+                          </label>
+                          <input
+                            type="text"
+                            placeholder={t('add_contraindications_placeholder')}
+                            value={addForm.contraindications}
+                            onChange={(e) => setAddForm(prev => ({ ...prev, contraindications: e.target.value }))}
+                            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="col-span-1 md:col-span-2 border-t border-zinc-900 pt-3 mt-1">
+                      <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">
+                        {t('add_side_effects_title')}
+                      </h4>
+                      <div className="flex flex-col gap-2.5">
+                        {addForm.sideEffects.map((se, idx) => (
+                          <div key={idx} className="flex gap-2 items-center bg-zinc-900/40 p-2 rounded-lg border border-zinc-900">
+                            <input
+                              type="text"
+                              placeholder={t('add_side_effect_name')}
+                              value={se.name}
+                              onChange={(e) => {
+                                const newSE = [...addForm.sideEffects];
+                                newSE[idx].name = e.target.value;
+                                setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                              }}
+                              className="flex-1 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-200 rounded text-xs focus:outline-none focus:border-indigo-500"
+                            />
+                            <input
+                              type="text"
+                              placeholder={t('add_side_effect_freq')}
+                              value={se.frequency}
+                              onChange={(e) => {
+                                const newSE = [...addForm.sideEffects];
+                                newSE[idx].frequency = e.target.value;
+                                setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                              }}
+                              className="w-24 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-200 rounded text-xs focus:outline-none focus:border-indigo-500"
+                            />
+                            <select
+                              value={se.severity}
+                              onChange={(e) => {
+                                const newSE = [...addForm.sideEffects];
+                                newSE[idx].severity = e.target.value as 'low' | 'medium' | 'high';
+                                setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                              }}
+                              className="bg-zinc-900 border border-zinc-800 text-zinc-200 rounded text-xs px-2 py-1.5 focus:outline-none"
+                            >
+                              <option value="low">{t('card_severity_low')}</option>
+                              <option value="medium">{t('card_severity_medium')}</option>
+                              <option value="high">{t('card_severity_high')}</option>
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newSE = addForm.sideEffects.filter((_, sIdx) => sIdx !== idx);
+                                setAddForm(prev => ({ ...prev, sideEffects: newSE }));
+                              }}
+                              className="px-2 py-1 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded text-[10px] font-bold cursor-pointer"
+                            >
+                              {t('add_btn_remove_side_effect')}
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddForm(prev => ({
+                              ...prev,
+                              sideEffects: [...prev.sideEffects, { name: '', frequency: '', severity: 'low' }]
+                            }));
+                          }}
+                          className="self-start px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/20 rounded text-xs font-bold cursor-pointer"
+                        >
+                          {t('add_btn_add_side_effect')}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1379,6 +1816,13 @@ export const Canvas: React.FC = () => {
         isOpen={showBenefitsModal}
         onClose={() => setShowBenefitsModal(false)}
         tariff="professional"
+      />
+
+      {/* Goal-Driven Wizard Modal */}
+      <WizardModal
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        onGenerate={handleGenerateFromWizard}
       />
     </div>
   );

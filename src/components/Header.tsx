@@ -16,8 +16,12 @@ import {
   Redo2,
   Sparkles,
   Sidebar,
-  Grid
+  Grid,
+  Settings,
+  HelpCircle
 } from "lucide-react";
+
+import { Ingredient } from "../types/pharm";
 
 interface HeaderProps {
   showCanvasControls?: boolean;
@@ -27,13 +31,15 @@ interface HeaderProps {
   canRedo?: boolean;
   showAddMenu?: boolean;
   setShowAddMenu?: (show: boolean) => void;
-  remainingIngredients?: any[];
+  remainingIngredients?: Ingredient[];
   handleAddIngredient?: (id: number) => void;
   tariff?: "hobby" | "professional";
   setTariff?: (tariff: "hobby" | "professional") => void;
   onOpenCompatibilityMatrix?: () => void;
   onOpenPricing?: (targetTariff?: "professional") => void;
   onOpenBenefits?: (tariff: "professional") => void;
+  onOpenWizard?: () => void;
+  onStartTour?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,7 +56,9 @@ export const Header: React.FC<HeaderProps> = ({
   setTariff,
   onOpenCompatibilityMatrix,
   onOpenPricing,
-  onOpenBenefits
+  onOpenBenefits,
+  onOpenWizard,
+  onStartTour
 }) => {
   const { user, status, login, logout, changeTariff } = useAuth();
   const { t, locale, setLocale } = useTranslation();
@@ -70,6 +78,9 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const handleTariffChange = (newTariff: "hobby" | "professional") => {
+    if (newTariff === "hobby" && activeTariff === "professional") {
+      return; // Block downgrading
+    }
     if (user) {
       changeTariff(newTariff);
     } else if (setTariff) {
@@ -140,12 +151,39 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Compatibility Matrix Button */}
           {onOpenCompatibilityMatrix && (
             <button
+              id="header-matrix-btn"
               onClick={onOpenCompatibilityMatrix}
               className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-zinc-200 transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer theme-element"
               title={t('header_open_matrix')}
             >
               <Grid size={15} />
               <span className="hidden sm:inline">{t('header_compatibility_guide')}</span>
+            </button>
+          )}
+
+          {/* Wizard Button */}
+          {onOpenWizard && (
+            <button
+              id="header-wizard-btn"
+              onClick={onOpenWizard}
+              className="p-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer theme-element shadow-[0_0_15px_rgba(99,102,241,0.1)]"
+              title={t('wizard_title')}
+            >
+              <Sparkles size={15} className="animate-pulse" />
+              <span className="hidden sm:inline">{t('wizard_launch_btn')}</span>
+            </button>
+          )}
+
+          {/* Tutorial Button */}
+          {onStartTour && (
+            <button
+              id="header-tour-btn"
+              onClick={onStartTour}
+              className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-zinc-200 transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer theme-element"
+              title={t('header_start_tour') || 'Start Onboarding Tour'}
+            >
+              <HelpCircle size={15} />
+              <span className="hidden md:inline">{t('header_tour') || 'Tutorial'}</span>
             </button>
           )}
         </div>
@@ -157,12 +195,16 @@ export const Header: React.FC<HeaderProps> = ({
         {(setTariff || user) && (
           <div className="flex items-center bg-zinc-900/60 rounded-lg p-0.5 border border-zinc-800">
             <button
+              disabled={activeTariff === "professional"}
               onClick={() => handleTariffChange("hobby")}
-              className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+              className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
                 activeTariff === "hobby"
                   ? "bg-zinc-800 text-indigo-400 shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  : activeTariff === "professional"
+                  ? "text-zinc-650 cursor-not-allowed opacity-50"
+                  : "text-zinc-400 hover:text-zinc-200 cursor-pointer"
               }`}
+              title={activeTariff === "professional" ? (locale === "ru-RU" ? "Нельзя переключиться на Hobby при активном Pro" : "Cannot downgrade to Hobby with active Pro") : undefined}
             >
               Hobby
             </button>
@@ -238,10 +280,16 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
                 
                 <button
+                  disabled={user.tariff === "professional"}
                   onClick={() => handleTariffChange("hobby")}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-zinc-800 transition-colors flex items-center justify-between cursor-pointer ${
-                    user.tariff === "hobby" ? "text-indigo-400 font-bold" : "text-zinc-300"
+                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                    user.tariff === "professional"
+                      ? "text-zinc-650 cursor-not-allowed opacity-50"
+                      : user.tariff === "hobby"
+                      ? "text-indigo-400 font-bold"
+                      : "text-zinc-300 hover:bg-zinc-800 cursor-pointer"
                   }`}
+                  title={user.tariff === "professional" ? (locale === "ru-RU" ? "Нельзя переключиться на Hobby при активном Pro" : "Cannot downgrade to Hobby with active Pro") : undefined}
                 >
                   <span>Hobby</span>
                   <span className="text-[9px] bg-zinc-850 px-1 py-0.2 rounded text-zinc-500">$0</span>
@@ -260,6 +308,14 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 <div className="border-t border-zinc-800/80 my-1 pt-1">
+                  <Link
+                    href="/settings"
+                    onClick={() => setShowProfileMenu(false)}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Settings size={12} className="text-zinc-500" />
+                    {t('header_settings') || 'Settings'}
+                  </Link>
                   <Link
                     href="/admin"
                     onClick={() => setShowProfileMenu(false)}

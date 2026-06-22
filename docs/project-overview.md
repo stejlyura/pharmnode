@@ -33,7 +33,7 @@ pharmnode/
 │   │   │   ├── ingredients/    # GET, POST ингредиенты
 │   │   │   ├── recipes/        # POST рецептуры
 │   │   │   ├── auth/           # NextAuth.js
-│   │   │   └── checkout/       # Stripe биллинг
+│   │   │   └── checkout/       # Paddle биллинг
 │   │   └── globals.css         # CSS переменные тем
 │   ├── components/
 │   │   ├── Canvas.tsx          # Холст с нодами

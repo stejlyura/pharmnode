@@ -48,3 +48,62 @@ export function validateOptionalString(value: unknown, maxLength = 255, fieldNam
   }
   return sanitized;
 }
+
+export function validateEffects(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  const arr = Array.isArray(value) ? value : JSON.parse(String(value) || "[]");
+  if (!Array.isArray(arr)) {
+    throw new Error("Эффекты должны быть представлены массивом строк");
+  }
+  return arr.map(item => {
+    const sanitized = sanitizeString(item);
+    if (sanitized.length > 100) {
+      throw new Error("Каждый эффект не должен превышать 100 символов");
+    }
+    return sanitized;
+  }).filter(Boolean);
+}
+
+export function validateContraindications(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  const arr = Array.isArray(value) ? value : JSON.parse(String(value) || "[]");
+  if (!Array.isArray(arr)) {
+    throw new Error("Противопоказания должны быть представлены массивом строк");
+  }
+  return arr.map(item => {
+    const sanitized = sanitizeString(item);
+    if (sanitized.length > 100) {
+      throw new Error("Каждое противопоказание не должно превышать 100 символов");
+    }
+    return sanitized;
+  }).filter(Boolean);
+}
+
+export function validateSideEffects(value: unknown): { name: string; frequency: string; severity: 'low' | 'medium' | 'high' }[] {
+  if (value === undefined || value === null) return [];
+  const arr = Array.isArray(value) ? value : JSON.parse(String(value) || "[]");
+  if (!Array.isArray(arr)) {
+    throw new Error("Побочные эффекты должны быть представлены массивом объектов");
+  }
+  return arr.map((item: unknown) => {
+    if (typeof item !== "object" || item === null) {
+      throw new Error("Побочный эффект должен быть объектом");
+    }
+    const record = item as Record<string, unknown>;
+    const name = sanitizeString(record.name);
+    const frequency = sanitizeString(record.frequency);
+    const severity = sanitizeString(record.severity).toLowerCase();
+    
+    if (!name) {
+      throw new Error("Название побочного эффекта обязательно");
+    }
+    if (!frequency) {
+      throw new Error("Частота побочного эффекта обязательна");
+    }
+    if (severity !== "low" && severity !== "medium" && severity !== "high") {
+      throw new Error("Степень тяжести побочного эффекта должна быть: low, medium или high");
+    }
+    
+    return { name, frequency, severity: severity as 'low' | 'medium' | 'high' };
+  });
+}

@@ -26,7 +26,7 @@ export interface UseRecipesResult {
     nodes: EditorNode[],
     connections: EditorConnection[],
     name?: string
-  ) => Promise<{ success: boolean; recipeId?: string }>;
+  ) => Promise<{ success: boolean; recipeId?: string; tariffLimitReached?: boolean }>;
   /** Delete a recipe by ID */
   deleteRecipe: (recipeId: string) => Promise<{ success: boolean }>;
 }
@@ -51,8 +51,18 @@ export function useRecipes(userId?: string | null, isMockUser?: boolean): UseRec
 
     try {
       if (isMockUser) {
-        // Mock users: no server recipes
-        setRecipes([]);
+        // Mock users: load from localStorage
+        const storedKey = `pharmnode_recipes_mock_${userId}`;
+        const stored = localStorage.getItem(storedKey);
+        if (stored) {
+          try {
+            setRecipes(JSON.parse(stored) as RecipeData[]);
+          } catch {
+            setRecipes([]);
+          }
+        } else {
+          setRecipes([]);
+        }
         return;
       }
 
@@ -92,16 +102,54 @@ export function useRecipes(userId?: string | null, isMockUser?: boolean): UseRec
       connections: EditorConnection[],
       name = "Autosaved Recipe",
       recipeId?: string
-    ): Promise<{ success: boolean; recipeId?: string }> => {
+    ): Promise<{ success: boolean; recipeId?: string; tariffLimitReached?: boolean }> => {
       if (!userId) return { success: false };
 
       if (isMockUser) {
-        // Mock mode: no-op success
-        return { success: true, recipeId: recipeId || "mock-recipe" };
+        const newId = recipeId || `mock-recipe-${Date.now()}`;
+        const newRecipe: RecipeData = {
+          id: newId,
+          userId,
+          name,
+          nodes,
+          connections,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const storedKey = `pharmnode_recipes_mock_${userId}`;
+        const stored = localStorage.getItem(storedKey);
+        let existing: RecipeData[] = stored ? JSON.parse(stored) : [];
+
+        if (recipeId) {
+          existing = existing.map((r) =>
+            r.id === recipeId
+              ? {
+                  ...r,
+                  name,
+                  nodes,
+                  connections,
+                  updatedAt: new Date().toISOString(),
+                }
+              : r
+          );
+        } else {
+          existing.push(newRecipe);
+        }
+
+        localStorage.setItem(storedKey, JSON.stringify(existing));
+        setRecipes(existing);
+        return { success: true, recipeId: newId };
       }
 
       try {
-        const payload: any = { nodes, connections, name, userId };
+        const payload: {
+          nodes: EditorNode[];
+          connections: EditorConnection[];
+          name: string;
+          userId: string;
+          recipeId?: string;
+        } = { nodes, connections, name, userId };
         if (recipeId) {
           payload.recipeId = recipeId;
         }
@@ -113,6 +161,12 @@ export function useRecipes(userId?: string | null, isMockUser?: boolean): UseRec
         });
 
         const data = await res.json();
+
+        // Handle tariff limit — 403 with TARIFF_LIMIT_REACHED code
+        if (res.status === 403 && data.code === "TARIFF_LIMIT_REACHED") {
+          return { success: false, tariffLimitReached: true };
+        }
+
         if (data.success) {
           return { success: true, recipeId: data.recipeId };
         }
@@ -129,7 +183,24 @@ export function useRecipes(userId?: string | null, isMockUser?: boolean): UseRec
   // ── Delete recipe ───────────────────────────────────────────────────────────
   const deleteRecipe = useCallback(
     async (recipeId: string): Promise<{ success: boolean }> => {
-      if (!userId || isMockUser) return { success: false };
+      if (!userId) return { success: false };
+
+      if (isMockUser) {
+        try {
+          const storedKey = `pharmnode_recipes_mock_${userId}`;
+          const stored = localStorage.getItem(storedKey);
+          if (stored) {
+            let existing: RecipeData[] = JSON.parse(stored);
+            existing = existing.filter((r) => r.id !== recipeId);
+            localStorage.setItem(storedKey, JSON.stringify(existing));
+            setRecipes(existing);
+            return { success: true };
+          }
+        } catch (e) {
+          console.error("[useRecipes] Failed to delete mock recipe:", e);
+        }
+        return { success: false };
+      }
 
       try {
         const res = await fetch(`/api/recipes?id=${encodeURIComponent(recipeId)}`, {

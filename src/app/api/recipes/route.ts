@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/validation";
 import { checkTariffLimit } from "@/lib/tariffLimits";
 
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
     }
 
     const recipeId = searchParams.get("id");
+    const { decrypt, decryptJson } = await import("@/lib/encryption");
 
     if (recipeId) {
       const recipe = await prisma.recipe.findUnique({
@@ -35,7 +37,14 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Recipe not found or forbidden" }, { status: 404 });
       }
 
-      return NextResponse.json({ success: true, recipe });
+      const decryptedRecipe = {
+        ...recipe,
+        name: decrypt(recipe.name),
+        nodes: decryptJson(recipe.nodes),
+        connections: decryptJson(recipe.connections),
+      };
+
+      return NextResponse.json({ success: true, recipe: decryptedRecipe });
     }
 
     const recipes = await prisma.recipe.findMany({
@@ -43,7 +52,14 @@ export async function GET(request: Request) {
       orderBy: { updatedAt: "desc" },
     });
 
-    return NextResponse.json({ success: true, recipes });
+    const decryptedRecipes = recipes.map(r => ({
+      ...r,
+      name: decrypt(r.name),
+      nodes: decryptJson(r.nodes),
+      connections: decryptJson(r.connections),
+    }));
+
+    return NextResponse.json({ success: true, recipes: decryptedRecipes });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Fetch recipes error:", err);
@@ -53,7 +69,6 @@ export async function GET(request: Request) {
 
 // ─── POST /api/recipes ────────────────────────────────────────────────────────
 // Creates or updates a recipe for the authenticated user.
-// For simplicity in MVP: upserts the "current" recipe per user (one per user).
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -95,9 +110,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // ── Encrypt fields ─────────────────────────────────────────────────────
+    const { encrypt, encryptJson } = await import("@/lib/encryption");
+    const encryptedName = encrypt(recipeName);
+    const encryptedNodes = encryptJson(nodes) as Prisma.InputJsonValue;
+    const encryptedConnections = encryptJson(connections) as Prisma.InputJsonValue;
+
     // ── Update or Create ─────────────────────────────────────────────────────
     let dbRecipe;
-
     const recipeId = body.recipeId as string | undefined;
 
     if (recipeId) {
@@ -109,7 +129,7 @@ export async function POST(request: Request) {
 
       dbRecipe = await prisma.recipe.update({
         where: { id: recipeId },
-        data: { name: recipeName, nodes, connections },
+        data: { name: encryptedName, nodes: encryptedNodes, connections: encryptedConnections },
       });
     } else {
       // ── Tariff limit check (on create only) ────────────────────────────────
@@ -130,12 +150,21 @@ export async function POST(request: Request) {
       dbRecipe = await prisma.recipe.create({
         data: {
           userId: activeUserId,
-          name: recipeName,
-          nodes,
-          connections,
+          name: encryptedName,
+          nodes: encryptedNodes,
+          connections: encryptedConnections,
         },
       });
     }
+
+    // Log compliance event
+    const { logAuditEvent } = await import("@/lib/auditLogger");
+    await logAuditEvent({
+      userId: activeUserId,
+      email: session?.user?.email,
+      action: recipeId ? "recipe_update" : "recipe_create",
+      details: `Recipe ID: ${dbRecipe.id}, Name: ${recipeName}`
+    });
 
     return NextResponse.json({ success: true, recipeId: dbRecipe.id });
   } catch (err: unknown) {
@@ -178,6 +207,19 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.recipe.delete({ where: { id: recipeId } });
+
+    // Decrypt recipe name for logging
+    const { decrypt } = await import("@/lib/encryption");
+    const decryptedName = decrypt(recipe.name);
+
+    // Log compliance event
+    const { logAuditEvent } = await import("@/lib/auditLogger");
+    await logAuditEvent({
+      userId: activeUserId,
+      email: session?.user?.email,
+      action: "recipe_delete",
+      details: `Recipe ID: ${recipeId}, Name: ${decryptedName}`
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

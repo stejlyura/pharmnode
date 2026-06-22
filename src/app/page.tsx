@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Footer } from "@/components/Footer";
 import { useTranslation } from "@/context/I18nContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   Cpu,
   Settings,
-  DollarSign,
   FileText,
   CheckCircle,
   ArrowRight,
@@ -20,8 +21,8 @@ import {
   Lock,
   CreditCard,
   Building,
-  Check,
-  Scale
+  Scale,
+  LogIn
 } from "lucide-react";
 
 // Dictionaries for Landing Page content to keep code organized and support localized routes/headers
@@ -88,7 +89,7 @@ const translations = {
     tech_nosql_desc: "Flexible, high-performance storage for complex node-based canvas graphs.",
     tech_auth: "Secure OAuth Security",
     tech_auth_desc: "Secure login utilizing NextAuth.js for corporate credentials.",
-    tech_billing: "Stripe Billing Engine",
+    tech_billing: "Paddle Billing Engine",
     tech_billing_desc: "Instant subscription management for Pro plan.",
     reg_title: "Regulatory Compliance Standards",
     reg_desc: "Our verification engine is engineered in collaboration with pharma consultants to comply with major legal environments.",
@@ -103,6 +104,8 @@ const translations = {
     cta_btn: "Open Interactive Canvas",
     footer_copy: "PharmNode. All rights reserved.",
     footer_terms: "Terms of Use",
+    footer_privacy: "Privacy Policy",
+    footer_refund: "Refund Policy",
     footer_eula: "EULA / DSS Disclaimer",
     footer_fda: "FDA Compliance",
     terms_title: "Terms of Use",
@@ -181,7 +184,7 @@ const translations = {
     tech_nosql_desc: "Масштабируемое и гибкое хранилище для структурных схем и графов холста.",
     tech_auth: "Безопасность и OAuth",
     tech_auth_desc: "Защищенный вход по стандартам OAuth 2.0 (Google, GitHub, Microsoft).",
-    tech_billing: "Биллинг Stripe",
+    tech_billing: "Биллинг Paddle",
     tech_billing_desc: "Мгновенное управление подписками и биллингом для Pro тарифа.",
     reg_title: "Стандарты регуляторного контроля",
     reg_desc: "Наша система валидации разработана совместно с экспертами фармацевтической отрасли.",
@@ -196,6 +199,8 @@ const translations = {
     cta_btn: "Открыть интерактивный холст",
     footer_copy: "PharmNode. Все права защищены.",
     footer_terms: "Условия использования",
+    footer_privacy: "Политика конфиденциальности",
+    footer_refund: "Правила возврата",
     footer_eula: "EULA / DSS Дисклеймер",
     footer_fda: "Соответствие FDA",
     terms_title: "Условия использования",
@@ -220,21 +225,13 @@ export default function LandingPage() {
   const { locale, setLocale } = useTranslation();
   const currentLocale: LocaleKey = (locale === "ru-RU") ? "ru-RU" : "en-US";
   const dict = translations[currentLocale];
-
-  // Legal Modals State
-  const [modalOpen, setModalOpen] = useState<{
-    terms: boolean;
-    eula: boolean;
-    fda: boolean;
-  }>({
-    terms: false,
-    eula: false,
-    fda: false
-  });
-
-  const closeModals = () => {
-    setModalOpen({ terms: false, eula: false, fda: false });
+  
+  const { user, status, logout } = useAuth();
+  const handleLogoutClick = async () => {
+    await logout();
   };
+
+
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans theme-element relative overflow-hidden">
@@ -262,7 +259,7 @@ export default function LandingPage() {
           <a href="#regulatory" className="hover:text-zinc-100 transition-colors">{dict.nav_regulatory}</a>
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap justify-end">
           <button
             onClick={() => setLocale(locale === "ru-RU" ? "en-US" : "ru-RU")}
             className="px-2.5 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 transition-colors cursor-pointer theme-element"
@@ -273,13 +270,33 @@ export default function LandingPage() {
 
           <ThemeToggle />
 
-          <Link
-            href="/projects"
-            className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all flex items-center gap-1 group theme-element"
-          >
-            {dict.btn_open}
-            <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+          {status === "loading" ? (
+            <div className="w-8 h-8 rounded-full border border-zinc-750 border-t-zinc-400 animate-spin" />
+          ) : status === "authenticated" && user ? (
+            <div className="flex items-center gap-2">
+              <Link
+                href="/projects"
+                className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all flex items-center gap-1 group theme-element animate-fade-in"
+              >
+                {dict.btn_open}
+                <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <button
+                onClick={handleLogoutClick}
+                className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 text-rose-400 hover:text-rose-300 rounded-lg text-xs font-bold transition-all cursor-pointer theme-element"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-100 text-zinc-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer theme-element"
+            >
+              <LogIn size={13} />
+              {currentLocale === "ru-RU" ? "Войти" : "Sign In"}
+            </Link>
+          )}
         </div>
       </header>
 
@@ -622,100 +639,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-zinc-900 py-8 px-6 bg-zinc-950/80 backdrop-blur-md text-xs text-zinc-500 text-center theme-element z-10 relative">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-zinc-400">PharmNode</span>
-            <span>&copy; 2026. {dict.footer_copy}</span>
-          </div>
-          <div className="flex gap-6">
-            <button
-              onClick={() => setModalOpen(prev => ({ ...prev, terms: true }))}
-              className="hover:text-zinc-300 bg-transparent border-none outline-none cursor-pointer"
-            >
-              {dict.footer_terms}
-            </button>
-            <button
-              onClick={() => setModalOpen(prev => ({ ...prev, eula: true }))}
-              className="hover:text-zinc-300 bg-transparent border-none outline-none cursor-pointer"
-            >
-              {dict.footer_eula}
-            </button>
-            <button
-              onClick={() => setModalOpen(prev => ({ ...prev, fda: true }))}
-              className="hover:text-zinc-300 bg-transparent border-none outline-none cursor-pointer"
-            >
-              {dict.footer_fda}
-            </button>
-          </div>
-        </div>
-      </footer>
-
-      {/* Terms of Use Modal */}
-      {modalOpen.terms && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl relative p-6 max-h-[80vh] overflow-y-auto">
-            <button onClick={closeModals} className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 cursor-pointer">✕</button>
-            <h3 className="text-base font-bold text-zinc-100 mb-4 uppercase tracking-wider flex items-center gap-2">
-              <Scale size={18} className="text-indigo-400" />
-              {dict.terms_title}
-            </h3>
-            <div className="text-xs text-zinc-400 flex flex-col gap-3 leading-relaxed">
-              <p>{dict.terms_p1}</p>
-              <p>{dict.terms_p2}</p>
-              <p>{dict.terms_p3}</p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={closeModals} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs cursor-pointer">{dict.btn_close}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* EULA / DSS Disclaimer Modal */}
-      {modalOpen.eula && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl relative p-6 max-h-[80vh] overflow-y-auto">
-            <button onClick={closeModals} className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 cursor-pointer">✕</button>
-            <h3 className="text-base font-bold text-zinc-100 mb-4 uppercase tracking-wider flex items-center gap-2">
-              <ShieldAlert size={18} className="text-amber-400" />
-              {dict.eula_title}
-            </h3>
-            <div className="text-xs text-zinc-400 flex flex-col gap-3 leading-relaxed">
-              <p className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded text-amber-400 font-semibold">
-                {dict.eula_alert}
-              </p>
-              <p>{dict.eula_p1}</p>
-              <p>{dict.eula_p2}</p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={closeModals} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs cursor-pointer">{dict.btn_close}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FDA Compliance Modal */}
-      {modalOpen.fda && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl relative p-6 max-h-[80vh] overflow-y-auto">
-            <button onClick={closeModals} className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 cursor-pointer">✕</button>
-            <h3 className="text-base font-bold text-zinc-100 mb-4 uppercase tracking-wider flex items-center gap-2">
-              <Building size={18} className="text-emerald-400" />
-              {dict.fda_title}
-            </h3>
-            <div className="text-xs text-zinc-400 flex flex-col gap-3 leading-relaxed">
-              <p>{dict.fda_p1}</p>
-              <p>{dict.fda_p2}</p>
-              <p>{dict.fda_p3}</p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={closeModals} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs cursor-pointer">{dict.btn_close}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Footer />
 
     </div>
   );

@@ -9,10 +9,6 @@ node_modules/
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 
-# Чувствительные данные (никогда не читать)
-.env
-.env.local
-.env.production
 
 # Lockfiles (не редактировать)
 package-lock.json
@@ -20,6 +16,13 @@ yarn.lock
 pnpm-lock.yaml
 
 # Бинарные и медиа файлы
+img/
+*.webp
+*.png
+*.jpg
+*.ico
+*.svg
+
 public/
 *.png
 *.jpg

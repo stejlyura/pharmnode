@@ -1,25 +1,69 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
 import { useRecipes } from "@/hooks/useRecipes";
+import type { EditorNode, EditorConnection } from "@/hooks/useNodeEditor";
+import { trackEvent } from "@/lib/analytics";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { FolderPlus, FileText, Calendar, ArrowRight, FlaskConical, Loader2, Trash2 } from "lucide-react";
+import { FolderPlus, FileText, Calendar, ArrowRight, FlaskConical, Loader2, Trash2, LogOut } from "lucide-react";
+
+const initialNodes: EditorNode[] = [
+  {
+    id: "node-1",
+    type: "ingredient",
+    position: { x: 100, y: 150 },
+    data: { ingredientId: 1, percentage: 10 }
+  },
+  {
+    id: "node-2",
+    type: "ingredient",
+    position: { x: 100, y: 350 },
+    data: { ingredientId: 2, percentage: 90 }
+  },
+  {
+    id: "node-blending",
+    type: "blending",
+    position: { x: 450, y: 250 },
+    data: {}
+  },
+  {
+    id: "node-press",
+    type: "press",
+    position: { x: 750, y: 250 },
+    data: { diameterCm: 0.3, depthCm: 0.5 }
+  },
+  {
+    id: "node-output",
+    type: "output",
+    position: { x: 1050, y: 250 },
+    data: { activeRawWeightG: 10 }
+  }
+];
+
+const initialConnections: EditorConnection[] = [
+  { id: "conn-1", source: "node-1", target: "node-blending" },
+  { id: "conn-2", source: "node-2", target: "node-blending" },
+  { id: "conn-3", source: "node-blending", target: "node-press" },
+  { id: "conn-4", source: "node-press", target: "node-output" }
+];
 
 export default function ProjectsPage() {
-  const { user, status } = useAuth();
-  const { t } = useTranslation();
+  const { user, status, logout } = useAuth();
+  const { t, locale } = useTranslation();
   const router = useRouter();
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
 
   const isMockUser = !!user?.id?.startsWith('mock-');
-  const { recipes, isLoading, error, loadRecipes, deleteRecipe } = useRecipes(user?.id, isMockUser);
+  const { recipes, isLoading, error, loadRecipes, deleteRecipe, saveRecipe } = useRecipes(user?.id, isMockUser);
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/");
+      router.push("/login?callbackUrl=/projects");
     }
   }, [status, router]);
 
@@ -28,6 +72,45 @@ export default function ProjectsPage() {
       loadRecipes();
     }
   }, [user?.id, loadRecipes]);
+
+  const handleCreateProject = async () => {
+    if (!user?.id) return;
+
+    // Limit for Hobby tariff: max 1 project/formulation
+    if (user.tariff === "hobby" && recipes.length >= 1) {
+      router.push("/premium-required");
+      return;
+    }
+
+    setIsCreating(true);
+    setCreationError(null);
+    const projectName = locale === "ru-RU" ? "Новая рецептура" : "New Formulation";
+    try {
+      const res = await saveRecipe(initialNodes, initialConnections, projectName);
+
+      // Backend enforced tariff limit (double-layer check)
+      if (res.tariffLimitReached) {
+        router.push("/premium-required");
+        return;
+      }
+
+      if (res.success && res.recipeId) {
+        trackEvent('project_created', {
+          recipeId: res.recipeId,
+          name: projectName,
+          locale: locale
+        });
+        router.push(`/configurator?recipeId=${res.recipeId}`);
+      } else {
+        setCreationError(locale === "ru-RU" ? "Не удалось создать проект" : "Failed to create project");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error";
+      setCreationError(msg);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -63,11 +146,21 @@ export default function ProjectsPage() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <ThemeToggle />
-          <div className="text-xs font-bold text-zinc-400 bg-zinc-900/60 px-3 py-1.5 rounded-lg border border-zinc-800">
+          <div className="text-xs font-bold text-zinc-400 bg-zinc-900/60 px-3 py-1.5 rounded-lg border border-zinc-800 animate-fade-in">
             {user?.name || "Guest"}
           </div>
+          {status === "authenticated" && (
+            <button
+              onClick={() => logout()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-800/80 text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer theme-element"
+              title="Sign Out"
+            >
+              <LogOut size={14} />
+              <span className="hidden sm:inline">{locale === "ru-RU" ? "Выйти" : "Sign Out"}</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -82,27 +175,32 @@ export default function ProjectsPage() {
             </p>
           </div>
           
-          {error && (
+          {(error || creationError) && (
             <div className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-4 py-2 rounded-xl text-sm font-semibold">
-              Error: {error}
+              Error: {error || creationError}
             </div>
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Create New Project Card */}
-          <Link
-            href="/configurator"
-            className="group h-48 bg-zinc-900/40 border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer theme-element"
+          <button
+            onClick={handleCreateProject}
+            disabled={isCreating}
+            className="group h-48 w-full bg-zinc-900/40 border-2 border-dashed border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl p-6 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer theme-element text-left focus:outline-none"
           >
             <div className="w-12 h-12 rounded-full bg-zinc-800 group-hover:bg-indigo-500 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors shadow-lg">
-              <FolderPlus size={24} />
+              {isCreating ? <Loader2 className="animate-spin" size={24} /> : <FolderPlus size={24} />}
             </div>
             <div className="text-center">
-              <h3 className="font-bold text-zinc-200 group-hover:text-indigo-400 transition-colors">New Project</h3>
-              <p className="text-xs text-zinc-500 mt-1">Start a blank canvas</p>
+              <h3 className="font-bold text-zinc-200 group-hover:text-indigo-400 transition-colors">
+                {locale === "ru-RU" ? "Новый проект" : "New Project"}
+              </h3>
+              <p className="text-xs text-zinc-500 mt-1">
+                {locale === "ru-RU" ? "Создать чистый холст" : "Start a blank canvas"}
+              </p>
             </div>
-          </Link>
+          </button>
 
           {/* Project Cards */}
           {recipes.map((recipe) => (

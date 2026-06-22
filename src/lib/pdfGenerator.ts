@@ -1,12 +1,14 @@
 import { jsPDF } from "jspdf";
-import { CalculatedResults } from "../hooks/useNodeEditor";
+import { CalculatedResults, EditorNode } from "../hooks/useNodeEditor";
+import { UserProfile } from "../context/AuthContext";
+import { Ingredient } from "../types/pharm";
 
 export function generateGMPReport(
-  nodes: any[],
+  nodes: EditorNode[],
   calculatedResults: CalculatedResults,
-  user: any,
+  user: UserProfile | null,
   region: string,
-  allIngredients: any[]
+  allIngredients: Ingredient[]
 ) {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -15,6 +17,13 @@ export function generateGMPReport(
   });
 
   let y = 20;
+
+  function checkPageBreak(amount: number) {
+    if (y + amount > 270) {
+      doc.addPage();
+      y = 20;
+    }
+  }
 
   // 1. BRAND HEADER
   doc.setFillColor(0, 94, 184); // clinical blue block
@@ -82,10 +91,10 @@ export function generateGMPReport(
   y += 6;
 
   // Rows
-  const ingredientNodes = nodes.filter((n: any) => n.type === "ingredient");
+  const ingredientNodes = nodes.filter((n) => n.type === "ingredient");
 
   doc.setFont("helvetica", "normal");
-  ingredientNodes.forEach((node: any, idx: number) => {
+  ingredientNodes.forEach((node, idx: number) => {
     const ing = allIngredients.find((i) => String(i.id) === String(node.data.ingredientId));
     if (ing) {
       if (idx % 2 === 1) {
@@ -94,7 +103,18 @@ export function generateGMPReport(
       }
       doc.text(ing.name, 23, y + 4);
       doc.text(ing.casNumber || "N/A", 75, y + 4);
-      doc.text(ing.role.toUpperCase(), 110, y + 4);
+
+      // Explicitly adjust functional roles for coating/sweetener components
+      let displayRole = ing.role.toUpperCase();
+      if (ing.name.includes("HPMC") || ing.name.includes("Hydroxypropyl Methylcellulose")) {
+        displayRole = "DRY-BINDER / COATING";
+      } else if (ing.name.includes("Sucrose") || ing.name.includes("Sorbitol") || ing.name.includes("Mannitol")) {
+        displayRole = "FILLER / SWEETENER";
+      } else if (ing.name.includes("PEG 6000") || ing.name.includes("Macrogol 6000")) {
+        displayRole = "LUBRICANT / PLASTICIZER";
+      }
+
+      doc.text(displayRole, 110, y + 4);
       doc.text(`${(node.data.percentage ?? 0).toFixed(1)}%`, 145, y + 4);
       doc.text(`$${ing.costPerKgUsd.toFixed(2)}`, 170, y + 4);
       y += 6;
@@ -106,7 +126,57 @@ export function generateGMPReport(
   doc.line(20, y, 190, y);
   y += 10;
 
+  // 1.1. COATING (SHELL) & ORGANOLEPTIC ADDITIVES
+  checkPageBreak(38);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(0, 94, 184);
+  doc.text("1.1. Coating (Shell) & Organoleptic Specifications", 20, y);
+  y += 6;
+
+  doc.setFillColor(248, 250, 252);
+  doc.rect(20, y, 170, 24, "F");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Film-Forming Polymers (Shell):", 23, y + 5);
+  doc.setFont("helvetica", "normal");
+  doc.text("HPMC (Hydroxypropyl Methylcellulose), PVA, Opadry II series.", 75, y + 5);
+  doc.text("Role: Film coat forming, mechanical protection, light/moisture barrier protection.", 23, y + 9);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Organoleptic Corrugents:", 23, y + 14);
+  doc.setFont("helvetica", "normal");
+  doc.text("Sucrose, Sorbitol, Mannitol, Mint/Fruit flavors, FDA/EFSA colorants.", 75, y + 14);
+  doc.text("Role: Taste-masking of bitter active ingredients, odor improvement, tablet color coding.", 23, y + 18);
+
+  const hasCoatingInRecipe = ingredientNodes.some(node => {
+    const ing = allIngredients.find((i) => String(i.id) === String(node.data.ingredientId));
+    return ing && (
+      ing.name.includes("HPMC") || 
+      ing.name.includes("PVA") || 
+      ing.name.includes("Opadry") || 
+      ing.name.includes("Sucrose") || 
+      ing.name.includes("Sorbitol") || 
+      ing.name.includes("Mannitol")
+    );
+  });
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  if (hasCoatingInRecipe) {
+    doc.text("Status: Active coating or sweetening ingredients detected in the recipe composition above.", 23, y + 22);
+  } else {
+    doc.text("Status: Recommended standard aqueous film coating formula applied (Opadry II / HPMC based).", 23, y + 22);
+  }
+  y += 34;
+
   // 3. PHYSICAL PROPERTIES
+  checkPageBreak(45);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(0, 94, 184);
@@ -126,7 +196,7 @@ export function generateGMPReport(
   doc.text(`Hausner Ratio (H): ${blend.flowability.hausner.toFixed(2)}`, 25, y + 18);
   doc.text(`Carr Index (C): ${blend.flowability.carr.toFixed(1)}%`, 25, y + 24);
 
-  const pressNode = nodes.find((n: any) => n.type === "press");
+  const pressNode = nodes.find((n) => n.type === "press");
   const diameterCm = pressNode?.data.diameterCm ?? 0.3;
   const depthCm = pressNode?.data.depthCm ?? 0.5;
 
@@ -137,6 +207,7 @@ export function generateGMPReport(
   y += 38;
 
   // 4. CHEMICAL INCOMPATIBILITIES & WARNINGS
+  checkPageBreak(32);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(0, 94, 184);
@@ -184,6 +255,7 @@ export function generateGMPReport(
   }
 
   // 5. REGULATORY NOTICE & DISCLAIMER
+  checkPageBreak(25);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
@@ -200,6 +272,7 @@ export function generateGMPReport(
   y += 12;
 
   // 6. TECH SIGNATURE SIGN-OFF BLOCK
+  checkPageBreak(30);
   doc.setDrawColor(203, 213, 225);
   doc.line(20, y, 190, y);
   y += 8;

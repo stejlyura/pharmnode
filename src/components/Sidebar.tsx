@@ -125,26 +125,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return [...base, ...customIngredients];
   }, [customIngredients, standardIngredients]);
 
-  const filteredIngredients = allIngredients.filter(ing => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      ing.name.toLowerCase().includes(q) ||
-      ing.role.toLowerCase().includes(q) ||
-      ROLE_META[ing.role]?.label.toLowerCase().includes(q) ||
-      (ing.casNumber && ing.casNumber.includes(q))
-    );
-  });
+  const filteredIngredients = useMemo(() => {
+    return allIngredients.filter(ing => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        ing.name.toLowerCase().includes(q) ||
+        ing.role.toLowerCase().includes(q) ||
+        ROLE_META[ing.role]?.label.toLowerCase().includes(q) ||
+        (ing.casNumber && ing.casNumber.includes(q))
+      );
+    });
+  }, [allIngredients, searchQuery]);
 
   // When searching, auto-expand all categories that have results
   useEffect(() => {
     if (searchQuery) {
       const rolesWithResults = new Set(filteredIngredients.map(i => i.role));
-      setOpenCategories(prev => {
-        const next = { ...prev };
-        rolesWithResults.forEach(r => { next[r] = true; });
-        return next;
-      });
+      setTimeout(() => {
+        setOpenCategories(prev => {
+          const next = { ...prev };
+          rolesWithResults.forEach(r => { next[r] = true; });
+          return next;
+        });
+      }, 0);
     }
   }, [searchQuery, filteredIngredients]);
 
@@ -184,6 +188,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
+      id="sidebar-container"
       className={`sidebar-panel relative flex-shrink-0 flex flex-col h-full z-30 overflow-hidden theme-element ${
         isOpen ? 'sidebar-open' : 'sidebar-closed'
       }`}

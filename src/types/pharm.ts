@@ -1,9 +1,25 @@
 export type IngredientRole = 'active' | 'filler' | 'lubricant' | 'glidant' | 'dry-binder';
 
+export type SeverityType = 'low' | 'medium' | 'high';
+
+export interface SideEffect {
+  name: string;
+  frequency: string; // e.g. "common", "rare"
+  severity: SeverityType;
+}
+
+export interface ActiveMolecule {
+  id: string;
+  name: string;
+  casNumber?: string;
+  chemicalClassId: number;
+}
+
 export interface Ingredient {
   id: number | string;
   name: string;
   casNumber?: string;
+  activeMolecules?: ActiveMolecule[];
   role: IngredientRole;
   chemicalClassId: number;
   looseBulkDensity: number;
@@ -13,7 +29,7 @@ export interface Ingredient {
   isAllergen?: boolean;
   costPerKgUsd: number;
   maxSafePercentage: number;
-  
+
   // Knowledge Base fields
   benefit?: number;
   risk?: number;
@@ -27,6 +43,11 @@ export interface Ingredient {
   dosageForm?: string;
   applicationArea?: string;
   processingTech?: string;
+
+  // Level 2 Supplements and OTC fields
+  effects?: string[];
+  contraindications?: string[];
+  sideEffects?: SideEffect[];
 }
 
 export const baseIngredientsMatrix: Ingredient[] = [
@@ -142,7 +163,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     risk: 15,
     cost: 15.00,
     stability: 80,
-    manufacturability: 85
+    manufacturability: 85,
+    effects: ["Обезболивающее", "Жаропонижающее"],
+    contraindications: ["Печеночная недостаточность"],
+    sideEffects: [
+      { name: "Аллергическая сыпь", frequency: "редко", severity: "medium" }
+    ]
   },
   {
     id: 7,
@@ -161,7 +187,13 @@ export const baseIngredientsMatrix: Ingredient[] = [
     risk: 20,
     cost: 22.00,
     stability: 80,
-    manufacturability: 80
+    manufacturability: 80,
+    effects: ["Обезболивающее", "Противовоспалительное", "Жаропонижающее"],
+    contraindications: ["Язва желудка", "Почечная недостаточность", "Аспириновая астма"],
+    sideEffects: [
+      { name: "Боли в желудке", frequency: "часто", severity: "medium" },
+      { name: "Тошнота", frequency: "редко", severity: "low" }
+    ]
   },
   {
     id: 8,
@@ -180,7 +212,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     risk: 10,
     cost: 18.00,
     stability: 70,
-    manufacturability: 75
+    manufacturability: 75,
+    effects: ["Иммунитет", "Энергия", "Антиоксидант"],
+    contraindications: ["Гипероксалурия", "Тромбофлебит"],
+    sideEffects: [
+      { name: "Изжога", frequency: "редко", severity: "low" }
+    ]
   },
   {
     id: 9,
@@ -313,7 +350,13 @@ export const baseIngredientsMatrix: Ingredient[] = [
     risk: 20,
     cost: 25.00,
     stability: 85,
-    manufacturability: 85
+    manufacturability: 85,
+    effects: ["Стимулятор", "Энергия", "Фокусировка"],
+    contraindications: ["Гипертония", "Бессонница", "Аритмия"],
+    sideEffects: [
+      { name: "Тахикардия", frequency: "часто", severity: "medium" },
+      { name: "Бессонница", frequency: "часто", severity: "medium" }
+    ]
   },
   {
     id: 16,
@@ -351,7 +394,12 @@ export const baseIngredientsMatrix: Ingredient[] = [
     risk: 5,
     cost: 1200.00,
     stability: 65,
-    manufacturability: 70
+    manufacturability: 70,
+    effects: ["Здоровье костей", "Иммунитет"],
+    contraindications: ["Гиперкальциемия"],
+    sideEffects: [
+      { name: "Головная боль", frequency: "редко", severity: "low" }
+    ]
   },
   {
     id: 18,
@@ -525,3 +573,69 @@ export const baseIngredientsMatrix: Ingredient[] = [
     manufacturability: 85
   }
 ];
+
+export interface SegregationRiskResult {
+  maxBulkDensityDifference: number;
+  bulkDensityRatio: number;
+  maxParticleSizeDifference: number;
+  particleSizeRatio: number;
+  riskLevel: 'Low' | 'Medium' | 'High';
+  warnings: string[];
+}
+
+export interface SpreadingCoefficientResult {
+  spreadingCoefficient: number;
+  rating: 'Spontaneous' | 'Non-Spontaneous';
+}
+
+export interface PKDoseResult {
+  dSR: number;
+  releaseRate: number;
+  loadingDose: number;
+  maintenanceDose: number;
+}
+
+export interface WetGranulationInputs {
+  targetTabletWeightMg: number;
+  apiPercentage: number;
+  intragranularPercentage: number;
+  moistureContentLod: number;
+  binderSolutionAddedPercentage: number;
+  expectedLossPercentage: number;
+  batchSizeTablets: number;
+}
+
+export interface WetGranulationResult {
+  totalDryBatchWeightKg: number;
+  pureApiWeightKg: number;
+  intragranularDryWeightKg: number;
+  extragranularDryWeightKg: number;
+  wetGranulesWeightBeforeDryingKg: number;
+  granuleFillWeightPerTabletMg: number;
+  finalFillWeightPerTabletMg: number;
+  expectedLossWeightKg: number;
+}
+
+export interface PunchDimensions {
+  shape: 'round' | 'shaped';
+  diameterMm?: number;
+  lengthMm?: number;
+  widthMm?: number;
+}
+
+export interface FillCamResult {
+  punchAreaMm2: number;
+  theoreticalFillDepthMm: number;
+  recommendedFillDepthMm: number;
+  closestStandardCamMm: number;
+}
+
+export interface PressPresetsResult {
+  fetteFillDepthMm: number;
+  geaCourtoyFillDepthMm: number;
+}
+
+
+
+
+

@@ -7,17 +7,25 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "db:cleanup": "npx tsx prisma/cleanup.ts",
+    "db:backup": "npx tsx scripts/backup-db.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@paddle/paddle-js": "^1.6.4",
+    "@paddle/paddle-node-sdk": "^3.8.0",
     "@prisma/client": "^6.19.3",
+    "@sentry/nextjs": "^10.57.0",
+    "driver.js": "^1.4.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
     "next-auth": "^4.24.14",
+    "posthog-js": "^1.386.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "stripe": "^22.2.0"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -30,7 +38,8 @@
     "pngjs": "^7.0.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.8"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

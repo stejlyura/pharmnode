@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Ingredient } from '../types/pharm';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/I18nContext';
+import { trackEvent } from '../lib/analytics';
 import {
   calculateBlendProperties,
   calculateTableting,
@@ -13,6 +14,7 @@ import {
   BatchResult,
   CompatibilityWarning
 } from '../lib/calculator';
+import { analyzeRecipe, ScoringResult } from '../lib/scoring';
 
 export interface EditorNode {
   id: string;
@@ -47,6 +49,7 @@ export interface CalculatedResults {
   totalPercentage: number;
   activePercentage: number;
   allergens: string[];
+  scoring: ScoringResult;
 }
 
 const initialNodes: EditorNode[] = [
@@ -96,11 +99,11 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
   const { t } = useTranslation();
   const [tariff, setTariff] = useState<TariffType>(initialTariff);
   const [recipeId, setRecipeId] = useState<string | null>(initialRecipeId || null);
-  
+
   const allIngredients = useMemo(() => {
     return customIngredients;
   }, [customIngredients]);
-  
+
   const [state, setState] = useState<HistoryState>({
     nodes: initialNodes,
     connections: initialConnections
@@ -117,7 +120,9 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
           try {
             const parsed = JSON.parse(stored) as HistoryState;
             if (parsed && Array.isArray(parsed.nodes) && Array.isArray(parsed.connections)) {
-              setState(parsed);
+              setTimeout(() => {
+                setState(parsed);
+              }, 0);
             }
           } catch (e) {
             console.error("Failed to parse canvas state from localStorage", e);
@@ -134,17 +139,41 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     const handler = setTimeout(async () => {
       // 1. Guest or Mock User -> Save to localStorage
       if (!user || isMockUser) {
-        const storageKey = user ? `pharmnode_canvas_state_${user.id}` : 'pharmnode_canvas_state';
-        localStorage.setItem(storageKey, JSON.stringify({
-          nodes: state.nodes,
-          connections: state.connections
-        }));
+        if (isMockUser && recipeId) {
+          const storedKey = `pharmnode_recipes_mock_${user?.id}`;
+          const stored = localStorage.getItem(storedKey);
+          if (stored) {
+            try {
+              let existing = JSON.parse(stored) as { id: string; name: string; nodes: EditorNode[]; connections: EditorConnection[]; createdAt?: string; updatedAt?: string }[];
+              existing = existing.map((r) =>
+                r.id === recipeId
+                  ? { ...r, nodes: state.nodes, connections: state.connections, updatedAt: new Date().toISOString() }
+                  : r
+              );
+              localStorage.setItem(storedKey, JSON.stringify(existing));
+            } catch (e) {
+              console.error("Failed to autosave mock recipe:", e);
+            }
+          }
+        } else {
+          const storageKey = user ? `pharmnode_canvas_state_${user.id}` : 'pharmnode_canvas_state';
+          localStorage.setItem(storageKey, JSON.stringify({
+            nodes: state.nodes,
+            connections: state.connections
+          }));
+        }
         return;
       }
 
       // 2. Real User -> Save to Server DB
       try {
-        const payload: any = {
+        const payload: {
+          nodes: EditorNode[];
+          connections: EditorConnection[];
+          userId: string;
+          name: string;
+          recipeId?: string;
+        } = {
           nodes: state.nodes,
           connections: state.connections,
           userId: user.id,
@@ -175,7 +204,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     }, 2000);
 
     return () => clearTimeout(handler);
-  }, [state.nodes, state.connections, user, isMockUser]);
+  }, [state.nodes, state.connections, user, isMockUser, recipeId]);
 
   const [past, setPast] = useState<HistoryState[]>([]);
   const [future, setFuture] = useState<HistoryState[]>([]);
@@ -192,7 +221,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     if (past.length === 0) return;
     const previous = past[past.length - 1];
     const newPast = past.slice(0, past.length - 1);
-    
+
     setFuture(prev => [state, ...prev]);
     setPast(newPast);
     setState(previous);
@@ -203,7 +232,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     if (future.length === 0) return;
     const next = future[0];
     const newFuture = future.slice(1);
-    
+
     setPast(prev => [...prev, state]);
     setFuture(newFuture);
     setState(next);
@@ -236,7 +265,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
   // Add an ingredient node
   const addIngredientNode = useCallback((ingredientId: number | string, position?: { x: number; y: number }) => {
     const ingredientNodesCount = state.nodes.filter(node => node.type === 'ingredient').length;
-    
+
     if (tariff === 'hobby' && ingredientNodesCount >= 3) {
       return { success: false, reason: 'hobby-limit' };
     }
@@ -368,7 +397,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     const depthCm = pressNode?.data.depthCm ?? 0.5;
 
     const tableting = calculateTableting(diameterCm, depthCm, blend.looseDensity);
-    
+
     // Porosity
     const porosity = calculatePorosity(tableting.recommendedWeightMg, tableting.volume, blend.trueDensity);
     const tabletingWithPorosity = {
@@ -391,6 +420,8 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
       )
     );
 
+    const scoring = analyzeRecipe(blendIngredients, tableting.recommendedWeightMg, warnings);
+
     return {
       blend,
       tableting: tabletingWithPorosity,
@@ -398,7 +429,8 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
       warnings,
       totalPercentage,
       activePercentage,
-      allergens
+      allergens,
+      scoring
     };
   }, [state.nodes, state.connections, allIngredients, t]);
 
@@ -407,6 +439,54 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     setPast([]);
     setFuture([]);
   }, []);
+
+  // 1. Debounced track calculation_performed
+  useEffect(() => {
+    if (calculatedResults.totalPercentage > 0) {
+      const handler = setTimeout(() => {
+        trackEvent('calculation_performed', {
+          ingredientCount: state.nodes.filter(n => n.type === 'ingredient').length,
+          totalPercentage: calculatedResults.totalPercentage,
+          activePercentage: calculatedResults.activePercentage,
+          hausnerRatio: calculatedResults.blend.flowability.hausner,
+          carrIndex: calculatedResults.blend.flowability.carr,
+          porosity: calculatedResults.tableting.porosity,
+          hasWarnings: calculatedResults.warnings.length > 0,
+          scoringScore: calculatedResults.scoring.score
+        });
+      }, 1000);
+      return () => clearTimeout(handler);
+    }
+  }, [
+    calculatedResults.totalPercentage,
+    calculatedResults.activePercentage,
+    calculatedResults.blend.flowability.hausner,
+    calculatedResults.blend.flowability.carr,
+    calculatedResults.tableting.porosity,
+    calculatedResults.warnings.length,
+    calculatedResults.scoring.score,
+    state.nodes.length
+  ]);
+
+  // 2. Track compatibility_error_triggered
+  const warningMessagesJson = JSON.stringify(
+    calculatedResults.warnings.map(w => ({ type: w.type, msg: w.message }))
+  );
+  useEffect(() => {
+    if (calculatedResults.warnings.length > 0) {
+      try {
+        const currentWarnings = JSON.parse(warningMessagesJson) as { type: string; msg: string }[];
+        currentWarnings.forEach((warn) => {
+          trackEvent('compatibility_error_triggered', {
+            conflictType: warn.type,
+            message: warn.msg
+          });
+        });
+      } catch (e) {
+        console.error('Failed to parse warnings for telemetry:', e);
+      }
+    }
+  }, [warningMessagesJson]);
 
   return {
     nodes: state.nodes,

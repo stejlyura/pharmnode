@@ -21,7 +21,7 @@ export const CHEMICAL_CLASSES: ChemicalClass[] = [
   { id: 3, category: "Амины и Азотсодержащие", name: "Амиды и Имиды" },
   { id: 4, category: "Амины и Азотсодержащие", name: "Сульфаниламиды / Тиазиды" },
   { id: 5, category: "Амины и Азотсодержащие", name: "Алкалоиды / Ксантины" },
-  
+
   // Acids and Salts
   { id: 6, category: "Кислоты, Соли и Эфиры", name: "Органические кислоты (алифатические)" },
   { id: 7, category: "Кислоты, Соли и Эфиры", name: "Органические кислоты (ароматические)" },
@@ -64,33 +64,33 @@ export const CHEMICAL_CLASSES: ChemicalClass[] = [
 export const COMPATIBILITY_RULES: CompatibilityRule[] = [
   // Maillard Reaction
   { classA: 1, classB: 14, type: 'incompatible', severity: 'error', title: 'Реакция Майяра', message: 'Первичная аминогруппа вступает в реакцию с альдегидной (редуцирующей) группой сахара. В присутствии влаги это вызывает потемнение смеси, образование токсичных адуктов и потерю активности АФС.', suggestion: 'Замените восстанавливающий сахар на инертный (Сахароза), Маннит или МКЦ.' },
-  
+
   // Alkaline degradation of amines
   { classA: 1, classB: 9, type: 'incompatible', severity: 'error', title: 'Щелочная деградация', message: 'Щелочные соли (Стеараты) создают локальную щелочную микросреду, ускоряя гидролитическое расщепление аминов во влажной среде.', suggestion: 'Замените стеарат магния на стеариновую кислоту или ПРУВ.' },
   { classA: 1, classB: 10, type: 'incompatible', severity: 'error', title: 'Щелочная деградация', message: 'Карбонаты и другие щелочные неорганические соли разрушают первичные амины.', suggestion: 'Избегайте сильных щелочных агентов.' },
-  
+
   // Acid-Base reactions
   { classA: 6, classB: 9, type: 'incompatible', severity: 'warning', title: 'Кислотно-основное взаимодействие', message: 'Алифатическая органическая кислота реагирует со щелочным лубрикантом, разрушая смазывающую решетку стеарата.', suggestion: 'Используйте кислый или нейтральный лубрикант.' },
   { classA: 7, classB: 9, type: 'incompatible', severity: 'warning', title: 'Кислотно-основное взаимодействие', message: 'Ароматическая органическая кислота реагирует со щелочным лубрикантом, разрушая смазывающую решетку стеарата.', suggestion: 'Используйте кислый или нейтральный лубрикант.' },
   { classA: 6, classB: 10, type: 'incompatible', severity: 'error', title: 'Газообразование', message: 'Органические кислоты реагируют с карбонатами с выделением углекислого газа во влажной среде, что приведет к вздутию и разрушению таблетки.', suggestion: 'Избегайте карбонатов, если это не шипучая таблетка.' },
-  
+
   // Phenols and polymers complexation
   { classA: 21, classB: 19, type: 'incompatible', severity: 'warning', title: 'Комплексообразование', message: 'Фенольные группы способны образовывать водородные связи с полимерными цепями (ПВП, ПЭГ), что может замедлить растворение in vitro.', suggestion: 'Проверьте кинетику высвобождения, возможно потребуется увеличить долю дезинтегранта.' },
-  
+
   // Vitamins and Metals/Alkalis
   { classA: 23, classB: 9, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Жирорастворимые витамины крайне чувствительны к щелочной среде стеаратов.', suggestion: 'Используйте антиоксиданты и нейтральные наполнители.' },
   { classA: 23, classB: 10, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Жирорастворимые витамины окисляются в щелочной среде неорганических солей.', suggestion: 'Используйте антиоксиданты и нейтральные наполнители.' },
   { classA: 23, classB: 28, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Следовые количества тяжелых металлов в силикатах (Тальк) катализируют окисление витаминов.', suggestion: 'Избегайте талька или используйте хелатирующие агенты (ЭДТА).' },
   { classA: 23, classB: 13, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Ионы кальция и следовые металлы в фосфатах катализируют деградацию витамина.', suggestion: 'Избегайте неорганических солей.' },
   { classA: 6, classB: 13, type: 'incompatible', severity: 'error', title: 'Металл-катализируемое окисление', message: 'Двухвалентные ионы кальция в составе фосфата катализируют окисление алифатических органических кислот (например, Витамина С).', suggestion: 'Используйте Маннит или МКЦ.' },
-  
+
   // Calcium salts and organic acids
   { classA: 7, classB: 13, type: 'incompatible', severity: 'warning', title: 'Образование нерастворимых солей', message: 'Взаимодействие ароматической органической кислоты с кальциевой солью образует малорастворимые комплексы, снижая биодоступность.', suggestion: 'Замените на нейтральный наполнитель.' },
   { classA: 26, classB: 13, type: 'incompatible', severity: 'warning', title: 'Омыление in situ', message: 'Жирные кислоты (Стеариновая к-та) образуют нерастворимые кальциевые соли при контакте с фосфатами.', suggestion: 'Рассмотрите замену лубриканта.' },
-  
+
   // Amines and polyols
   { classA: 1, classB: 17, type: 'incompatible', severity: 'warning', title: 'Реакция с микропримесями', message: 'Полиолы (Сорбит) могут содержать следовые количества редуцирующих сахаров, которые вступают в реакцию с первичными аминами.', suggestion: 'Используйте очищенный Маннит или МКЦ.' },
-  
+
   // Proteins
   { classA: 27, classB: 9, type: 'incompatible', severity: 'warning', title: 'Денатурация в щелочной среде', message: 'Белки и ферменты подвержены щелочному гидролизу в присутствии щелочных солей.', suggestion: 'Используйте нейтральную среду.' }
 ];
@@ -99,6 +99,27 @@ export function getCompatibilityRule(classA: number, classB: number): Compatibil
   for (const rule of COMPATIBILITY_RULES) {
     if ((rule.classA === classA && rule.classB === classB) || (rule.classA === classB && rule.classB === classA)) {
       return rule;
+    }
+  }
+  return null;
+}
+
+export function getIngredientsCompatibilityRule(
+  ingA: { chemicalClassId: number; activeMolecules?: { chemicalClassId: number }[] | null },
+  ingB: { chemicalClassId: number; activeMolecules?: { chemicalClassId: number }[] | null }
+): CompatibilityRule | null {
+  const moleculesA = ingA.activeMolecules && ingA.activeMolecules.length > 0
+    ? ingA.activeMolecules
+    : [{ chemicalClassId: ingA.chemicalClassId }];
+
+  const moleculesB = ingB.activeMolecules && ingB.activeMolecules.length > 0
+    ? ingB.activeMolecules
+    : [{ chemicalClassId: ingB.chemicalClassId }];
+
+  for (const mA of moleculesA) {
+    for (const mB of moleculesB) {
+      const rule = getCompatibilityRule(mA.chemicalClassId, mB.chemicalClassId);
+      if (rule) return rule;
     }
   }
   return null;

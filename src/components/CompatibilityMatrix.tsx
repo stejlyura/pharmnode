@@ -70,7 +70,7 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
     const rule = getCompatibilityRule(ing1.chemicalClassId, ing2.chemicalClassId);
 
     if (rule && rule.type === 'incompatible') {
-      let desc = rule.message.replace(/{nameA}/g, ing1.name).replace(/{nameB}/g, ing2.name);
+      const desc = rule.message.replace(/{nameA}/g, ing1.name).replace(/{nameB}/g, ing2.name);
       return {
         status: "incompatible",
         title: rule.title,

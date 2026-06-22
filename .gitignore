@@ -13,6 +13,13 @@
 # testing
 /coverage
 
+img/
+*.webp
+*.png
+*.jpg
+*.ico
+*.svg
+
 # next.js
 /.next/
 /out/
@@ -39,3 +46,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database backups
+/backups
+
+
+# Sentry Config File
+.env.sentry-build-plugin

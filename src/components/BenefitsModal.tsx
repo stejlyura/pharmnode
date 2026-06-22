@@ -13,11 +13,11 @@ interface BenefitsModalProps {
 export const BenefitsModal: React.FC<BenefitsModalProps> = ({
   isOpen,
   onClose,
-  tariff
+  tariff: _tariff
 }) => {
-  if (!isOpen) return null;
-
   const { t } = useTranslation();
+
+  if (!isOpen) return null;
 
   const details = {
     title: t('benefits_pro_title'),

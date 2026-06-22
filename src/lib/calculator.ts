@@ -1,5 +1,15 @@
-import { Ingredient } from '../types/pharm';
-import { getCompatibilityRule } from './chemicalRules';
+import {
+  Ingredient,
+  SegregationRiskResult,
+  SpreadingCoefficientResult,
+  PKDoseResult,
+  WetGranulationInputs,
+  WetGranulationResult,
+  PunchDimensions,
+  FillCamResult,
+  PressPresetsResult
+} from '../types/pharm';
+import { getIngredientsCompatibilityRule } from './chemicalRules';
 
 export interface FlowabilityResult {
   hausner: number;
@@ -73,14 +83,14 @@ export function calculatePorosity(massMg: number, volumeCm3: number, trueDensity
   if (massMg <= 0 || volumeCm3 <= 0 || trueDensityBlend <= 0) {
     return 0;
   }
-  
+
   // Apparent density of tablet = mass (g) / volume (cm3)
   const massG = massMg / 1000;
   const apparentDensity = massG / volumeCm3;
 
   // Porosity = 1 - (apparentDensity / trueDensity)
   const porosity = 1 - (apparentDensity / trueDensityBlend);
-  
+
   // Ensure porosity stays within realistic bounds [0, 1]
   return Math.max(0, Math.min(1, porosity));
 }
@@ -117,7 +127,7 @@ export function calculateBlendProperties(
   for (const item of ingredients) {
     const normalizedPercentage = item.percentage * scale; // Adjust percentages so they sum to 100%
     const fraction = normalizedPercentage / 100;
-    
+
     costSum += item.ingredient.costPerKgUsd * fraction;
   }
 
@@ -125,7 +135,7 @@ export function calculateBlendProperties(
     for (const item of standardIngredientsForDensity) {
       const normalizedPercentage = item.percentage * densityScale;
       const fraction = normalizedPercentage / 100;
-      
+
       looseDensitySum += item.ingredient.looseBulkDensity * fraction;
       tappedDensitySum += item.ingredient.tappedBulkDensity * fraction;
       trueDensitySum += (item.ingredient.trueDensity || item.ingredient.tappedBulkDensity) * fraction;
@@ -134,7 +144,7 @@ export function calculateBlendProperties(
     for (const item of ingredients) {
       const normalizedPercentage = item.percentage * scale;
       const fraction = normalizedPercentage / 100;
-      
+
       looseDensitySum += item.ingredient.looseBulkDensity * fraction;
       tappedDensitySum += item.ingredient.tappedBulkDensity * fraction;
       trueDensitySum += (item.ingredient.trueDensity || item.ingredient.tappedBulkDensity) * fraction;
@@ -166,7 +176,7 @@ export function calculateTableting(
 
   const radiusCm = diameterCm / 2;
   const volume = Math.PI * Math.pow(radiusCm, 2) * depthCm; // in cm3 (mL)
-  
+
   // maxWeight in mg = volume (mL) * looseDensity (g/mL) * 1000
   const maxWeightMg = volume * looseDensity * 1000;
   const recommendedWeightMg = 0.9 * maxWeightMg;
@@ -198,16 +208,16 @@ export function calculateBatch(
 
   const activeFraction = activePercentage / 100;
   const recommendedWeightG = recommendedWeightMg / 1000;
-  
+
   // Total tablets = activeRawWeightG / (recommendedWeightG * activeFraction)
   const totalTablets = Math.floor(activeRawWeightG / (recommendedWeightG * activeFraction));
-  
+
   // Total batch weight in kg
   const totalBatchWeightKg = (totalTablets * recommendedWeightMg) / 1000000;
-  
+
   // Cost per tablet in USD = weight in kg * cost per kg
   const costPerTabletUsd = (recommendedWeightMg / 1000000) * costPerKgBlend;
-  
+
   // Total batch cost in USD
   const totalBatchCostUsd = totalBatchWeightKg * costPerKgBlend;
 
@@ -270,11 +280,8 @@ export function checkCompatibilityAndLimits(
       const itemA = activeIngredients[i];
       const itemB = activeIngredients[j];
 
-      const classA = itemA.ingredient.chemicalClassId;
-      const classB = itemB.ingredient.chemicalClassId;
-
       // Check if A is incompatible with B's class, or B is incompatible with A's class
-      const rule = getCompatibilityRule(classA, classB);
+      const rule = getIngredientsCompatibilityRule(itemA.ingredient, itemB.ingredient);
       if (rule && rule.type === 'incompatible') {
         const ruleKeyBase = `rule_${rule.classA}_${rule.classB}`;
         let ruleTitle = translate(`${ruleKeyBase}_title`);
@@ -288,7 +295,7 @@ export function checkCompatibilityAndLimits(
 
         const msg = ruleMsg.replace(/{nameA}/g, itemA.ingredient.name).replace(/{nameB}/g, itemB.ingredient.name);
         const sugg = ruleSugg.replace(/{nameA}/g, itemA.ingredient.name).replace(/{nameB}/g, itemB.ingredient.name);
-        
+
         warnings.push({
           type: 'compatibility',
           severity: rule.severity,
@@ -310,7 +317,7 @@ export function checkCompatibilityAndLimits(
  */
 export function calculateComplexComponent(
   ingredient: Ingredient,
-  percentage: number
+  _percentage: number
 ): {
   isComplex: boolean;
   dilutionScale?: string;
@@ -323,7 +330,7 @@ export function calculateComplexComponent(
   }
 
   const scale = ingredient.dilutionScale || "";
-  
+
   return {
     isComplex: true,
     dilutionScale: scale,
@@ -331,3 +338,242 @@ export function calculateComplexComponent(
     note: `Компонент ${ingredient.name} разведен по шкале ${scale}. Химическая масса действующего вещества пренебрежимо мала.`
   };
 }
+
+/**
+ * Calculates powder compaction using the Sonnergaard log-exp model.
+ * V = V_l - w * log10(P) + V_e * exp(-P / P_m)
+ */
+export function calculateSonnergaardCompaction(
+  pressure: number,
+  vL: number,
+  w: number,
+  vE: number,
+  pM: number
+): number {
+  if (pressure <= 0) {
+    return vL + vE;
+  }
+  if (pM <= 0) {
+    // Prevent division by zero
+    return vL - w * Math.log10(pressure);
+  }
+  return vL - w * Math.log10(pressure) + vE * Math.exp(-pressure / pM);
+}
+
+/**
+ * Analyzes segregation risk of a blend of ingredients based on bulk density and particle size ratios.
+ */
+export function calculateSegregationRisk(
+  ingredients: { ingredient: Ingredient; percentage: number }[]
+): SegregationRiskResult {
+  const activeComponents = ingredients.filter(item => item.percentage > 0);
+  if (activeComponents.length <= 1) {
+    return {
+      maxBulkDensityDifference: 0,
+      bulkDensityRatio: 1.0,
+      maxParticleSizeDifference: 0,
+      particleSizeRatio: 1.0,
+      riskLevel: 'Low',
+      warnings: []
+    };
+  }
+
+  const densities = activeComponents
+    .map(item => item.ingredient.looseBulkDensity)
+    .filter(d => d !== undefined && d > 0);
+
+  const sizes = activeComponents
+    .map(item => item.ingredient.averageParticleSizeUm)
+    .filter((s): s is number => s !== undefined && s > 0);
+
+  let maxBulkDensityDifference = 0;
+  let bulkDensityRatio = 1.0;
+  if (densities.length > 1) {
+    const maxD = Math.max(...densities);
+    const minD = Math.min(...densities);
+    maxBulkDensityDifference = maxD - minD;
+    bulkDensityRatio = minD > 0 ? maxD / minD : 1.0;
+  }
+
+  let maxParticleSizeDifference = 0;
+  let particleSizeRatio = 1.0;
+  if (sizes.length > 1) {
+    const maxS = Math.max(...sizes);
+    const minS = Math.min(...sizes);
+    maxParticleSizeDifference = maxS - minS;
+    particleSizeRatio = minS > 0 ? maxS / minS : 1.0;
+  }
+
+  let riskLevel: 'Low' | 'Medium' | 'High' = 'Low';
+  const warnings: string[] = [];
+
+  if (bulkDensityRatio > 6.0 || particleSizeRatio > 10.0) {
+    riskLevel = 'High';
+  } else if (bulkDensityRatio > 3.5 || particleSizeRatio > 4.5) {
+    riskLevel = 'Medium';
+  }
+
+  if (bulkDensityRatio > 6.0) {
+    warnings.push(`High density segregation risk: ratio of bulk densities is ${bulkDensityRatio.toFixed(2)} (threshold > 6.0).`);
+  } else if (bulkDensityRatio > 3.5) {
+    warnings.push(`Medium density segregation risk: ratio of bulk densities is ${bulkDensityRatio.toFixed(2)} (threshold > 3.5).`);
+  }
+
+  if (particleSizeRatio > 10.0) {
+    warnings.push(`High particle size segregation risk: ratio of sizes is ${particleSizeRatio.toFixed(2)} (threshold > 10.0).`);
+  } else if (particleSizeRatio > 4.5) {
+    warnings.push(`Medium particle size segregation risk: ratio of sizes is ${particleSizeRatio.toFixed(2)} (threshold > 4.5).`);
+  }
+
+  return {
+    maxBulkDensityDifference,
+    bulkDensityRatio,
+    maxParticleSizeDifference,
+    particleSizeRatio,
+    riskLevel,
+    warnings
+  };
+}
+
+/**
+ * Calculates Wu's spreading coefficient of a lubricant over a substrate.
+ * S_12 = -2 * gamma_L + 4 * ( (gamma_S^d * gamma_L^d)/(gamma_S^d + gamma_L^d) + (gamma_S^p * gamma_L^p)/(gamma_S^p + gamma_L^p) )
+ */
+export function calculateSpreadingCoefficientWu(
+  gammaSd: number,
+  gammaSp: number,
+  gammaLd: number,
+  gammaLp: number
+): SpreadingCoefficientResult {
+  const termD = (gammaSd + gammaLd) > 0 ? (gammaSd * gammaLd) / (gammaSd + gammaLd) : 0;
+  const termP = (gammaSp + gammaLp) > 0 ? (gammaSp * gammaLp) / (gammaSp + gammaLp) : 0;
+
+  const gammaL = gammaLd + gammaLp;
+
+  const spreadingCoefficient = -2 * gammaL + 4 * (termD + termP);
+  const rating = spreadingCoefficient > 0 ? 'Spontaneous' : 'Non-Spontaneous';
+
+  return {
+    spreadingCoefficient,
+    rating
+  };
+}
+
+/**
+ * Calculates sustained-release vs. immediate-release pharmacokinetic dosing parameters.
+ * D_SR = D_IR * (1 + (0.693 * T_d) / t_1/2)
+ */
+export function calculatePharmacokineticDose(
+  dIR: number,
+  tHalf: number,
+  tDuration: number
+): PKDoseResult {
+  if (dIR <= 0 || tHalf <= 0 || tDuration <= 0) {
+    return { dSR: 0, releaseRate: 0, loadingDose: 0, maintenanceDose: 0 };
+  }
+
+  const ke = 0.693 / tHalf;
+  const dSR = dIR * (1 + ke * tDuration);
+  const releaseRate = dIR * ke;
+
+  return {
+    dSR,
+    releaseRate,
+    loadingDose: dIR,
+    maintenanceDose: dSR - dIR
+  };
+}
+
+/**
+ * Calculates wet granulation batch weights, raw fill weight with LOD, wet mass, and expected losses.
+ */
+export function calculateWetGranulation(inputs: WetGranulationInputs): WetGranulationResult {
+  const totalDryBatchWeightKg = (inputs.targetTabletWeightMg * inputs.batchSizeTablets) / 1000000;
+  const pureApiWeightKg = totalDryBatchWeightKg * (inputs.apiPercentage / 100);
+  const intragranularDryWeightKg = totalDryBatchWeightKg * (inputs.intragranularPercentage / 100);
+  
+  const extragranularPercentage = 100 - inputs.intragranularPercentage;
+  const extragranularDryWeightKg = totalDryBatchWeightKg * (extragranularPercentage / 100);
+  
+  const wetGranulesWeightBeforeDryingKg = intragranularDryWeightKg * (1 + inputs.binderSolutionAddedPercentage / 100);
+  
+  // LOD calculations
+  const lodFraction = inputs.moistureContentLod / 100;
+  const dryFraction = Math.max(0.01, 1 - lodFraction); // Prevent division by zero
+  const granuleFillWeightPerTabletMg = (inputs.targetTabletWeightMg * (inputs.intragranularPercentage / 100)) / dryFraction;
+  
+  const finalFillWeightPerTabletMg = granuleFillWeightPerTabletMg + (inputs.targetTabletWeightMg * (extragranularPercentage / 100));
+  
+  const expectedLossWeightKg = totalDryBatchWeightKg * (inputs.expectedLossPercentage / 100);
+
+  return {
+    totalDryBatchWeightKg,
+    pureApiWeightKg,
+    intragranularDryWeightKg,
+    extragranularDryWeightKg,
+    wetGranulesWeightBeforeDryingKg,
+    granuleFillWeightPerTabletMg,
+    finalFillWeightPerTabletMg,
+    expectedLossWeightKg
+  };
+}
+
+/**
+ * Calculates required Fill Cam size based on tablet weight, density, and punch dimensions.
+ */
+export function calculateFillCamSize(
+  targetWeightMg: number,
+  looseDensity: number,
+  punch: PunchDimensions
+): FillCamResult {
+  let punchAreaMm2 = 0;
+  if (punch.shape === 'round') {
+    const diameter = punch.diameterMm ?? 0;
+    punchAreaMm2 = (Math.PI * Math.pow(diameter, 2)) / 4;
+  } else {
+    const length = punch.lengthMm ?? 0;
+    const width = punch.widthMm ?? 0;
+    if (length > width) {
+      punchAreaMm2 = width * (length - width) + (Math.PI * Math.pow(width, 2)) / 4;
+    } else {
+      punchAreaMm2 = length * width;
+    }
+  }
+
+  const theoreticalFillDepthMm =
+    looseDensity > 0 && punchAreaMm2 > 0 ? targetWeightMg / (looseDensity * punchAreaMm2) : 0;
+
+  const recommendedFillDepthMm = theoreticalFillDepthMm > 0 ? theoreticalFillDepthMm + 3.0 : 0;
+
+  const standardCams = [4, 6, 8, 10, 12, 14, 16, 18, 20];
+  let closestStandardCamMm = 4;
+  if (recommendedFillDepthMm > 0) {
+    const found = standardCams.find(cam => cam >= recommendedFillDepthMm);
+    closestStandardCamMm = found !== undefined ? found : 20;
+  }
+
+  return {
+    punchAreaMm2,
+    theoreticalFillDepthMm,
+    recommendedFillDepthMm,
+    closestStandardCamMm
+  };
+}
+
+/**
+ * Calculates Fette and GEA Courtoy fill depth settings/presets.
+ */
+export function calculatePressPresets(
+  tabletThicknessMm: number,
+  preCompressionHeightMm: number
+): PressPresetsResult {
+  const fetteFillDepthMm = 2 * tabletThicknessMm + 2;
+  const geaCourtoyFillDepthMm = 1.8 * preCompressionHeightMm;
+
+  return {
+    fetteFillDepthMm,
+    geaCourtoyFillDepthMm
+  };
+}
+
+

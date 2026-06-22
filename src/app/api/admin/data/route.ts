@@ -1,22 +1,35 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // ─── GET /api/admin/data ──────────────────────────────────────────────────────
-// Admin panel endpoint. Protected by HTTP Basic Auth.
+// Admin panel endpoint. Protected by NextAuth or HTTP Basic Auth.
 // Query params:
 //   ?page=1     → page number (1-indexed, default: 1)
 //   ?limit=20   → items per page (default: 20, max: 100)
 export async function GET(request: Request) {
   try {
-    // ── Basic Auth ───────────────────────────────────────────────────────────
-    const authHeader = request.headers.get("authorization");
+    // ── NextAuth Session Check ───────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    const isSessionAdmin = session?.user?.email === "admin@pharmnode.com";
 
-    const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
-    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "PasswordforAdmin123";
-    const expectedAuth =
-      "Basic " + Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`).toString("base64");
+    // ── Basic Auth Fallback ──────────────────────────────────────────────────
+    let isAuthorized = isSessionAdmin;
 
-    if (!authHeader || authHeader !== expectedAuth) {
+    if (!isAuthorized) {
+      const authHeader = request.headers.get("authorization");
+      const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
+      const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "PasswordforAdmin123";
+      const expectedAuth =
+        "Basic " + Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`).toString("base64");
+
+      if (authHeader && authHeader === expectedAuth) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       return new Response("Unauthorized", {
         status: 401,
         headers: { "WWW-Authenticate": 'Basic realm="Admin Portal"' },
@@ -80,9 +93,15 @@ export async function GET(request: Request) {
         ]);
 
       // Map id → _id for backward compatibility with admin frontend
+      const { decrypt } = await import("@/lib/encryption");
       const users = dbUsers.map((u) => ({ ...u, _id: u.id }));
-      const recipes = dbRecipes.map((r) => ({ ...r, _id: r.id }));
-      const customIngredients = dbIngredients.map((ing) => ({ ...ing, _id: ing.id }));
+      const recipes = dbRecipes.map((r) => ({ ...r, _id: r.id, name: decrypt(r.name) }));
+      const customIngredients = dbIngredients.map((ing) => ({
+        ...ing,
+        _id: ing.id,
+        name: decrypt(ing.name),
+        casNumber: ing.casNumber ? decrypt(ing.casNumber) : null
+      }));
 
       return NextResponse.json({
         databaseOnline: true,

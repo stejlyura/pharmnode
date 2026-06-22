@@ -13,11 +13,54 @@ model User {
   email             String             @unique
   image             String?
   tariff            String             @default("hobby")
+  isSubscribed      Boolean            @default(false)
+  paddleSubId       String?            // Paddle Subscription ID
+  paddleCustomerId  String?            // Paddle Customer ID
+  variantId         String?
+  renewsAt          DateTime?          @map("renews_at")
+  billingPortalUrl  String?
+  twoFactorEnabled  Boolean            @default(false)
+  twoFactorSecret   String?
+  passwordHash      String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   recipes           Recipe[]
   customIngredients CustomIngredient[]
+  sessions          UserSession[]
 }
+
+model UserSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  lastUsed  DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  email     String?
+  action    String
+  details   String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+}
+
+model ProcessedWebhook {
+  id        String   @id
+  createdAt DateTime @default(now())
+}
+
 
 model Recipe {
   id          String   @id @default(uuid())
@@ -50,34 +93,110 @@ model CustomIngredient {
   dosageForm        String?
   applicationArea   String?
   processingTech    String?
+  effects           Json?    @default("[]")
+  contraindications Json?    @default("[]")
+  sideEffects       Json?    @default("[]")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
 
 model Ingredient {
-  id                    Int      @id
+  id                    Int                          @id
   name                  String
   casNumber             String?
-  role                  String   // active, filler, lubricant, glidant, dry-binder
+  role                  String                       // active, filler, lubricant, glidant, dry-binder
   chemicalClassId       Int
   looseBulkDensity      Float
   tappedBulkDensity     Float
   trueDensity           Float?
   averageParticleSizeUm Float?
-  isAllergen            Boolean  @default(false)
-  benefit               Float    @default(0)
-  risk                  Float    @default(0)
-  cost                  Float    @default(0) // cost field from KB
-  costPerKgUsd          Float    @default(0) // kept for codebase compatibility
-  stability             Float    @default(0)
-  manufacturability     Float    @default(0)
-  maxSafePercentage     Float    @default(100)
+  isAllergen            Boolean                      @default(false)
+  benefit               Float                        @default(0)
+  risk                  Float                        @default(0)
+  cost                  Float                        @default(0) // cost field from KB
+  costPerKgUsd          Float                        @default(0) // kept for codebase compatibility
+  stability             Float                        @default(0)
+  manufacturability     Float                        @default(0)
+  maxSafePercentage     Float                        @default(100)
   source                String?
   dilutionScale         String?
   dosageForm            String?
   applicationArea       String?
   processingTech        String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  sideEffects           Json?                        @default("[]")
+  activeMolecules       ActiveMolecule[]
+  effects               IngredientEffect[]
+  contraindications     IngredientContraindication[]
+  synergiesA            Synergy[]                    @relation("SynergyA")
+  synergiesB            Synergy[]                    @relation("SynergyB")
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+}
+
+model ActiveMolecule {
+  id              String     @id @default(uuid())
+  name            String
+  casNumber       String?
+  chemicalClassId Int
+  ingredientId    Int
+  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Effect {
+  id          String             @id @default(uuid())
+  name        String             @unique
+  ingredients IngredientEffect[]
+}
+
+model IngredientEffect {
+  id           String     @id @default(uuid())
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  effectId     String
+  effect       Effect     @relation(fields: [effectId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, effectId])
+}
+
+model Contraindication {
+  id          String                       @id @default(uuid())
+  name        String                       @unique
+  ingredients IngredientContraindication[]
+}
+
+model IngredientContraindication {
+  id                 String           @id @default(uuid())
+  ingredientId       Int
+  ingredient         Ingredient       @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  contraindicationId String
+  contraindication   Contraindication @relation(fields: [contraindicationId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, contraindicationId])
+}
+
+model Synergy {
+  id            String     @id @default(uuid())
+  ingredientAId Int
+  ingredientA   Ingredient @relation("SynergyA", fields: [ingredientAId], references: [id], onDelete: Cascade)
+  ingredientBId Int
+  ingredientB   Ingredient @relation("SynergyB", fields: [ingredientBId], references: [id], onDelete: Cascade)
+  value         Float
+
+  @@unique([ingredientAId, ingredientBId])
+}
+
+model CompatibilityRule {
+  id         String   @id @default(uuid())
+  classA     Int
+  classB     Int
+  type       String   // incompatible, synergy
+  severity   String   // error, warning
+  title      String
+  message    String
+  suggestion String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 

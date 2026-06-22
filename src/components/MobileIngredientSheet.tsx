@@ -114,13 +114,15 @@ export const MobileIngredientSheet: React.FC<MobileIngredientSheetProps> = ({
   useEffect(() => {
     if (searchQuery) {
       const rolesWithResults = new Set(filteredIngredients.map(i => i.role));
-      setOpenCategories(prev => {
-        const next = { ...prev };
-        rolesWithResults.forEach(r => {
-          next[r] = true;
+      setTimeout(() => {
+        setOpenCategories(prev => {
+          const next = { ...prev };
+          rolesWithResults.forEach(r => {
+            next[r] = true;
+          });
+          return next;
         });
-        return next;
-      });
+      }, 0);
     }
   }, [searchQuery, filteredIngredients]);
 

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sanitizeString, validateRole, validateDensity, validatePercentage, validateOptionalString, validateDilutionScale } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
+import { sanitizeString, validateRole, validateDensity, validatePercentage, validateOptionalString, validateDilutionScale, validateEffects, validateContraindications, validateSideEffects } from "@/lib/validation";
 import { checkTariffLimit } from "@/lib/tariffLimits";
 
 // ─── Tariff limits (enforced server-side only) ────────────────────────────────
@@ -19,6 +20,11 @@ type IngredientRole = (typeof VALID_ROLES)[number];
 function isValidRole(role: unknown): role is IngredientRole {
   return VALID_ROLES.includes(role as IngredientRole);
 }
+
+// Basic in-memory cache for standard ingredients
+let cachedStandardIngredients: Record<string, unknown>[] | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL = 300 * 1000; // 5 minutes
 
 // ─── GET /api/ingredients ─────────────────────────────────────────────────────
 // Query params:
@@ -39,12 +45,36 @@ export async function GET(request: Request) {
 
     const session = await getServerSession(authOptions);
     const activeUserId = session?.user?.id;
+    const now = Date.now();
+
+    // Helper to fetch standard ingredients from database with relations
+    const getStandardIngredientsFromDb = async () => {
+      const dbIngredients = await prisma.ingredient.findMany({
+        orderBy: { id: "asc" },
+        include: {
+          activeMolecules: true,
+          effects: { include: { effect: true } },
+          contraindications: { include: { contraindication: true } },
+        },
+      });
+
+      return dbIngredients.map(ing => ({
+        ...ing,
+        effects: ing.effects.map(e => e.effect.name),
+        contraindications: ing.contraindications.map(c => c.contraindication.name),
+      }));
+    };
 
     // "standard" is always public — no auth needed
     if (typeParam === "standard" || (!typeParam && !activeUserId)) {
-      const standardIngredients = await prisma.ingredient.findMany({
-        orderBy: { id: "asc" },
-      });
+      if (cachedStandardIngredients && (now - lastCacheTime < CACHE_TTL)) {
+        return NextResponse.json({ success: true, ingredients: cachedStandardIngredients });
+      }
+
+      const standardIngredients = await getStandardIngredientsFromDb();
+      cachedStandardIngredients = standardIngredients;
+      lastCacheTime = now;
+
       return NextResponse.json({ success: true, ingredients: standardIngredients });
     }
 
@@ -53,28 +83,55 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { decrypt, decryptJson } = await import("@/lib/encryption");
+    const decryptCustomIngredient = (ing: {
+      name: string;
+      casNumber?: string | null;
+      source?: string | null;
+      effects?: unknown;
+      contraindications?: unknown;
+      sideEffects?: unknown;
+      [key: string]: unknown;
+    }) => ({
+      ...ing,
+      name: decrypt(ing.name),
+      casNumber: ing.casNumber ? decrypt(ing.casNumber) : null,
+      source: ing.source ? decrypt(ing.source) : null,
+      effects: decryptJson(ing.effects),
+      contraindications: decryptJson(ing.contraindications),
+      sideEffects: decryptJson(ing.sideEffects),
+    });
+
     if (typeParam === "custom") {
       const customIngredients = await prisma.customIngredient.findMany({
         where: { userId: activeUserId },
         orderBy: { createdAt: "desc" },
       });
-      return NextResponse.json({ success: true, ingredients: customIngredients });
+      const decryptedCustom = customIngredients.map(decryptCustomIngredient);
+      return NextResponse.json({ success: true, ingredients: decryptedCustom });
     }
 
     // "all" or authenticated user with no param → standard + custom merged
-    const [standardIngredients, customIngredients] = await Promise.all([
-      prisma.ingredient.findMany({ orderBy: { id: "asc" } }),
-      prisma.customIngredient.findMany({
-        where: { userId: activeUserId },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+    let standardIngredients: Record<string, unknown>[];
+    if (cachedStandardIngredients && (now - lastCacheTime < CACHE_TTL)) {
+      standardIngredients = cachedStandardIngredients;
+    } else {
+      standardIngredients = await getStandardIngredientsFromDb();
+      cachedStandardIngredients = standardIngredients;
+      lastCacheTime = now;
+    }
+
+    const customIngredients = await prisma.customIngredient.findMany({
+      where: { userId: activeUserId },
+      orderBy: { createdAt: "desc" },
+    });
+    const decryptedCustom = customIngredients.map(decryptCustomIngredient);
 
     return NextResponse.json({
       success: true,
-      ingredients: [...standardIngredients, ...customIngredients],
+      ingredients: [...standardIngredients, ...decryptedCustom],
       standard: standardIngredients,
-      custom: customIngredients,
+      custom: decryptedCustom,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -85,7 +142,6 @@ export async function GET(request: Request) {
 
 // ─── POST /api/ingredients ────────────────────────────────────────────────────
 // Creates a new custom ingredient for the authenticated user.
-// Enforces tariff limits and validates all fields.
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -108,6 +164,9 @@ export async function POST(request: Request) {
       dosageForm,
       applicationArea,
       processingTech,
+      effects,
+      contraindications,
+      sideEffects,
     } = body;
 
     // ── Mock dev support ────────────────────────────────────────────────────
@@ -137,6 +196,10 @@ export async function POST(request: Request) {
     let validatedDosageForm: string | null = null;
     let validatedApplicationArea: string | null = null;
     let validatedProcessingTech: string | null = null;
+    let validatedEffects: string[] = [];
+    let validatedContraindications: string[] = [];
+    let validatedSideEffects: { name: string; frequency: string; severity: 'low' | 'medium' | 'high' }[] = [];
+
 
     try {
       cleanName = sanitizeString(name);
@@ -169,8 +232,12 @@ export async function POST(request: Request) {
       validatedDosageForm = validateOptionalString(dosageForm, 255, "Форма выпуска");
       validatedApplicationArea = validateOptionalString(applicationArea, 255, "Область применения");
       validatedProcessingTech = validateOptionalString(processingTech, 255, "Технология производства");
-    } catch (validationErr: any) {
-      return NextResponse.json({ error: validationErr.message }, { status: 400 });
+      validatedEffects = validateEffects(effects);
+      validatedContraindications = validateContraindications(contraindications);
+      validatedSideEffects = validateSideEffects(sideEffects);
+    } catch (validationErr: unknown) {
+      const msg = validationErr instanceof Error ? validationErr.message : "Validation error";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
     // ── Tariff limit check ──────────────────────────────────────────────────
@@ -188,28 +255,59 @@ export async function POST(request: Request) {
       );
     }
 
+    // ── Encrypt fields ──────────────────────────────────────────────────────
+    const { encrypt, encryptJson } = await import("@/lib/encryption");
+    const encryptedName = encrypt(cleanName);
+    const encryptedCas = cleanCas ? encrypt(cleanCas) : null;
+    const encryptedSource = validatedSource ? encrypt(validatedSource) : null;
+    const encryptedEffects = encryptJson(validatedEffects) as Prisma.InputJsonValue;
+    const encryptedContraindications = encryptJson(validatedContraindications) as Prisma.InputJsonValue;
+    const encryptedSideEffects = encryptJson(validatedSideEffects) as Prisma.InputJsonValue;
+
     // ── Persist ─────────────────────────────────────────────────────────────
     const newIngredient = await prisma.customIngredient.create({
       data: {
         userId: activeUserId,
-        name: cleanName,
+        name: encryptedName,
         role: validatedRole,
-        casNumber: cleanCas || null,
+        casNumber: encryptedCas,
         looseBulkDensity: parsedLoose,
         tappedBulkDensity: parsedTapped,
         trueDensity: parsedTrue,
         costPerKgUsd: parsedCost,
         maxSafePercentage: parsedMaxSafe,
         isAllergen: !!isAllergen,
-        source: validatedSource,
+        source: encryptedSource,
         dilutionScale: validatedDilutionScale,
         dosageForm: validatedDosageForm,
         applicationArea: validatedApplicationArea,
         processingTech: validatedProcessingTech,
+        effects: encryptedEffects,
+        contraindications: encryptedContraindications,
+        sideEffects: encryptedSideEffects,
       },
     });
 
-    return NextResponse.json({ success: true, ingredient: newIngredient }, { status: 201 });
+    const clientIngredient = {
+      ...newIngredient,
+      name: cleanName,
+      casNumber: cleanCas || null,
+      source: validatedSource,
+      effects: validatedEffects,
+      contraindications: validatedContraindications,
+      sideEffects: validatedSideEffects,
+    };
+
+    // Log compliance event
+    const { logAuditEvent } = await import("@/lib/auditLogger");
+    await logAuditEvent({
+      userId: activeUserId,
+      email: session?.user?.email,
+      action: "custom_ingredient_create",
+      details: `Ingredient ID: ${newIngredient.id}, Name: ${cleanName}`
+    });
+
+    return NextResponse.json({ success: true, ingredient: clientIngredient }, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Save custom ingredient error:", err);
