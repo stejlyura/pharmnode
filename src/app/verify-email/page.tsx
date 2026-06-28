@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { resendVerificationEmailAction } from "@/actions/auth";
 
 function VerifyEmailContent() {
@@ -18,6 +18,22 @@ function VerifyEmailContent() {
   const [errorMessage, setErrorMessage] = useState("");
   const [devMessage, setDevMessage] = useState("");
   const verificationStarted = useRef(false);
+  const sessionChecked = useRef(false);
+
+  // Auto-refresh session on mount to detect if user has verified from another tab or context
+  useEffect(() => {
+    if (session?.user && !session.user.emailVerified && !sessionChecked.current) {
+      sessionChecked.current = true;
+      update().then((newSession) => {
+        if (newSession?.user?.emailVerified) {
+          setStatus("success");
+          setTimeout(() => {
+            router.push("/projects");
+          }, 1500);
+        }
+      });
+    }
+  }, [session, update, router]);
 
   // Resend email state & logic
   const [resendCooldown, setResendCooldown] = useState(60);
@@ -184,6 +200,12 @@ function VerifyEmailContent() {
               После подтверждения обновите эту страницу или войдите заново.
             </div>
             {renderResendButton()}
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="mt-4 text-xs text-zinc-500 hover:text-zinc-300 transition underline decoration-dotted underline-offset-4"
+            >
+              Выйти из аккаунта
+            </button>
           </div>
         )}
 
@@ -232,6 +254,12 @@ function VerifyEmailContent() {
                 Вернуться назад
               </button>
               {renderResendButton()}
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="mt-2 text-xs text-zinc-500 hover:text-zinc-300 transition underline decoration-dotted underline-offset-4"
+              >
+                Выйти из аккаунта
+              </button>
             </div>
           </div>
         )}
