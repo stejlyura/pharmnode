@@ -4,25 +4,18 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { SessionProvider, useSession, signIn, signOut } from "next-auth/react";
 import { initAnalytics, identifyUser, resetAnalytics } from "@/lib/analytics";
 
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  image?: string;
-  tariff: "hobby" | "professional";
-  provider: string;
-  renewsAt?: string | null;
-}
+import { UserProfile, TariffType } from "@/types/pharm";
+export type { UserProfile, TariffType };
 
 interface AuthContextType {
   user: UserProfile | null;
   status: "authenticated" | "unauthenticated" | "loading";
   login: (
     provider: string,
-    customDetails?: { name: string; email: string; tariff?: "hobby" | "professional" }
+    customDetails?: { name: string; email: string; tariff?: TariffType }
   ) => Promise<void>;
   logout: () => Promise<void>;
-  changeTariff: (tariff: "hobby" | "professional") => void;
+  changeTariff: (tariff: TariffType) => void;
   startSubscriptionPolling: () => void;
   isPolling: boolean;
   pollingStatus: "idle" | "polling" | "timeout";
@@ -34,23 +27,31 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { data: session, status: nextAuthStatus, update } = useSession();
   const [mockUser, setMockUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tariffOverride, setTariffOverride] = useState<"hobby" | "professional" | null>(null);
+  const [tariffOverride, setTariffOverride] = useState<TariffType | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [pollingStatus, setPollingStatus] = useState<"idle" | "polling" | "timeout">("idle");
 
   useEffect(() => {
     initAnalytics();
-    const stored = localStorage.getItem("pharmnode_mock_user");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setTimeout(() => {
-          setMockUser(parsed);
-        }, 0);
-      } catch (e) {
-        console.error("Failed to parse mock user:", e);
+    
+    const isProduction =
+      process.env.NODE_ENV === "production" ||
+      process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
+
+    if (!isProduction) {
+      const stored = localStorage.getItem("pharmnode_mock_user");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setTimeout(() => {
+            setMockUser(parsed);
+          }, 0);
+        } catch (e) {
+          console.error("Failed to parse mock user:", e);
+        }
       }
     }
+
     setTimeout(() => {
       setLoading(false);
     }, 0);
@@ -60,7 +61,15 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     provider: string,
     customDetails?: { name: string; email: string; tariff?: "hobby" | "professional" }
   ) => {
+    const isProduction =
+      process.env.NODE_ENV === "production" ||
+      process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
+
     if (provider.startsWith("mock-")) {
+      if (isProduction) {
+        throw new Error("Mock login is disabled in production environment");
+      }
+
       const name = 
         customDetails?.name || (
           provider === "mock-google" 
@@ -110,7 +119,7 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  const changeTariff = (newTariff: "hobby" | "professional") => {
+  const changeTariff = (newTariff: TariffType) => {
     if (mockUser) {
       const updated = { 
         ...mockUser, 
@@ -204,19 +213,25 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     activeStatus = "loading";
   }
 
+  const activeUserId = activeUser?.id;
+  const activeUserEmail = activeUser?.email;
+  const activeUserName = activeUser?.name;
+  const activeUserTariff = activeUser?.tariff;
+  const activeUserProvider = activeUser?.provider;
+
   // Telemetry session tracking
   useEffect(() => {
-    if (activeStatus === "authenticated" && activeUser) {
-      identifyUser(activeUser.id, {
-        email: activeUser.email,
-        name: activeUser.name,
-        tariff: activeUser.tariff,
-        provider: activeUser.provider
+    if (activeStatus === "authenticated" && activeUserId && activeUserEmail && activeUserName && activeUserTariff && activeUserProvider) {
+      identifyUser(activeUserId, {
+        email: activeUserEmail,
+        name: activeUserName,
+        tariff: activeUserTariff,
+        provider: activeUserProvider
       });
     } else if (activeStatus === "unauthenticated") {
       resetAnalytics();
     }
-  }, [activeUser?.id, activeUser?.tariff, activeStatus]);
+  }, [activeUserId, activeUserEmail, activeUserName, activeUserTariff, activeUserProvider, activeStatus]);
 
   return (
     <AuthContext.Provider value={{ user: activeUser, status: activeStatus, login, logout, changeTariff, startSubscriptionPolling, isPolling, pollingStatus }}>

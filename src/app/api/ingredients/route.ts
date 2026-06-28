@@ -6,6 +6,10 @@ import { Prisma } from "@prisma/client";
 import { sanitizeString, validateRole, validateDensity, validatePercentage, validateOptionalString, validateDilutionScale, validateEffects, validateContraindications, validateSideEffects } from "@/lib/validation";
 import { checkTariffLimit } from "@/lib/tariffLimits";
 
+const isProduction =
+  process.env.NODE_ENV === "production" ||
+  process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
+
 // ─── Tariff limits (enforced server-side only) ────────────────────────────────
 const TARIFF_LIMITS: Record<string, number> = {
   hobby: 3,
@@ -39,7 +43,7 @@ export async function GET(request: Request) {
 
     // Mock user support
     const queryUserId = searchParams.get("userId");
-    if (queryUserId && String(queryUserId).startsWith("mock-")) {
+    if (!isProduction && queryUserId && String(queryUserId).startsWith("mock-")) {
       return NextResponse.json({ success: true, ingredients: [] });
     }
 
@@ -170,7 +174,7 @@ export async function POST(request: Request) {
     } = body;
 
     // ── Mock dev support ────────────────────────────────────────────────────
-    if (userId && String(userId).startsWith("mock-")) {
+    if (!isProduction && userId && String(userId).startsWith("mock-")) {
       return NextResponse.json({
         success: true,
         mock: true,

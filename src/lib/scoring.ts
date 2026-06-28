@@ -1,5 +1,4 @@
-import { Ingredient, SideEffect } from '../types/pharm';
-import { CompatibilityWarning } from './calculator';
+import { Ingredient, SideEffect, CompatibilityWarning } from '../types/pharm';
 
 export interface OverdoseWarning {
   ingredientId: string | number;

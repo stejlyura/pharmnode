@@ -16,8 +16,8 @@ export async function logAuditEvent(params: {
       where: { key: "audit_logging_enabled" },
     });
     
-    // Default to false (off by default)
-    const isEnabled = setting ? setting.value === "true" : false;
+    // Default to true (on by default for B2B SaaS)
+    const isEnabled = setting ? setting.value === "true" : true;
     if (!isEnabled) {
       return;
     }

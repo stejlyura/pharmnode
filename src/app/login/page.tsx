@@ -528,7 +528,7 @@ function LoginContent() {
               </div>
 
               {/* Mock Demo Sandboxes — hidden in production */}
-              {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && (
+              {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && process.env.NODE_ENV !== "production" && (
                 <div className="border-t border-zinc-850 pt-5 mt-2">
                   <span className="block text-[9px] text-zinc-500 font-bold uppercase tracking-wider mb-3 text-center">
                     {isRu ? "Песочница для тестирования (Демо)" : "Testing Sandbox (Demo)"}

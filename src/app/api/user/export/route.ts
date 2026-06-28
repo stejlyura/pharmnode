@@ -9,6 +9,18 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const limiter = await rateLimit("user_export", {
+      limit: 3,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many export requests. Please try again in an hour." },
+        { status: 429 }
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

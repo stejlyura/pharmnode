@@ -34,3 +34,9 @@ jobs:
 
     - name: Run Unit Tests
       run: npm run test
+
+    - name: Build Application
+      run: npm run build
+      env:
+        NEXTAUTH_SECRET: "ci-secret-value-for-next-auth-build"
+

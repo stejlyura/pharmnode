@@ -1,15 +1,15 @@
-import { jsPDF } from "jspdf";
 import { CalculatedResults, EditorNode } from "../hooks/useNodeEditor";
 import { UserProfile } from "../context/AuthContext";
 import { Ingredient } from "../types/pharm";
 
-export function generateGMPReport(
+export async function generateGMPReport(
   nodes: EditorNode[],
   calculatedResults: CalculatedResults,
   user: UserProfile | null,
   region: string,
   allIngredients: Ingredient[]
 ) {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",

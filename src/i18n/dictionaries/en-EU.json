@@ -483,9 +483,12 @@
   "fda_p3": "DSHEA 1994 Compliance: Automatic inclusion of required dietary supplement labeling statements for products intended for distribution in the United States.",
   "btn_close": "Close",
   "company_name": "PharmNode LLC",
-  "company_address": "75 Formulation Drive, Suite 210, Boston, MA 02111, USA",
-  "company_phone": "+1 (617) 555-0143",
+  "company_address": "12 Heroiv Polku Azov St, Kyiv, 04212, Ukraine",
+  "company_phone": "+380 73 271 3617",
   "company_email": "support@pharmnode.com",
   "company_registration": "Delaware Reg No. DE-994101",
-  "footer_contacts_title": "Corporate Contact"
+  "footer_contacts_title": "Corporate Contact",
+  "nav_pricing": "Pricing",
+  "nav_about": "About Us",
+  "nav_usecases": "Use Cases"
 }

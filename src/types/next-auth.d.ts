@@ -6,6 +6,7 @@ declare module "next-auth" {
     id: string;
     tariff?: string;
     renewsAt?: string | null;
+    emailVerified?: boolean;
   }
   interface Session {
     user: {
@@ -15,6 +16,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       renewsAt?: string | null;
+      emailVerified: boolean;
     };
     error?: string;
   }
@@ -25,5 +27,6 @@ declare module "next-auth/jwt" {
     id?: string;
     tariff?: string;
     renewsAt?: string | null;
+    emailVerified?: boolean;
   }
 }

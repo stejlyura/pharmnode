@@ -5,11 +5,6 @@ import { Ingredient, IngredientRole } from '../types/pharm';
 import { useTranslation } from '../context/I18nContext';
 import {
   Search,
-  Sparkles,
-  Layers,
-  ShieldCheck,
-  Flame,
-  Wind,
   Plus,
   X,
   ChevronDown

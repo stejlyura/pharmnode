@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Ingredient, IngredientRole, baseIngredientsMatrix } from '../types/pharm';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Ingredient, IngredientRole } from '../types/pharm';
+import { baseIngredientsMatrix } from '../data/baseIngredients';
 import { useTranslation } from '../context/I18nContext';
 import {
   Search,
@@ -77,7 +78,7 @@ const ROLE_VISUAL: Record<IngredientRole, {
 
 const CATEGORY_ORDER: IngredientRole[] = ['active', 'filler', 'dry-binder', 'lubricant', 'glidant'];
 
-export const Sidebar: React.FC<SidebarProps> = ({
+export const Sidebar = React.memo<SidebarProps>(({
   isOpen,
   onToggle,
   activeNodeIngredientIds,
@@ -94,7 +95,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
   const [draggingId, setDraggingId] = useState<number | string | null>(null);
 
-  const ghostRef = useRef<HTMLDivElement>(null);
 
   // Dynamic role meta with translated labels — recomputed on locale change
   const ROLE_META = useMemo<Record<IngredientRole, {
@@ -136,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         (ing.casNumber && ing.casNumber.includes(q))
       );
     });
-  }, [allIngredients, searchQuery]);
+  }, [allIngredients, searchQuery, ROLE_META]);
 
   // When searching, auto-expand all categories that have results
   useEffect(() => {
@@ -523,4 +523,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
     </aside>
   );
-};
+});
+
+Sidebar.displayName = 'Sidebar';

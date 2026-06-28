@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { userId } = await request.json();
+    const { userId } = (await request.json()) as { userId?: string };
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId in request body" }, { status: 400 });
@@ -90,8 +90,8 @@ export async function POST(request: Request) {
       customerId,
       eventId
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[SIMULATOR] Error during webhook simulation:", err);
-    return NextResponse.json({ error: "Simulator error", message: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Simulator error", message: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }

@@ -9,9 +9,7 @@ import {
   LogIn, 
   LogOut, 
   User, 
-  ShieldCheck, 
   ChevronDown, 
-  Plus, 
   Undo2, 
   Redo2,
   Sparkles,
@@ -50,8 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   canRedo = false,
   showAddMenu = false,
   setShowAddMenu,
-  remainingIngredients = [],
-  handleAddIngredient,
+  remainingIngredients: _remainingIngredients = [],
+  handleAddIngredient: _handleAddIngredient,
   tariff,
   setTariff,
   onOpenCompatibilityMatrix,
@@ -304,7 +302,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <Sparkles size={11} className="text-indigo-400 animate-pulse" />
                     Pro
                   </span>
-                  <span className="text-[9px] bg-zinc-850 px-1 py-0.2 rounded text-zinc-500">$19</span>
+                  <span className="text-[9px] bg-zinc-850 px-1 py-0.2 rounded text-zinc-500">$39</span>
                 </button>
 
                 <div className="border-t border-zinc-800/80 my-1 pt-1">
@@ -336,45 +334,65 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
         ) : (
-          <div className="relative">
-            <button
-              onClick={() => setShowLoginMenu(!showLoginMenu)}
-              className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-100 text-zinc-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer theme-element"
-            >
-              <LogIn size={13} />
-              {t('header_sign_in')}
-            </button>
+          (() => {
+            const isProduction =
+              process.env.NODE_ENV === "production" ||
+              process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
 
-            {showLoginMenu && (
-              <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl p-2.5 flex flex-col gap-1.5 z-50">
-                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider px-1 block mb-1">
-                  {t('header_auth_title')}
-                </span>
-                
-                <button
-                  onClick={() => handleMockLogin("mock-google")}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-zinc-800 text-zinc-200 transition-colors flex items-center gap-2 cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
+            if (isProduction) {
+              return (
+                <Link
+                  href="/login"
+                  className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-100 text-zinc-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer theme-element"
                 >
-                  <div className="w-4 h-4 rounded bg-red-500/10 flex items-center justify-center text-red-400 text-[9px] font-bold">G</div>
-                  <span>Google Mock (Hobby)</span>
-                </button>
+                  <LogIn size={13} />
+                  {t('header_sign_in')}
+                </Link>
+              );
+            }
+
+            return (
+              <div className="relative">
                 <button
-                  onClick={() => handleMockLogin("mock-github")}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-zinc-800 text-zinc-200 transition-colors flex items-center gap-2 cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
+                  onClick={() => setShowLoginMenu(!showLoginMenu)}
+                  className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-100 text-zinc-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer theme-element"
                 >
-                  <div className="w-4 h-4 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-[9px] font-bold">Git</div>
-                  <span>GitHub Mock (Pro)</span>
+                  <LogIn size={13} />
+                  {t('header_sign_in')}
                 </button>
 
+                {showLoginMenu && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl p-2.5 flex flex-col gap-1.5 z-50">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider px-1 block mb-1">
+                      {t('header_auth_title')}
+                    </span>
+                    
+                    <button
+                      onClick={() => handleMockLogin("mock-google")}
+                      className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-zinc-800 text-zinc-200 transition-colors flex items-center gap-2 cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
+                    >
+                      <div className="w-4 h-4 rounded bg-red-500/10 flex items-center justify-center text-red-400 text-[9px] font-bold">G</div>
+                      <span>Google Mock (Hobby)</span>
+                    </button>
+                    <button
+                      onClick={() => handleMockLogin("mock-github")}
+                      className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-zinc-800 text-zinc-200 transition-colors flex items-center gap-2 cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
+                    >
+                      <div className="w-4 h-4 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-[9px] font-bold">Git</div>
+                      <span>GitHub Mock (Pro)</span>
+                    </button>
 
-                <div className="border-t border-zinc-800/80 my-1 pt-1.5 flex flex-col gap-1">
-                  <span className="text-[8px] text-zinc-500 leading-normal px-1">
-                    {t('header_demo_note')}
-                  </span>
-                </div>
+
+                    <div className="border-t border-zinc-800/80 my-1 pt-1.5 flex flex-col gap-1">
+                      <span className="text-[8px] text-zinc-500 leading-normal px-1">
+                        {t('header_demo_note')}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()
         )}
       </div>
     </header>

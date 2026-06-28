@@ -9,9 +9,7 @@ import {
   Check, 
   AlertTriangle, 
   X, 
-  Activity, 
   ShieldAlert, 
-  Settings2,
   CheckCircle2
 } from "lucide-react";
 

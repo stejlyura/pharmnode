@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, validatePassword } from "@/lib/password";
 import { sanitizeString } from "@/lib/validation";
+import crypto from "node:crypto";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const limiter = await rateLimit("auth_register", {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    const body = (await request.json()) as { name?: string; email?: string; password?: string };
     const { name, email, password } = body;
 
     const sanitizedName = sanitizeString(name);
@@ -20,8 +33,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Введите корректный email" }, { status: 400 });
     }
 
-    if (!rawPassword || rawPassword.length < 6) {
-      return NextResponse.json({ error: "Пароль должен быть не менее 6 символов" }, { status: 400 });
+    if (!validatePassword(rawPassword)) {
+      return NextResponse.json(
+        { error: "Пароль должен быть не менее 8 символов и содержать заглавные и строчные буквы, а также цифры" },
+        { status: 400 }
+      );
     }
 
     // Check if user already exists
@@ -36,6 +52,8 @@ export async function POST(request: Request) {
     // Hash password
     const passwordHash = hashPassword(rawPassword);
 
+    const verificationToken = crypto.randomUUID();
+
     // Create user in database
     const user = await prisma.user.create({
       data: {
@@ -44,8 +62,20 @@ export async function POST(request: Request) {
         passwordHash,
         tariff: "hobby",
         isSubscribed: false,
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
       },
     });
+
+    // Send email verification link
+    try {
+      const { sendVerificationEmail } = await import("@/actions/auth");
+      const origin = request.headers.get("origin") || "http://localhost:3000";
+      const verificationUrl = `${origin}/verify-email?token=${verificationToken}`;
+      await sendVerificationEmail(trimmedEmail, verificationUrl);
+    } catch (emailErr) {
+      console.error("Verification email dispatch failed:", emailErr);
+    }
 
     // Log registration audit event
     try {

@@ -14,12 +14,12 @@ export const CookieConsent: React.FC = () => {
 
   useEffect(() => {
     const consent = localStorage.getItem("pharmnode_cookie_consent");
-    if (!consent) {
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
+    if (consent) return;
+
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleAcceptAll = () => {

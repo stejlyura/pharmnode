@@ -2,8 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Footer } from "@/components/Footer";
+import { PricingPanel } from "@/components/PricingPanel";
 import { useTranslation } from "@/context/I18nContext";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -30,8 +32,11 @@ const translations = {
   "en-US": {
     nav_features: "Features",
     nav_workflow: "Workflow",
+    nav_about: "About Us",
+    nav_usecases: "Use Cases",
     nav_tech: "Technologies",
     nav_regulatory: "Regulatory",
+    nav_pricing: "Pricing",
     btn_open: "Open Studio",
     hero_badge: "Digital Pharmaceutical Compounding",
     hero_title: "Virtual Formulation Studio for B2B Pharma & Supplements",
@@ -120,13 +125,48 @@ const translations = {
     fda_p1: "FDA Title 21 CFR Part 11: Designed to accommodate GMP/GxP logging, electronic signature support, and audit trailing protocols for commercial use.",
     fda_p2: "FALCPA Standard: Automatic declaration of major allergens in dietary supplements. Warnings are generated for substances containing milk (lactose), wheat (gluten), soy, or nuts.",
     fda_p3: "DSHEA 1994 Compliance: Automatic inclusion of required dietary supplement labeling statements for products intended for distribution in the United States.",
-    btn_close: "Close"
+    btn_close: "Close",
+    about_title: "Empowering Smart Pharmaceutical Design",
+    about_desc: "PharmNode is a specialized Decision Support System (DSS) designed to bridge the gap between initial recipe formulation and regulatory-compliant manufacturing. Our mission is to replace time-consuming trial-and-error laboratory iterations with instant physical simulations and deterministic compatibility rules.",
+    about_audience_title: "Who is PharmNode for?",
+    about_audience_1_title: "Technologists & Formulators",
+    about_audience_1_desc: "Accelerate formulation design, calculate powder flowability (Carr & Hausner), and instantly resolve chemical conflicts.",
+    about_audience_2_title: "R&D Laboratories",
+    about_audience_2_desc: "Model excipient and active ingredient interactions digitally before performing physical HPLC/DSC trials.",
+    about_audience_3_title: "Contract Manufacturers (CDMO)",
+    about_audience_3_desc: "Optimize tablet press geometry, predict batch yields, and export ready-to-use GMP validation reports for clients.",
+    about_value_1_num: "70%",
+    about_value_1_lbl: "Reduction in R&D iteration cycles",
+    about_value_2_num: "0%",
+    about_value_2_lbl: "Risk of cross-allergen or chemical conflicts",
+    about_value_3_num: "1 Click",
+    about_value_3_lbl: "To generate GMP validation PDF reports",
+    usecases_title: "Practical Examples of Formulation Engineering",
+    usecases_desc: "Discover how technologists leverage PharmNode to resolve critical formulation, tableting, and compatibility challenges digitally.",
+    usecase_1_title: "Excipient Flowability Tuning",
+    usecase_1_subtitle: "Solving poor flow in tablet compression",
+    usecase_1_challenge: "A formulation with 15% Active Ingredient exhibits poor flowability (Carr Index of 25, Hausner Ratio of 1.33), causing weight variations during high-speed compression.",
+    usecase_1_solution: "Adding 1.5% Aerosil and 35% Avicel pH-102 adjusts tapped density, lowering the Carr Index to 12 (Excellent flow) and stabilizing tablet weight.",
+    usecase_1_metric: "Flow Index: Poor (25) → Excellent (12)",
+    usecase_2_title: "Punch & Porosity Optimization",
+    usecase_2_subtitle: "Preventing capping and lamination",
+    usecase_2_challenge: "A 500mg Calcium Carbonate blend undergoes capping (top splits off) when pressed with a flat 10mm round punch under 15kN force.",
+    usecase_2_solution: "Switching to a double-convex 11mm oval punch decreases tablet thickness, optimizes porosity to 15%, and guarantees safe mechanical strength at lower compression forces.",
+    usecase_2_metric: "Force Required: 15kN → 8kN",
+    usecase_3_title: "Allergen & Browning Prevention",
+    usecase_3_subtitle: "Detecting active/excipient conflicts",
+    usecase_3_challenge: "Developing a new chewable tablet containing Glucosamine Hydrochloride (primary amine) and Lactose Monohydrate (reducing sugar).",
+    usecase_3_solution: "The engine flags a Maillard browning conflict. Substituting lactose with Mannitol avoids discoloration, while removing lactose allergens under FALCPA/EFSA guidelines.",
+    usecase_3_metric: "Compatibility Rating: 40% → 100% Compliant"
   },
   "ru-RU": {
     nav_features: "Функции",
     nav_workflow: "Техпроцесс",
+    nav_about: "О проекте",
+    nav_usecases: "Примеры",
     nav_tech: "Технологии",
     nav_regulatory: "Регуляторика",
+    nav_pricing: "Тарифы",
     btn_open: "Открыть Студию",
     hero_badge: "Цифровое фармацевтическое моделирование",
     hero_title: "Виртуальная студия разработки лекарств и БАДов",
@@ -215,18 +255,51 @@ const translations = {
     fda_p1: "FDA Title 21 CFR Part 11: Система спроектирована с учетом поддержки логирования GMP/GxP, электронных подписей и протоколов аудита для коммерческого использования.",
     fda_p2: "Стандарт FALCPA: Автоматическое декларирование основных аллергенов в пищевых добавках. Предупреждения генерируются для веществ, содержащих молоко (лактозу), пшеницу (глютен), сою или орехи.",
     fda_p3: "Соответствие DSHEA 1994: Автоматическое включение обязательных дисклеймеров FDA для продуктов, предназначенных для распространения на территории США.",
-    btn_close: "Закрыть"
+    btn_close: "Закрыть",
+    about_title: "Интеллектуальное проектирование фармацевтических форм",
+    about_desc: "PharmNode — это специализированная система поддержки принятия решений (DSS), созданная для преодоления разрыва между разработкой рецептуры и производством готовых лекарственных форм. Наша миссия — заменить трудоемкий метод проб и ошибок в лабораториях мгновенным физическим моделированием и правилами контроля совместимости сырья.",
+    about_audience_title: "Для кого создан PharmNode?",
+    about_audience_1_title: "Технологи-разработчики",
+    about_audience_1_desc: "Ускоряйте проектирование состава, рассчитывайте сыпучесть порошков (Карр и Хауснер) и мгновенно решайте химические конфликты.",
+    about_audience_2_title: "R&D Лаборатории",
+    about_audience_2_desc: "Моделируйте взаимодействие вспомогательных и активных веществ в цифровом виде перед проведением дорогостоящих тестов ВЭЖХ/ДСК.",
+    about_audience_3_title: "Контрактные производства (CDMO)",
+    about_audience_3_desc: "Оптимизируйте геометрию пресса, прогнозируйте выход готовой партии и экспортируйте готовые GMP-отчеты для заказчиков.",
+    about_value_1_num: "70%",
+    about_value_1_lbl: "Сокращение времени на разработку рецептуры",
+    about_value_2_num: "0",
+    about_value_2_lbl: "Риск перекрестных аллергенов или скрытых несовместимостей",
+    about_value_3_num: "1 клик",
+    about_value_3_lbl: "Для генерации готовых отчетов валидации GMP в PDF",
+    usecases_title: "Практические примеры решения задач",
+    usecases_desc: "Узнайте, как технологи используют PharmNode для цифрового решения проблем с сыпучестью, таблетированием и совместимостью сырья.",
+    usecase_1_title: "Корректировка сыпучести смеси",
+    usecase_1_subtitle: "Решение проблемы дозирования порошка",
+    usecase_1_challenge: "Рецептура с 15% активного вещества показывает плохую сыпучесть (Индекс Карра 25, Коэффициент Хауснера 1.33), вызывая разброс массы таблеток.",
+    usecase_1_solution: "Введение 1.5% Аэросила и 35% Avicel pH-102 корректирует плотность, снижая индекс Карра до 12 (отличная сыпучесть) и стабилизируя массу.",
+    usecase_1_metric: "Сыпучесть: Плохая (25) → Отличная (12)",
+    usecase_2_title: "Оптимизация формы и пористости",
+    usecase_2_subtitle: "Предотвращение расслоения («capping»)",
+    usecase_2_challenge: "Таблетка карбоната кальция массой 500 мг расслаивается при прессовании плоским круглым пуансоном 10 мм под давлением 15 кН.",
+    usecase_2_solution: "Решение: Переход на двояковыпуклый овальный пуансон 11 мм снижает толщину, оптимизирует пористость до 15% и сохраняет прочность при усилии 8 кН.",
+    usecase_2_metric: "Давление пресса: 15 кН → 8 кН",
+    usecase_3_title: "Предотвращение реакции Майяра",
+    usecase_3_subtitle: "Выявление скрытых конфликтов сырья",
+    usecase_3_challenge: "Проблема: Проектирование жевательной таблетки с глюкозамином (первичный амин) и моногидратом лактозы (восстанавливающий сахар).",
+    usecase_3_solution: "Решение: Система предупреждает о риске потемнения смеси. Замена лактозы на маннит предотвращает деградацию и убирает молочные аллергены по нормам FALCPA/EFSA.",
+    usecase_3_metric: "Совместимость: 40% (риск брака) → 100% (норма)"
   }
 };
 
 type LocaleKey = "en-US" | "ru-RU";
 
 export default function LandingPage() {
+  const router = useRouter();
   const { locale, setLocale } = useTranslation();
   const currentLocale: LocaleKey = (locale === "ru-RU") ? "ru-RU" : "en-US";
   const dict = translations[currentLocale];
   
-  const { user, status, logout } = useAuth();
+  const { user, status, logout, changeTariff } = useAuth();
   const handleLogoutClick = async () => {
     await logout();
   };
@@ -255,8 +328,11 @@ export default function LandingPage() {
         <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-zinc-400">
           <a href="#features" className="hover:text-zinc-100 transition-colors">{dict.nav_features}</a>
           <a href="#workflow" className="hover:text-zinc-100 transition-colors">{dict.nav_workflow}</a>
+          <a href="#about" className="hover:text-zinc-100 transition-colors">{dict.nav_about}</a>
+          <a href="#usecases" className="hover:text-zinc-100 transition-colors">{dict.nav_usecases}</a>
           <a href="#technology" className="hover:text-zinc-100 transition-colors">{dict.nav_tech}</a>
           <a href="#regulatory" className="hover:text-zinc-100 transition-colors">{dict.nav_regulatory}</a>
+          <a href="#pricing" className="hover:text-zinc-100 transition-colors">{dict.nav_pricing}</a>
         </nav>
 
         <div className="flex items-center gap-4 flex-wrap justify-end">
@@ -299,6 +375,8 @@ export default function LandingPage() {
           )}
         </div>
       </header>
+
+      <main className="flex-1 flex flex-col">
 
       {/* Hero Section */}
       <section className="relative pt-20 pb-16 px-6 max-w-7xl mx-auto flex flex-col items-center text-center">
@@ -430,9 +508,9 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1 */}
-          <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
+          <li className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0">
               <Layers size={20} />
             </div>
@@ -440,10 +518,10 @@ export default function LandingPage() {
             <p className="text-xs text-zinc-400 leading-relaxed">
               {dict.feature_node_desc}
             </p>
-          </div>
+          </li>
 
           {/* Card 2 */}
-          <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
+          <li className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
               <Gauge size={20} />
             </div>
@@ -451,10 +529,10 @@ export default function LandingPage() {
             <p className="text-xs text-zinc-400 leading-relaxed">
               {dict.feature_math_desc}
             </p>
-          </div>
+          </li>
 
           {/* Card 3 */}
-          <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
+          <li className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
             <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400 shrink-0">
               <ShieldAlert size={20} />
             </div>
@@ -462,10 +540,10 @@ export default function LandingPage() {
             <p className="text-xs text-zinc-400 leading-relaxed">
               {dict.feature_chem_desc}
             </p>
-          </div>
+          </li>
 
           {/* Card 4 */}
-          <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
+          <li className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
             <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 shrink-0">
               <FileText size={20} />
             </div>
@@ -473,8 +551,8 @@ export default function LandingPage() {
             <p className="text-xs text-zinc-400 leading-relaxed">
               {dict.feature_gmp_desc}
             </p>
-          </div>
-        </div>
+          </li>
+        </ul>
       </section>
 
       {/* Workflow Section */}
@@ -550,6 +628,186 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* About Section */}
+      <section id="about" className="py-20 px-6 max-w-7xl mx-auto border-t border-zinc-900 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          
+          {/* Left Column: Title & Mission */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/80 border border-zinc-800 text-zinc-400 text-[10px] font-bold uppercase tracking-wider self-start">
+              {dict.nav_about}
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-zinc-100 leading-tight">
+              {dict.about_title}
+            </h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              {dict.about_desc}
+            </p>
+
+            {/* Metrics grid */}
+            <ul className="grid grid-cols-3 gap-4 mt-4">
+              <li className="flex flex-col gap-1 border-l-2 border-indigo-500 pl-3">
+                <span className="text-xl sm:text-2xl font-extrabold text-zinc-100 font-mono leading-none">
+                  {dict.about_value_1_num}
+                </span>
+                <span className="text-[10px] text-zinc-500 leading-tight">
+                  {dict.about_value_1_lbl}
+                </span>
+              </li>
+              <li className="flex flex-col gap-1 border-l-2 border-indigo-500 pl-3">
+                <span className="text-xl sm:text-2xl font-extrabold text-zinc-100 font-mono leading-none">
+                  {dict.about_value_2_num}
+                </span>
+                <span className="text-[10px] text-zinc-500 leading-tight">
+                  {dict.about_value_2_lbl}
+                </span>
+              </li>
+              <li className="flex flex-col gap-1 border-l-2 border-indigo-500 pl-3">
+                <span className="text-xl sm:text-2xl font-extrabold text-zinc-100 font-mono leading-none">
+                  {dict.about_value_3_num}
+                </span>
+                <span className="text-[10px] text-zinc-500 leading-tight">
+                  {dict.about_value_3_lbl}
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Right Column: Audience ("For Whom") */}
+          <div className="lg:col-span-7 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 flex flex-col gap-6 theme-element">
+            <h3 className="text-base font-bold text-zinc-100 uppercase tracking-wider">
+              {dict.about_audience_title}
+            </h3>
+
+            <ul className="flex flex-col gap-6">
+              <li className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Scale size={16} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <strong className="text-zinc-200 text-sm font-semibold">{dict.about_audience_1_title}</strong>
+                  <span className="text-xs text-zinc-400 leading-relaxed">{dict.about_audience_1_desc}</span>
+                </div>
+              </li>
+              <li className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Beaker size={16} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <strong className="text-zinc-200 text-sm font-semibold">{dict.about_audience_2_title}</strong>
+                  <span className="text-xs text-zinc-400 leading-relaxed">{dict.about_audience_2_desc}</span>
+                </div>
+              </li>
+              <li className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Building size={16} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <strong className="text-zinc-200 text-sm font-semibold">{dict.about_audience_3_title}</strong>
+                  <span className="text-xs text-zinc-400 leading-relaxed">{dict.about_audience_3_desc}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          
+        </div>
+      </section>
+
+      {/* Use Cases Section */}
+      <section id="usecases" className="py-20 px-6 max-w-7xl mx-auto border-t border-zinc-900 w-full flex flex-col items-center">
+        <div className="text-center flex flex-col gap-3 mb-16 max-w-2xl">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/80 border border-zinc-800 text-zinc-400 text-[10px] font-bold uppercase tracking-wider self-center">
+            {dict.nav_usecases}
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-zinc-100">
+            {dict.usecases_title}
+          </h2>
+          <p className="text-zinc-400 text-xs sm:text-sm">
+            {dict.usecases_desc}
+          </p>
+        </div>
+
+        <ul className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+          {/* Case 1: Flowability */}
+          <li className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
+            <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
+              {dict.usecase_1_subtitle}
+            </span>
+            <h3 className="text-base font-bold text-zinc-100">
+              {dict.usecase_1_title}
+            </h3>
+            
+            <div className="flex flex-col gap-3 my-2">
+              <div className="bg-red-950/10 border border-red-500/20 text-[11px] text-zinc-400 p-3 rounded-lg">
+                <span className="text-[9px] text-red-400 font-bold uppercase block mb-1">Problem</span>
+                {dict.usecase_1_challenge}
+              </div>
+              <div className="bg-emerald-950/10 border border-emerald-500/20 text-[11px] text-zinc-400 p-3 rounded-lg">
+                <span className="text-[9px] text-emerald-400 font-bold uppercase block mb-1">Solution</span>
+                {dict.usecase_1_solution}
+              </div>
+            </div>
+
+            <div className="mt-auto pt-3 border-t border-zinc-800 flex justify-between items-center text-xs">
+              <span className="text-zinc-500 font-semibold">Verification</span>
+              <span className="font-mono text-emerald-400 font-bold">{dict.usecase_1_metric}</span>
+            </div>
+          </li>
+
+          {/* Case 2: Press & Porosity */}
+          <li className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
+            <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
+              {dict.usecase_2_subtitle}
+            </span>
+            <h3 className="text-base font-bold text-zinc-100">
+              {dict.usecase_2_title}
+            </h3>
+
+            <div className="flex flex-col gap-3 my-2">
+              <div className="bg-red-950/10 border border-red-500/20 text-[11px] text-zinc-400 p-3 rounded-lg">
+                <span className="text-[9px] text-red-400 font-bold uppercase block mb-1">Problem</span>
+                {dict.usecase_2_challenge}
+              </div>
+              <div className="bg-emerald-950/10 border border-emerald-500/20 text-[11px] text-zinc-400 p-3 rounded-lg">
+                <span className="text-[9px] text-emerald-400 font-bold uppercase block mb-1">Solution</span>
+                {dict.usecase_2_solution}
+              </div>
+            </div>
+
+            <div className="mt-auto pt-3 border-t border-zinc-800 flex justify-between items-center text-xs">
+              <span className="text-zinc-500 font-semibold">Verification</span>
+              <span className="font-mono text-emerald-400 font-bold">{dict.usecase_2_metric}</span>
+            </div>
+          </li>
+
+          {/* Case 3: Compatibility */}
+          <li className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 hover:border-zinc-700/80 transition-all duration-300 theme-element flex flex-col gap-4">
+            <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
+              {dict.usecase_3_subtitle}
+            </span>
+            <h3 className="text-base font-bold text-zinc-100">
+              {dict.usecase_3_title}
+            </h3>
+
+            <div className="flex flex-col gap-3 my-2">
+              <div className="bg-red-950/10 border border-red-500/20 text-[11px] text-zinc-400 p-3 rounded-lg">
+                <span className="text-[9px] text-red-400 font-bold uppercase block mb-1">Problem</span>
+                {dict.usecase_3_challenge}
+              </div>
+              <div className="bg-emerald-950/10 border border-emerald-500/20 text-[11px] text-zinc-400 p-3 rounded-lg">
+                <span className="text-[9px] text-emerald-400 font-bold uppercase block mb-1">Solution</span>
+                {dict.usecase_3_solution}
+              </div>
+            </div>
+
+            <div className="mt-auto pt-3 border-t border-zinc-800 flex justify-between items-center text-xs">
+              <span className="text-zinc-500 font-semibold">Verification</span>
+              <span className="font-mono text-emerald-400 font-bold">{dict.usecase_3_metric}</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
       {/* Technologies Section */}
       <section id="technology" className="py-20 px-6 max-w-7xl mx-auto border-t border-zinc-900 w-full">
         <div className="text-center flex flex-col gap-3 mb-16">
@@ -561,33 +819,33 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
+        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <li className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
             <Cpu className="text-indigo-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.tech_ssr}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.tech_ssr_desc}</p>
-          </div>
-          <div className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
+          </li>
+          <li className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
             <Database className="text-indigo-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.tech_db}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.tech_db_desc}</p>
-          </div>
-          <div className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
+          </li>
+          <li className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
             <Layers className="text-indigo-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.tech_nosql}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.tech_nosql_desc}</p>
-          </div>
-          <div className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
+          </li>
+          <li className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
             <Lock className="text-indigo-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.tech_auth}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.tech_auth_desc}</p>
-          </div>
-          <div className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
+          </li>
+          <li className="p-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex flex-col gap-3">
             <CreditCard className="text-indigo-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.tech_billing}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.tech_billing_desc}</p>
-          </div>
-        </div>
+          </li>
+        </ul>
       </section>
 
       {/* Regulatory Section */}
@@ -601,23 +859,37 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-3">
+        <ul className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <li className="p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-3">
             <Scale className="text-emerald-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.reg_fda}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.reg_fda_desc}</p>
-          </div>
-          <div className="p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-3">
+          </li>
+          <li className="p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-3">
             <Building className="text-emerald-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.reg_efsa}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.reg_efsa_desc}</p>
-          </div>
-          <div className="p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-3">
+          </li>
+          <li className="p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-3">
             <ShieldAlert className="text-emerald-400" size={24} />
             <h4 className="font-bold text-zinc-100 text-sm">{dict.reg_falcpa}</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.reg_falcpa_desc}</p>
-          </div>
-        </div>
+          </li>
+        </ul>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 px-6 max-w-7xl mx-auto border-t border-zinc-900 w-full flex flex-col items-center">
+        <PricingPanel
+          currentTariff={user?.tariff || "hobby"}
+          onSelectTariff={(tariff) => {
+            if (!user) {
+              router.push("/login");
+            } else {
+              changeTariff(tariff);
+            }
+          }}
+        />
       </section>
 
       {/* CTA Bottom Section */}
@@ -638,6 +910,8 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+
+      </main>
 
       <Footer />
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Environment, Paddle, EventName } from "@paddle/paddle-node-sdk";
+import type { SubscriptionNotification, SubscriptionCreatedNotification, TransactionNotification } from "@paddle/paddle-node-sdk";
 import prisma from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
@@ -50,12 +51,12 @@ export async function POST(request: Request) {
       case EventName.TransactionCompleted:
       case EventName.SubscriptionCreated: {
         // Extract userId from customData
-        let customData: Record<string, any> = {};
+        let customData: Record<string, string> = {};
         let customerId: string | undefined;
         let subscriptionId: string | undefined;
 
         if (eventData.data && "customData" in eventData.data) {
-           customData = (eventData.data.customData as Record<string, any>) || {};
+           customData = (eventData.data.customData as Record<string, string>) || {};
         }
         
         if (eventData.data && "customerId" in eventData.data) {
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
         if (userId) {
           const user = await prisma.user.findUnique({ where: { id: userId } });
           if (user) {
-            const subData = eventData.data as any;
+            const subData = eventData.data as SubscriptionCreatedNotification;
             const renewsAt = subData.nextBilledAt 
               ? new Date(subData.nextBilledAt) 
               : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
       }
       
       case EventName.SubscriptionUpdated: {
-        const subData = eventData.data as any; // Cast as any if TS doesn't infer properly
+        const subData = eventData.data as SubscriptionNotification;
         const subscriptionId = subData.id;
         
         if (subscriptionId) {
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
       }
 
       case EventName.SubscriptionCanceled: {
-        const subData = eventData.data as any;
+        const subData = eventData.data as SubscriptionNotification;
         const subscriptionId = subData.id;
 
         if (subscriptionId) {
@@ -184,10 +185,10 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    logger.error("Paddle Webhook error", error, "webhook_paddle");
+  } catch (error: unknown) {
+    logger.error("Paddle Webhook error", error instanceof Error ? error : null, "webhook_paddle");
     return NextResponse.json(
-      { error: "Internal server error", message: error.message },
+      { error: "Internal server error", message: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

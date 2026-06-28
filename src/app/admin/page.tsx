@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { 
   Users, 
@@ -110,7 +110,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     localStorage.removeItem("pharmnode_admin_auth_token");
     setIsAuthorized(false);
     setUsers([]);
@@ -121,9 +121,9 @@ export default function AdminPage() {
     if (status === "authenticated") {
       await logout();
     }
-  };
+  }, [status, logout]);
 
-  const fetchDatabaseData = async (token?: string) => {
+  const fetchDatabaseData = useCallback(async (token?: string) => {
     setLoading(true);
     try {
       const authHeader = token || localStorage.getItem("pharmnode_admin_auth_token");
@@ -173,7 +173,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleLogout]);
 
   const handleToggleAuditLogging = async () => {
     setUpdatingSettings(true);
@@ -223,7 +223,7 @@ export default function AdminPage() {
         fetchDatabaseData();
       }, 0);
     }
-  }, [status, user]);
+  }, [status, user, fetchDatabaseData]);
 
   if (status === "loading") {
     return (

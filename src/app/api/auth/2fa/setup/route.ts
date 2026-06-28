@@ -7,6 +7,18 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const limiter = await rateLimit("2fa_setup", {
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many 2FA setup attempts. Please try again in 15 minutes." },
+        { status: 429 }
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -141,7 +141,7 @@ export default function AccessibilityStatementPage() {
 
           {/* Heading */}
           <div className="border-b border-zinc-900 pb-8 mb-10">
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-linear-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
               {dict.title}
             </h1>
             <p className="mt-2 text-sm text-zinc-400">
@@ -164,11 +164,10 @@ export default function AccessibilityStatementPage() {
                     <button
                       key={sec.id}
                       onClick={() => handleScrollTo(sec.id)}
-                      className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                        activeSection === sec.id
+                      className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${activeSection === sec.id
                           ? "bg-indigo-500/10 border-l-2 border-indigo-400 text-indigo-400 pl-4"
                           : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
-                      }`}
+                        }`}
                     >
                       {sec.title.split(". ")[1] || sec.title}
                     </button>

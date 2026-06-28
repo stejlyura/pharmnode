@@ -11,16 +11,43 @@ async function verifyAdmin(request: Request): Promise<boolean> {
   if (isSessionAdmin) return true;
 
   const authHeader = request.headers.get("authorization");
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction && (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD)) {
+    throw new Error("ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set in production.");
+  }
   const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "PasswordforAdmin123";
   const expectedAuth =
     "Basic " + Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`).toString("base64");
+  const isAuthorized = !!(authHeader && authHeader === expectedAuth);
+  if (!isAuthorized) {
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const failedLimiter = await rateLimit("admin_basic_auth_failed", {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!failedLimiter.success) {
+      throw new Error("RATE_LIMIT_EXCEEDED");
+    }
+  }
 
-  return !!(authHeader && authHeader === expectedAuth);
+  return isAuthorized;
 }
 
 export async function GET(request: Request) {
   try {
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const limiter = await rateLimit("admin_settings", {
+      limit: 20,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many admin requests. Please try again in 15 minutes." },
+        { status: 429 }
+      );
+    }
+
     const isAuthorized = await verifyAdmin(request);
     if (!isAuthorized) {
       return new Response("Unauthorized", {
@@ -37,6 +64,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, auditLoggingEnabled: isEnabled });
   } catch (err) {
+    if (err instanceof Error && err.message === "RATE_LIMIT_EXCEEDED") {
+      return new Response("Too many failed auth attempts. Please try again in 15 minutes.", {
+        status: 429,
+      });
+    }
     console.error("Admin settings GET route error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -45,6 +77,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const limiter = await rateLimit("admin_settings", {
+      limit: 20,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many admin requests. Please try again in 15 minutes." },
+        { status: 429 }
+      );
+    }
+
     const isAuthorized = await verifyAdmin(request);
     if (!isAuthorized) {
       return new Response("Unauthorized", {
@@ -53,7 +97,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const { key, value } = await request.json();
+    const { key, value } = (await request.json()) as { key?: string; value?: unknown };
     if (!key || value === undefined) {
       return NextResponse.json({ error: "Key and value are required" }, { status: 400 });
     }
@@ -66,6 +110,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
+    if (err instanceof Error && err.message === "RATE_LIMIT_EXCEEDED") {
+      return new Response("Too many failed auth attempts. Please try again in 15 minutes.", {
+        status: 429,
+      });
+    }
     console.error("Admin settings POST route error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -9,11 +9,17 @@ import { PaddleInit } from "@/components/PaddleInit";
 export const metadata: Metadata = {
   title: {
     template: '%s | PharmNode',
-    default: 'PharmNode - Pharmaceutical Formulation SaaS',
+    default: 'PharmNode - Pharmaceutical Formulation B2B SaaS',
   },
-  description: 'Advanced decision support system for pharmaceutical formulations, flowability calculations, and tableting geometry optimization.',
+  description: 'PharmNode - Advanced decision support system (DSS) B2B SaaS for pharmaceutical formulations, flowability calculations (Carr index, Hausner ratio), excipient compatibility, and tableting geometry optimization. Экспертная система для фармацевтических расчетов и оптимизации таблетирования.',
   applicationName: 'PharmNode',
-  keywords: ['pharmaceuticals', 'formulation', 'tableting', 'Hausner ratio', 'Carr index', 'SaaS', 'pharmacy', 'chemistry'],
+  keywords: [
+    'pharmaceuticals', 'formulation', 'tableting', 'Hausner ratio', 'Carr index', 
+    'B2B SaaS', 'pharmacy', 'chemistry', 'DSS', 'decision support system', 
+    'excipient compatibility', 'flowability calculations', 'фармацевтика', 
+    'таблетирование', 'расчет сыпучести', 'совместимость ингредиентов', 
+    'экспертная система', 'фармацевтические расчеты'
+  ],
   authors: [{ name: 'PharmNode Team' }],
   creator: 'PharmNode',
   openGraph: {
@@ -21,8 +27,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://pharmnode.com',
     siteName: 'PharmNode',
-    title: 'PharmNode - Pharmaceutical Formulation SaaS',
-    description: 'Advanced decision support system for pharmaceutical formulations, flowability calculations, and tableting geometry optimization.',
+    title: 'PharmNode - Pharmaceutical Formulation B2B SaaS',
+    description: 'PharmNode - Advanced decision support system (DSS) B2B SaaS for pharmaceutical formulations, flowability calculations, excipient compatibility, and tableting geometry optimization.',
     images: [
       {
         url: '/opengraph-image.png',
@@ -34,8 +40,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PharmNode - Pharmaceutical Formulation SaaS',
-    description: 'Advanced decision support system for pharmaceutical formulations, flowability calculations, and tableting geometry optimization.',
+    title: 'PharmNode - Pharmaceutical Formulation B2B SaaS',
+    description: 'PharmNode - Advanced decision support system (DSS) B2B SaaS for pharmaceutical formulations, flowability calculations, excipient compatibility, and tableting geometry optimization.',
     images: ['/opengraph-image.png'],
   },
   manifest: '/manifest.json',

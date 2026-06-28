@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { EditorNode, CalculatedResults } from '../hooks/useNodeEditor';
 import { Ingredient } from '../types/pharm';
-import { MobileNodeCard } from './MobileNodeCard';
+import { NodeCard } from './NodeCard';
 import { MobileIngredientSheet } from './MobileIngredientSheet';
 import { Header } from './Header';
 import { ArrowDown, Plus, FlaskConical, AlertTriangle } from 'lucide-react';
@@ -132,7 +132,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
           ) : (
             <div className="flex flex-col gap-3">
               {ingredientNodes.map(node => (
-                <MobileNodeCard
+                <NodeCard
                   key={node.id}
                   node={node}
                   nodes={nodes}
@@ -143,6 +143,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
                   onReplaceIngredient={onReplaceIngredient}
                   onUpgradeClick={handleUpgradeClick}
                   allIngredients={allIngredients}
+                  isMobile={true}
                 />
               ))}
             </div>
@@ -158,7 +159,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
 
         {/* Section: Blending */}
         {blendingNode && (
-          <MobileNodeCard
+          <NodeCard
             node={blendingNode}
             nodes={nodes}
             calculatedResults={calculatedResults}
@@ -168,6 +169,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onReplaceIngredient={onReplaceIngredient}
             onUpgradeClick={handleUpgradeClick}
             allIngredients={allIngredients}
+            isMobile={true}
           />
         )}
 
@@ -180,7 +182,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
 
         {/* Section: Press */}
         {pressNode && (
-          <MobileNodeCard
+          <NodeCard
             node={pressNode}
             nodes={nodes}
             calculatedResults={calculatedResults}
@@ -190,6 +192,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onReplaceIngredient={onReplaceIngredient}
             onUpgradeClick={handleUpgradeClick}
             allIngredients={allIngredients}
+            isMobile={true}
           />
         )}
 
@@ -201,7 +204,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
                 <ArrowDown size={14} />
               </div>
             </div>
-            <MobileNodeCard
+            <NodeCard
               node={costOptimizerNode}
               nodes={nodes}
               calculatedResults={calculatedResults}
@@ -211,6 +214,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
               onReplaceIngredient={onReplaceIngredient}
               onUpgradeClick={handleUpgradeClick}
               allIngredients={allIngredients}
+              isMobile={true}
             />
           </>
         )}
@@ -224,7 +228,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
 
         {/* Section: Output */}
         {outputNode && (
-          <MobileNodeCard
+          <NodeCard
             node={outputNode}
             nodes={nodes}
             calculatedResults={calculatedResults}
@@ -234,6 +238,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onReplaceIngredient={onReplaceIngredient}
             onUpgradeClick={handleUpgradeClick}
             allIngredients={allIngredients}
+            isMobile={true}
           />
         )}
       </main>

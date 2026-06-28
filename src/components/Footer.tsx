@@ -50,10 +50,6 @@ export const Footer: React.FC = () => {
                 {t("company_email")}
               </a>
             </div>
-            <div className="flex items-start gap-1.5">
-              <span className="text-zinc-550 min-w-[70px] uppercase font-mono text-[9px] mt-0.5">{currentLocale === "ru-RU" ? "Рег. данные:" : "Reg. Info:"}</span>
-              <span className="text-zinc-350">{t("company_registration")}</span>
-            </div>
           </address>
         </div>
 

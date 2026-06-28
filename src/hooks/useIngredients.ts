@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Ingredient, baseIngredientsMatrix } from "../types/pharm";
+import { Ingredient } from "../types/pharm";
+import { baseIngredientsMatrix } from "../data/baseIngredients";
 
 export interface UseIngredientsResult {
   /** Standard + custom ingredients merged */

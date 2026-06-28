@@ -16,43 +16,39 @@
 
 ---
 
-## 🎯 Задачи на реализацию — Полный User Flow (Dev + Prod)
+## 🚀 План улучшений (Post-MVP)
 
-> **Контекст**: Все задачи ниже должны корректно работать в **обоих окружениях** — локальная разработка (`npm run dev`, Paddle Sandbox) и продакшен (Vercel, Paddle Live). Аккаунт можно создать и в dev, и в prod.
->
-> **Платёжная система**: Paddle Billing v2 (SDK `@paddle/paddle-js` + `@paddle/paddle-node-sdk`).
->
-> **Ключевые файлы**:
-> - Auth/User state: [`src/context/AuthContext.tsx`](../../src/context/AuthContext.tsx)
-> - Paddle init: [`src/components/PaddleInit.tsx`](../../src/components/PaddleInit.tsx)
-> - Webhook handler: [`src/app/api/webhooks/paddle/route.ts`](../../src/app/api/webhooks/paddle/route.ts)
-> - Subscription status API: [`src/app/api/subscription/status/route.ts`](../../src/app/api/subscription/status/route.ts)
-> - Projects page: [`src/app/projects/page.tsx`](../../src/app/projects/page.tsx)
-> - Premium paywall: [`src/app/premium-required/page.tsx`](../../src/app/premium-required/page.tsx)
-> - Tariff limits: [`src/lib/tariffLimits.ts`](../../src/lib/tariffLimits.ts)
-> - Register API: [`src/app/api/auth/register/route.ts`](../../src/app/api/auth/register/route.ts)
-> - Prisma schema: [`prisma/schema.prisma`](../../prisma/schema.prisma)
+> **Контекст**: MVP завершен, все базовые задачи выполнены. Фокус на рефакторинге, тестировании, производительности и качестве кода (на основе аудита проекта от 26.06.2026). Ниже перечислены задачи (без реализации самого кода), которые необходимо будет выполнить.
 
----
+### 🔴 CRITICAL — Исправить сейчас
+- [x] **Декомпозиция Canvas.tsx**: Разделить гигантский компонент (1857 строк) на `CanvasToolbar`, `CanvasArea`, `AddIngredientModal`, `AuthModal`, `CanvasContextMenu`.
+- [x] **Исправление TypeScript ошибок**: Исправить ошибку typecheck в `src/app/api/admin/data/route.test.ts(158)` (Cannot assign to 'NODE_ENV').
+- [x] **Исправление ESLint ошибок**: Убрать 6 ошибок `@typescript-eslint/no-explicit-any` в тестах `src/lib/auth-2fa.test.ts`.
 
-## 🔐 Публичный сайт, комплаенс и юридические разделы
-- [x] Юридические страницы и Cookie-баннер (завершено)
+### 🟠 HIGH — Рекомендуется к следующему релизу
+- [x] **Добавление Frontend-тестов**: Настроить `@testing-library/react` + `vitest` для юнит-тестов хуков (`useNodeEditor`), smoke-тестов компонентов и E2E тестов.
+- [x] **Декомпозиция NodeCard**: Разбить компонент на паттерн стратегии: `IngredientNode`, `BlendingNode`, `PressNode`, `OutputNode`.
+- [x] **Устранение дублирования NodeCard**: Объединить `NodeCard.tsx` и `MobileNodeCard.tsx` in один адаптивный компонент.
+- [x] **Вынос статических данных из типов**: Убрать захардкоженные ингредиенты `baseIngredientsMatrix` из `src/types/pharm.ts` в `src/data/baseIngredients.ts` или `prisma/seed.ts`.
+- [x] **Добавление Error Boundaries**: Обернуть `Canvas`, `CompatibilityMatrix`, `WizardModal` в отдельные Error Boundaries для предотвращения крашей всего приложения.
+- [x] **Унификация i18n**: Консолидировать все переводы в `src/i18n/`, убрав inline-словари из `page.tsx` и приведя к единому подходу.
+- [x] **Loading states и скелетоны**: Создать `loading.tsx` для маршрутов и скелетоны для канваса, сайдбара и списка ингредиентов.
 
-## 🧮 Расчетный модуль (на основе научных алгоритмов)
-- [x] **Реологические свойства порошков:** реализовать расчет насыпной/тапированной плотности, индекса Карра ($C$) и коэффициента Хауснера ($H$).
-- [x] **Модель Соне:** реализовать математическую модель Соне для кинетики уплотнения порошкового слоя.
-- [x] **Гомогенность и сегрегация:** добавить алгоритмы расчета разности насыпных плотностей ($\Delta D_b$) и разности размеров частиц ($\Delta D_{50}$).
-- [x] **Термодинамика смесей:** расчет коэффициента растекания ($S_{12}$) по уравнению Ву для оценки эффективности лубрикантов.
-- [x] **Фармакокинетика и дозирование:** алгоритм расчета дозы немедленного ($D_{IR}$) и пролонгированного ($D_{SR}$) высвобождения с учетом периода полувыведения ($t_{1/2}$).
+### 🟡 MEDIUM — Улучшения качества и производительности
+- [x] **Оптимизация рендеринга (Performance)**: Добавить `React.memo` для `NodeCard` и `Sidebar`. Использовать `useMemo`/`useCallback` для обработчиков in `Canvas.tsx`.
+- [x] **Ленивая загрузка (Dynamic imports)**: Использовать `dynamic()` импорты для тяжелых модулей (`jspdf`, `driver.js`, `CompatibilityMatrix`).
+- [x] **Создание API Route Handler wrapper**: Разработать обертку `apiHandler()` для унификации парсинга body, проверок сессии, rate limits и обработки ошибок.
+- [x] **Устранение lint warnings**: Вычистить 58 предупреждений (особенно `react-hooks/exhaustive-deps` и `no-unused-vars`).
 
-## ⚙️ Технологические процессы
-- [x] **Влажная грануляция:** реализовать пошаговый алгоритм расчета массы гранул, чистого содержания АФИ, массы экстрагранулярных компонентов (опудривание) и массы сырого заполнения матрицы ($FW$).
-- [x] **Настройки оборудования:** реализовать формулы расчета размера копира заполнения (Fill Cam) для круглых и фигурных пуансонов.
-- [x] **Глубина прессования:** добавить пресеты расчетов глубины заполнения ($FD$) для различных типов прессов (например, Fette, GEA Courtoy).
+### 🔵 LOW — Приятные улучшения и инфраструктура
+- [ ] **Внедрение Accessibility (a11y)**: Добавить `aria-*` атрибуты, keyboard navigation и фокусы для Canvas и других интерактивных элементов.
+- [ ] **State Management**: Рассмотреть переход с текущего `useState` + Context на `zustand` для управления состоянием Canvas.
+- [ ] **Добавление индексов БД**: Добавить `@@index([userId])` в `AuditLog`, `Recipe`, `UserSession`, а также по `createdAt` в `AuditLog`.
+- [x] **CI/CD Pipeline**: Создать GitHub Actions пайплайн для автоматического запуска `typecheck`, `lint`, `test` и сборки на каждый PR.
+- [x] **Очистка проекта**: Удалить ненужные директории демо-примеров Sentry (`sentry-example-page`, `sentry-example-api`) и файл `Ptomotion.html` из корня проекта.
 
-## 📄 Отчетность и экспорт
-- [x] **Генерация PDF-отчета:** реализовать формирование детализированного PDF-документа с рецептурой. **Обязательно:** включить вывод компонентов для оболочки (например, HPMC, PVA, Opadry) и их функциональной роли, а также органолептических корригентов.
-
-## 🧠 База знаний и экспертная система (PharmNode QbCD)
-- [x] **Расширение полей БД ингредиентов:** убедиться, что структура БД содержит поля: `role`, `chemicalClassId` (1-35), `looseBulkDensity`, `tappedBulkDensity`, показатели (benefit, stability, manufacturability, risk, cost, maxSafePercentage).
-- [x] **Интегральный Score:** реализовать скоринговую формулу качества рецептуры: $Score = Benefit \cdot 0.4 + Stability \cdot 0.2 + Manufacturability \cdot 0.2 - Risk \cdot 0.2$.
+### 🟣 PADDLE & LANDING PAGE (Для Gemini Flash 3.5 Medium)
+- [x] **Публичные тарифы (Paddle)**: Интегрировать секцию с тарифами (Hobby/Pro) на главную страницу (`src/app/page.tsx`) или создать отдельную страницу `/pricing`. Это обязательное требование Paddle (Clear Pricing до регистрации).
+- [x] **SEO оптимизация лендинга**: Добавить семантические теги и расширить мета-данные в `src/app/layout.tsx`. Дополнить контент релевантными ключевыми словами (фармацевтика, расчеты, B2B SaaS, таблетирование, DSS).
+- [x] **Блок "О проекте" (About Us)**: Добавить на лендинг секцию, описывающую миссию проекта, для кого он предназначен (технологи, лаборатории, контрактные производства) и какую ценность он несет рынку.
+- [x] **Блок "Примеры использования" (Use Cases)**: Добавить визуально привлекательный блок с конкретными примерами решения задач на платформе (расчет сыпучести по Карру/Хауснеру, подбор пропорций компонентов для пресса, анализ совместимости).

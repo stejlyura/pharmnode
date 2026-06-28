@@ -49,7 +49,19 @@ function getJsonStringArray(field: unknown): string[] {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const limiter = await rateLimit("recommendations", {
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many recommendation requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    const body = (await request.json()) as { goals?: string[]; limitations?: string[]; dosageForm?: string };
     const { goals = [], limitations = [], dosageForm = "tablets" } = body;
 
     if (!Array.isArray(goals) || !Array.isArray(limitations)) {

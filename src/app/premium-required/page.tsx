@@ -36,8 +36,8 @@ export default function PremiumRequiredPage() {
         const data = await res.json();
         throw new Error(data.message || "Webhook simulator endpoint failed");
       }
-    } catch (err: any) {
-      setSimError(err.message || "Failed to trigger webhook simulation");
+    } catch (err: unknown) {
+      setSimError(err instanceof Error ? err.message : "Failed to trigger webhook simulation");
       console.error(err);
     } finally {
       setSimulating(false);
@@ -53,11 +53,11 @@ export default function PremiumRequiredPage() {
   const handleCheckout = () => {
     trackEvent('checkout_initiated', {
       tariff: 'professional',
-      price: '$19',
+      price: '$39',
       userId: user?.id
     });
     
-    const paddle = (window as any).Paddle;
+    const paddle = (window as unknown as { Paddle?: { Checkout: { open: (options: Record<string, unknown>) => void } } }).Paddle;
     if (paddle) {
       paddle.Checkout.open({
         items: [
@@ -176,7 +176,7 @@ export default function PremiumRequiredPage() {
                   {t("error_premium_back") || "Back to Workspace"}
                 </Link>
 
-                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && (
+                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && process.env.NODE_ENV !== "production" && (
                   <div className="mt-4 pt-4 border-t border-dashed border-zinc-800 flex flex-col gap-2 w-full">
                     <button
                       onClick={handleSimulateWebhook}
@@ -237,7 +237,7 @@ export default function PremiumRequiredPage() {
                   className="w-full py-3 bg-gradient-to-r from-teal-400 to-indigo-500 hover:from-teal-500 hover:to-indigo-650 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/20 text-center border-none"
                 >
                   <Sparkles size={14} />
-                  {t("error_premium_cta") || "Upgrade to Professional ($19/mo)"}
+                  {t("error_premium_cta") || "Upgrade to Professional ($39/mo)"}
                 </button>
                 
                 <Link
@@ -248,7 +248,7 @@ export default function PremiumRequiredPage() {
                   {t("error_premium_back") || "Back to Workspace"}
                 </Link>
 
-                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && (
+                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && process.env.NODE_ENV !== "production" && (
                   <div className="mt-4 pt-4 border-t border-dashed border-zinc-800 flex flex-col gap-2 w-full">
                     <p className="text-[10px] text-zinc-500 leading-normal text-left">
                       {isRu 

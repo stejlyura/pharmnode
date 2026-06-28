@@ -7,7 +7,8 @@ import {
   WetGranulationResult,
   PunchDimensions,
   FillCamResult,
-  PressPresetsResult
+  PressPresetsResult,
+  CompatibilityWarning
 } from '../types/pharm';
 import { getIngredientsCompatibilityRule } from './chemicalRules';
 
@@ -38,14 +39,7 @@ export interface BatchResult {
   totalBatchCostUsd: number;
 }
 
-export interface CompatibilityWarning {
-  type: 'compatibility' | 'limit';
-  severity: 'error' | 'warning';
-  message: string;
-  suggestion?: string;
-  ingredientId?: number | string;
-  relatedIngredientId?: number | string;
-}
+
 
 /**
  * Calculates Hausner ratio, Carr index, and flowability rating.

@@ -1,9 +1,20 @@
 import crypto from "node:crypto";
 
 const ALGORITHM = "aes-256-gcm";
+
+const isProduction = process.env.NODE_ENV === "production";
+if (isProduction && !process.env.ENCRYPTION_KEY) {
+  throw new Error(
+    "ENCRYPTION_KEY environment variable is not set in production. " +
+      "Generate one with: openssl rand -base64 32"
+  );
+}
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "dev-encryption-key-must-be-32-chars-long-!";
+
 const KEY = crypto
   .createHash("sha256")
-  .update(process.env.ENCRYPTION_KEY || "default-secret-key-change-me-in-prod-12345678")
+  .update(ENCRYPTION_KEY)
   .digest();
 
 /**
@@ -51,7 +62,7 @@ export function decrypt(ciphertext: string): string {
     let decrypted = decipher.update(encryptedHex, "hex", "utf8");
     decrypted += decipher.final("utf8");
     return decrypted;
-  } catch (e) {
+  } catch {
     // If decryption fails, return legacy plaintext
     return ciphertext;
   }

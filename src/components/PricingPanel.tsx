@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { Zap, Globe, Sparkles, Building } from 'lucide-react';
+import { Zap, Globe, Sparkles } from 'lucide-react';
 import { useTranslation } from '../context/I18nContext';
 import { useAuth } from '../context/AuthContext';
 import { PricingCard } from './PricingCard';
@@ -52,7 +52,7 @@ export const PricingPanel: React.FC<PricingPanelProps> = ({
     {
       id: 'professional' as const,
       name: 'Professional',
-      price: '$19',
+      price: '$39',
       period: t('pricing_month'),
       description: t('pricing_pro_desc'),
       icon: <Zap className="text-indigo-400 animate-pulse" size={18} />,

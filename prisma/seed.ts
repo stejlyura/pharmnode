@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { baseIngredientsMatrix } from '../src/types/pharm';
+import { baseIngredientsMatrix } from '../src/data/baseIngredients';
 
 const prisma = new PrismaClient();
 

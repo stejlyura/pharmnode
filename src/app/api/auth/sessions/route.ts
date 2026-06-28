@@ -33,7 +33,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as { all?: boolean; sessionId?: string };
     const { all, sessionId } = body;
 
     if (all) {

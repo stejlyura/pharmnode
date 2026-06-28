@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { action, details } = await request.json();
+    const { action, details } = (await request.json()) as { action?: string; details?: string };
     if (!action) {
       return NextResponse.json({ error: "Action is required" }, { status: 400 });
     }

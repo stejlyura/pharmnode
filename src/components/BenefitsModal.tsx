@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Check, ShieldCheck, Zap, Building, X } from 'lucide-react';
+import { Check, Zap, X } from 'lucide-react';
 import { useTranslation } from '../context/I18nContext';
 
 interface BenefitsModalProps {

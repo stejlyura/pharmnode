@@ -6,6 +6,10 @@ import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/validation";
 import { checkTariffLimit } from "@/lib/tariffLimits";
 
+const isProduction =
+  process.env.NODE_ENV === "production" ||
+  process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
+
 // ─── GET /api/recipes ─────────────────────────────────────────────────────────
 // Returns all recipes for the authenticated user.
 export async function GET(request: Request) {
@@ -17,7 +21,7 @@ export async function GET(request: Request) {
     const queryUserId = searchParams.get("userId");
 
     // Mock dev support
-    if (queryUserId && String(queryUserId).startsWith("mock-")) {
+    if (!isProduction && queryUserId && String(queryUserId).startsWith("mock-")) {
       return NextResponse.json({ success: true, recipes: [] });
     }
 
@@ -78,7 +82,7 @@ export async function POST(request: Request) {
     const { nodes, connections, name, userId } = body;
 
     // Mock dev support
-    if (!activeUserId && userId && String(userId).startsWith("mock-")) {
+    if (!isProduction && !activeUserId && userId && String(userId).startsWith("mock-")) {
       return NextResponse.json({ success: true, mock: true });
     }
 

@@ -10,6 +10,17 @@ import { prisma } from "@/lib/prisma";
 //   ?limit=20   → items per page (default: 20, max: 100)
 export async function GET(request: Request) {
   try {
+    const { rateLimit } = await import("@/lib/rateLimit");
+    const limiter = await rateLimit("admin_data", {
+      limit: 20,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: "Too many admin requests. Please try again in 15 minutes." },
+        { status: 429 }
+      );
+    }
     // ── NextAuth Session Check ───────────────────────────────────────────────
     const session = await getServerSession(authOptions);
     const isSessionAdmin = session?.user?.email === "admin@pharmnode.com";
@@ -19,6 +30,10 @@ export async function GET(request: Request) {
 
     if (!isAuthorized) {
       const authHeader = request.headers.get("authorization");
+      const isProduction = process.env.NODE_ENV === "production";
+      if (isProduction && (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD)) {
+        throw new Error("ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set in production.");
+      }
       const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
       const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "PasswordforAdmin123";
       const expectedAuth =
@@ -26,6 +41,16 @@ export async function GET(request: Request) {
 
       if (authHeader && authHeader === expectedAuth) {
         isAuthorized = true;
+      } else {
+        const failedLimiter = await rateLimit("admin_basic_auth_failed", {
+          limit: 5,
+          windowMs: 15 * 60 * 1000,
+        });
+        if (!failedLimiter.success) {
+          return new Response("Too many failed auth attempts. Please try again in 15 minutes.", {
+            status: 429,
+          });
+        }
       }
     }
 

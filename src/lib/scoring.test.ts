@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeRecipe } from './scoring';
-import { Ingredient } from '../types/pharm';
-import { CompatibilityWarning } from './calculator';
+import { Ingredient, CompatibilityWarning } from '../types/pharm';
 
 describe('analyzeRecipe scoring logic', () => {
   const mockActive: Ingredient = {

@@ -50,6 +50,11 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   }
 
   const handleCheckout = () => {
+    if (!userId) {
+      onSelectTariff('professional');
+      return;
+    }
+
     trackEvent('checkout_initiated', {
       tariff: 'professional',
       price: '$19',

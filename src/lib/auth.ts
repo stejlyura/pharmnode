@@ -5,17 +5,34 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import { rateLimit } from "./rateLimit";
 
+const isProduction = process.env.NODE_ENV === "production";
+if (isProduction) {
+  if (!process.env.ADMIN_USERNAME) {
+    throw new Error("ADMIN_USERNAME environment variable is not set in production.");
+  }
+  if (!process.env.ADMIN_PASSWORD) {
+    throw new Error("ADMIN_PASSWORD environment variable is not set in production.");
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GithubProvider({
-      clientId: process.env.GITHUB_ID || "mock-id",
-      clientSecret: process.env.GITHUB_SECRET || "mock-secret",
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "mock-id",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "mock-secret",
-    }),
+    ...(process.env.GITHUB_ID && process.env.GITHUB_SECRET
+      ? [
+          GithubProvider({
+            clientId: process.env.GITHUB_ID,
+            clientSecret: process.env.GITHUB_SECRET,
+          }),
+        ]
+      : []),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -35,8 +52,14 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const expectedUser = process.env.ADMIN_USERNAME || "admin";
-        const expectedPass = process.env.ADMIN_PASSWORD || "PasswordforAdmin123";
+        const expectedUser = process.env.ADMIN_USERNAME;
+        const expectedPass = process.env.ADMIN_PASSWORD;
+
+        if (!expectedUser || !expectedPass) {
+          throw new Error(
+            "ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set."
+          );
+        }
 
         if (credentials?.username === expectedUser && credentials?.password === expectedPass) {
           // Look up or create admin user in DB
@@ -66,7 +89,8 @@ export const authOptions: NextAuthOptions = {
               return null; // 2FA code is missing
             }
             const { verifyTOTP } = await import("./totp");
-            const is2FaValid = verifyTOTP(credentials.totpCode, adminUser.twoFactorSecret);
+            const { decrypt } = await import("./encryption");
+            const is2FaValid = verifyTOTP(credentials.totpCode, decrypt(adminUser.twoFactorSecret));
             if (!is2FaValid) {
               return null; // Invalid 2FA token
             }
@@ -78,6 +102,7 @@ export const authOptions: NextAuthOptions = {
             email: adminUser.email,
             tariff: adminUser.tariff,
             renewsAt: adminUser.renewsAt ? adminUser.renewsAt.toISOString() : null,
+            emailVerified: true,
           };
         }
 
@@ -92,10 +117,19 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || !user.passwordHash) return null;
 
-        const { verifyPassword } = await import("./password");
+        const { verifyPassword, needsUpgrade, hashPassword } = await import("./password");
         const isValid = verifyPassword(password, user.passwordHash);
 
         if (!isValid) return null;
+
+        // Upgrade password hash if it is in legacy format (PBKDF2)
+        if (needsUpgrade(user.passwordHash)) {
+          const newHash = hashPassword(password);
+          prisma.user.update({
+            where: { id: user.id },
+            data: { passwordHash: newHash },
+          }).catch(err => console.error("Failed to upgrade user password hash during login:", err));
+        }
 
         // Check if user has 2FA enabled
         if (user.twoFactorEnabled) {
@@ -103,7 +137,8 @@ export const authOptions: NextAuthOptions = {
             return null; // 2FA code is missing
           }
           const { verifyTOTP } = await import("./totp");
-          const is2FaValid = verifyTOTP(credentials.totpCode, user.twoFactorSecret);
+          const { decrypt } = await import("./encryption");
+          const is2FaValid = verifyTOTP(credentials.totpCode, decrypt(user.twoFactorSecret));
           if (!is2FaValid) {
             return null; // Invalid 2FA token
           }
@@ -115,6 +150,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           tariff: user.tariff,
           renewsAt: user.renewsAt ? user.renewsAt.toISOString() : null,
+          emailVerified: user.emailVerified,
         };
       }
     }),
@@ -136,6 +172,7 @@ export const authOptions: NextAuthOptions = {
               image: user.image || "",
               tariff: "hobby",
               isSubscribed: false,
+              emailVerified: true,
             },
           });
 
@@ -165,6 +202,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.tariff = user.tariff ?? "hobby";
         token.renewsAt = user.renewsAt ?? null;
+        token.emailVerified = (user as { emailVerified?: boolean }).emailVerified ?? false;
 
         const crypto = await import("node:crypto");
         const sessionToken = crypto.randomUUID();
@@ -238,6 +276,7 @@ export const authOptions: NextAuthOptions = {
             token.id = dbUser.id;
             token.tariff = dbUser.tariff ?? "hobby";
             token.renewsAt = dbUser.renewsAt ? dbUser.renewsAt.toISOString() : null;
+            token.emailVerified = dbUser.emailVerified ?? false;
           }
         } catch (e) {
           console.error("Error fetching user in JWT callback:", e);
@@ -252,6 +291,9 @@ export const authOptions: NextAuthOptions = {
         if (session?.renewsAt !== undefined) {
           token.renewsAt = session.renewsAt;
         }
+        if (session?.emailVerified !== undefined) {
+          token.emailVerified = session.emailVerified;
+        }
       }
 
       return token;
@@ -262,6 +304,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = (token.id as string) ?? "mock-user-id";
         session.user.tariff = (token.tariff as string) ?? "hobby";
         session.user.renewsAt = (token.renewsAt as string) ?? null;
+        session.user.emailVerified = (token.emailVerified as boolean) ?? false;
       }
       if (token.error) {
         session.error = token.error as string;
@@ -272,5 +315,15 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev",
+  secret: (() => {
+    const s = process.env.NEXTAUTH_SECRET;
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd && !s) {
+      throw new Error(
+        "NEXTAUTH_SECRET environment variable is not set in production. " +
+          "Generate one with: openssl rand -base64 32"
+      );
+    }
+    return s || "dev-nextauth-secret-key-for-pharmnode";
+  })(),
 };

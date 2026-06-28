@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Ingredient } from '../types/pharm';
+import { Ingredient, EditorNode, EditorConnection, HistoryState, TariffType, CompatibilityWarning } from '../types/pharm';
+export type { EditorNode, EditorConnection, HistoryState, TariffType, CompatibilityWarning };
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/I18nContext';
 import { trackEvent } from '../lib/analytics';
@@ -11,35 +12,9 @@ import {
   checkCompatibilityAndLimits,
   BlendProperties,
   TabletingResult,
-  BatchResult,
-  CompatibilityWarning
+  BatchResult
 } from '../lib/calculator';
 import { analyzeRecipe, ScoringResult } from '../lib/scoring';
-
-export interface EditorNode {
-  id: string;
-  type: 'ingredient' | 'blending' | 'press' | 'cost-optimizer' | 'output';
-  position: { x: number; y: number };
-  data: {
-    ingredientId?: number | string;
-    percentage?: number;
-    diameterCm?: number;
-    depthCm?: number;
-    activeRawWeightG?: number;
-    [key: string]: number | string | boolean | null | undefined;
-  };
-}
-
-export interface EditorConnection {
-  id: string;
-  source: string;
-  target: string;
-}
-
-export interface HistoryState {
-  nodes: EditorNode[];
-  connections: EditorConnection[];
-}
 
 export interface CalculatedResults {
   blend: BlendProperties;
@@ -91,8 +66,6 @@ const initialConnections: EditorConnection[] = [
   { id: "conn-3", source: "node-blending", target: "node-press" },
   { id: "conn-4", source: "node-press", target: "node-output" }
 ];
-
-export type TariffType = 'hobby' | 'professional';
 
 export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredients: Ingredient[] = [], initialRecipeId?: string | null) {
   const { user } = useAuth();
@@ -442,21 +415,21 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
 
   // 1. Debounced track calculation_performed
   useEffect(() => {
-    if (calculatedResults.totalPercentage > 0) {
-      const handler = setTimeout(() => {
-        trackEvent('calculation_performed', {
-          ingredientCount: state.nodes.filter(n => n.type === 'ingredient').length,
-          totalPercentage: calculatedResults.totalPercentage,
-          activePercentage: calculatedResults.activePercentage,
-          hausnerRatio: calculatedResults.blend.flowability.hausner,
-          carrIndex: calculatedResults.blend.flowability.carr,
-          porosity: calculatedResults.tableting.porosity,
-          hasWarnings: calculatedResults.warnings.length > 0,
-          scoringScore: calculatedResults.scoring.score
-        });
-      }, 1000);
-      return () => clearTimeout(handler);
-    }
+    if (calculatedResults.totalPercentage <= 0) return;
+
+    const handler = setTimeout(() => {
+      trackEvent('calculation_performed', {
+        ingredientCount: state.nodes.filter(n => n.type === 'ingredient').length,
+        totalPercentage: calculatedResults.totalPercentage,
+        activePercentage: calculatedResults.activePercentage,
+        hausnerRatio: calculatedResults.blend.flowability.hausner,
+        carrIndex: calculatedResults.blend.flowability.carr,
+        porosity: calculatedResults.tableting.porosity,
+        hasWarnings: calculatedResults.warnings.length > 0,
+        scoringScore: calculatedResults.scoring.score
+      });
+    }, 1000);
+    return () => clearTimeout(handler);
   }, [
     calculatedResults.totalPercentage,
     calculatedResults.activePercentage,
@@ -465,7 +438,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     calculatedResults.tableting.porosity,
     calculatedResults.warnings.length,
     calculatedResults.scoring.score,
-    state.nodes.length
+    state.nodes
   ]);
 
   // 2. Track compatibility_error_triggered
@@ -473,18 +446,18 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     calculatedResults.warnings.map(w => ({ type: w.type, msg: w.message }))
   );
   useEffect(() => {
-    if (calculatedResults.warnings.length > 0) {
-      try {
-        const currentWarnings = JSON.parse(warningMessagesJson) as { type: string; msg: string }[];
+    try {
+      const currentWarnings = JSON.parse(warningMessagesJson) as { type: string; msg: string }[];
+      if (currentWarnings.length > 0) {
         currentWarnings.forEach((warn) => {
           trackEvent('compatibility_error_triggered', {
             conflictType: warn.type,
             message: warn.msg
           });
         });
-      } catch (e) {
-        console.error('Failed to parse warnings for telemetry:', e);
       }
+    } catch (e) {
+      console.error('Failed to parse warnings for telemetry:', e);
     }
   }, [warningMessagesJson]);
 
