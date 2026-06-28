@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     try {
       const { sendVerificationEmail } = await import("@/actions/auth");
       const origin = request.headers.get("origin") || "http://localhost:3000";
-      const verificationUrl = `${origin}/verify-email?token=${verificationToken}`;
+      const verificationUrl = `${origin}/verify-email?token=${verificationToken}&email=${encodeURIComponent(trimmedEmail)}`;
       await sendVerificationEmail(trimmedEmail, verificationUrl);
     } catch (emailErr) {
       console.error("Verification email dispatch failed:", emailErr);

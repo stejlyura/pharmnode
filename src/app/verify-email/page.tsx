@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -9,16 +9,20 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const { data: session, update } = useSession();
   const token = searchParams.get("token");
+  const email = searchParams.get("email");
   const isDev = process.env.NODE_ENV !== "production";
   const [status, setStatus] = useState<"loading" | "success" | "error" | "pending">(
     token ? "loading" : "pending"
   );
   const [errorMessage, setErrorMessage] = useState("");
   const [devMessage, setDevMessage] = useState("");
+  const verificationStarted = useRef(false);
 
   useEffect(() => {
-    if (token) {
-      fetch(`/api/auth/verify-email?token=${token}`)
+    if (token && !verificationStarted.current) {
+      verificationStarted.current = true;
+      const emailParam = email ? `&email=${encodeURIComponent(email)}` : "";
+      fetch(`/api/auth/verify-email?token=${token}${emailParam}`)
         .then(async (res) => {
           const data = await res.json();
           if (res.ok && data.success) {
@@ -38,7 +42,7 @@ function VerifyEmailContent() {
           setErrorMessage("Произошла ошибка при отправке запроса.");
         });
     }
-  }, [token, router, update]);
+  }, [token, email, router, update]);
 
   const handleDevBypass = async () => {
     if (!session?.user?.email) {

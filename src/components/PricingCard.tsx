@@ -63,21 +63,25 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     
     const paddle = (window as any).Paddle || (window as any).PaddleBillingV1;
     if (paddle) {
-      paddle.Checkout.open({
+      const checkoutOptions: any = {
         items: [
           {
             priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID || "pri_test_placeholder",
             quantity: 1
           }
         ],
-        customer: {
-          email: userEmail || "",
-        },
-        // Pass userId as customData so we get it in the webhook
         customData: {
           userId: userId || "",
         }
-      });
+      };
+
+      if (userEmail && userEmail.trim() !== "") {
+        checkoutOptions.customer = {
+          email: userEmail
+        };
+      }
+
+      paddle.Checkout.open(checkoutOptions);
     } else {
       console.error("Paddle SDK not loaded");
       

@@ -8,15 +8,37 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get("token");
+    const email = searchParams.get("email");
 
     if (!token) {
       return NextResponse.json({ error: "Verification token is required" }, { status: 400 });
     }
 
-    // Find user with this token
-    const user = await prisma.user.findFirst({
-      where: { emailVerificationToken: token },
-    });
+    let user = null;
+
+    if (email) {
+      // Find user by email
+      user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+      });
+
+      if (user) {
+        // If the user is already verified, return success (idempotent behavior)
+        if (user.emailVerified) {
+          return NextResponse.json({ success: true });
+        }
+
+        // If not verified, check if token matches the stored token
+        if (user.emailVerificationToken !== token) {
+          return NextResponse.json({ error: "Invalid or expired verification token" }, { status: 400 });
+        }
+      }
+    } else {
+      // Backwards compatibility for older links
+      user = await prisma.user.findFirst({
+        where: { emailVerificationToken: token },
+      });
+    }
 
     if (!user) {
       return NextResponse.json({ error: "Invalid or expired verification token" }, { status: 400 });

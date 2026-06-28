@@ -59,21 +59,25 @@ export default function PremiumRequiredPage() {
     
     const paddle = (window as any).Paddle || (window as any).PaddleBillingV1;
     if (paddle) {
-      paddle.Checkout.open({
+      const checkoutOptions: any = {
         items: [
           {
             priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID || "pri_test_placeholder",
             quantity: 1
           }
         ],
-        customer: {
-          email: user?.email || "",
-        },
-        // Pass userId as customData so we get it in the webhook
         customData: {
           userId: user?.id || "",
         }
-      });
+      };
+
+      if (user?.email && user.email.trim() !== "") {
+        checkoutOptions.customer = {
+          email: user.email
+        };
+      }
+
+      paddle.Checkout.open(checkoutOptions);
     } else {
       console.error("Paddle SDK not loaded");
       

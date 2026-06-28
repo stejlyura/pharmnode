@@ -10,12 +10,14 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: {
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       update: vi.fn(),
     },
   },
   default: {
     user: {
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       update: vi.fn(),
     },
   },
@@ -119,5 +121,129 @@ describe("Verify-email API endpoint", () => {
       action: "user_verify_email",
       details: "Email address successfully verified via token link.",
     });
+  });
+
+  it("should return 200 if user email is already verified (idempotence)", async () => {
+    const mockUser: User = {
+      id: "user-123",
+      name: "Test User",
+      email: "user@example.com",
+      image: null,
+      tariff: "hobby",
+      isSubscribed: false,
+      paddleSubId: null,
+      paddleCustomerId: null,
+      variantId: null,
+      renewsAt: null,
+      billingPortalUrl: null,
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+      passwordHash: "somehash",
+      emailVerified: true,
+      emailVerificationToken: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const findUniqueMock = vi.mocked(prisma.user.findUnique);
+    findUniqueMock.mockResolvedValueOnce(mockUser);
+
+    const request = new Request("http://localhost:3000/api/auth/verify-email?token=valid-token&email=user@example.com");
+    const response = await GET(request);
+    expect(response.status).toBe(200);
+
+    const data = await response.json();
+    expect(data.success).toBe(true);
+
+    expect(findUniqueMock).toHaveBeenCalledWith({
+      where: { email: "user@example.com" }
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it("should successfully verify email and update database when email is provided and token matches", async () => {
+    const mockUser: User = {
+      id: "user-123",
+      name: "Test User",
+      email: "user@example.com",
+      image: null,
+      tariff: "hobby",
+      isSubscribed: false,
+      paddleSubId: null,
+      paddleCustomerId: null,
+      variantId: null,
+      renewsAt: null,
+      billingPortalUrl: null,
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+      passwordHash: "somehash",
+      emailVerified: false,
+      emailVerificationToken: "valid-token",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const findUniqueMock = vi.mocked(prisma.user.findUnique);
+    findUniqueMock.mockResolvedValueOnce(mockUser);
+
+    const updateMock = vi.mocked(prisma.user.update);
+    updateMock.mockResolvedValueOnce(mockUser);
+
+    const request = new Request("http://localhost:3000/api/auth/verify-email?token=valid-token&email=user@example.com");
+    const response = await GET(request);
+    expect(response.status).toBe(200);
+
+    const data = await response.json();
+    expect(data.success).toBe(true);
+
+    expect(findUniqueMock).toHaveBeenCalledWith({
+      where: { email: "user@example.com" }
+    });
+
+    expect(updateMock).toHaveBeenCalledWith({
+      where: { id: "user-123" },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+      }
+    });
+  });
+
+  it("should return 400 if email is provided but token does not match", async () => {
+    const mockUser: User = {
+      id: "user-123",
+      name: "Test User",
+      email: "user@example.com",
+      image: null,
+      tariff: "hobby",
+      isSubscribed: false,
+      paddleSubId: null,
+      paddleCustomerId: null,
+      variantId: null,
+      renewsAt: null,
+      billingPortalUrl: null,
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+      passwordHash: "somehash",
+      emailVerified: false,
+      emailVerificationToken: "valid-token",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const findUniqueMock = vi.mocked(prisma.user.findUnique);
+    findUniqueMock.mockResolvedValueOnce(mockUser);
+
+    const request = new Request("http://localhost:3000/api/auth/verify-email?token=mismatching-token&email=user@example.com");
+    const response = await GET(request);
+    expect(response.status).toBe(400);
+
+    const data = await response.json();
+    expect(data.error).toBe("Invalid or expired verification token");
+
+    expect(findUniqueMock).toHaveBeenCalledWith({
+      where: { email: "user@example.com" }
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 });
