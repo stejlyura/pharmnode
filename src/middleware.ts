@@ -39,25 +39,8 @@ export async function middleware(request: NextRequest) {
 
     const isAuthenticated = !!token || isMockAuthenticated;
 
-    // ─── Email Verification Enforcement ──────────────────────────────────────
-    const rawVerified = token?.emailVerified as unknown;
-    const isEmailVerified = token
-      ? (rawVerified === true || rawVerified === "true" || (!!rawVerified && rawVerified !== "false"))
-      : true;
-    if (isAuthenticated && !isEmailVerified) {
-      const isVerificationPage = pathname === "/verify-email";
-      const isVerificationApi = pathname.startsWith("/api/auth/verify-email");
-      const isSignOutApi = pathname.startsWith("/api/auth/signout");
-
-      if (!isVerificationPage && !isVerificationApi && !isSignOutApi) {
-        if (pathname.startsWith("/api/")) {
-          return NextResponse.json({ error: "Email verification required" }, { status: 403 });
-        }
-        const url = request.nextUrl.clone();
-        url.pathname = "/verify-email";
-        return NextResponse.redirect(url);
-      }
-    }
+    // ─── Email Verification Enforcement (Moved to Protected Layout) ───────────
+    // Verification is now reliably enforced by querying the database in src/app/(protected)/layout.tsx
 
     // ─── 1. API Route Protection ─────────────────────────────────────────────
     if (pathname.startsWith("/api/")) {
