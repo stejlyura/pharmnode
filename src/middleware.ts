@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
     });
+    console.log("[MIDDLEWARE] Retrieved token:", JSON.stringify(token));
 
     const isAuthenticated = !!token || isMockAuthenticated;
 

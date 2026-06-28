@@ -267,12 +267,15 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
+      console.log("[JWT CALLBACK] Entering: token =", JSON.stringify(token), "trigger =", trigger, "session =", JSON.stringify(session));
+
       // Query the database to ensure we always have the fresh subscription status
       if (token.email && !token.error) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: token.email },
           });
+          console.log("[JWT CALLBACK] dbUser result:", dbUser ? { id: dbUser.id, email: dbUser.email, emailVerified: dbUser.emailVerified } : "not found");
           if (dbUser) {
             token.id = dbUser.id;
             token.tariff = dbUser.tariff ?? "hobby";
@@ -286,6 +289,7 @@ export const authOptions: NextAuthOptions = {
 
       // Handle session updates triggered via useSession().update()
       if (trigger === "update") {
+        console.log("[JWT CALLBACK] Processing update trigger payload:", JSON.stringify(session));
         if (session?.tariff) {
           token.tariff = session.tariff;
         } else if (session?.user?.tariff) {
@@ -305,6 +309,7 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
+      console.log("[JWT CALLBACK] Returning token:", JSON.stringify(token));
       return token;
     },
 
