@@ -57,11 +57,11 @@ export const PricingCard: React.FC<PricingCardProps> = ({
 
     trackEvent('checkout_initiated', {
       tariff: 'professional',
-      price: '$19',
+      price: '$39',
       userId: userId
     });
     
-    const paddle = (window as any).Paddle;
+    const paddle = (window as any).Paddle || (window as any).PaddleBillingV1;
     if (paddle) {
       paddle.Checkout.open({
         items: [

@@ -57,7 +57,7 @@ export default function PremiumRequiredPage() {
       userId: user?.id
     });
     
-    const paddle = (window as unknown as { Paddle?: { Checkout: { open: (options: Record<string, unknown>) => void } } }).Paddle;
+    const paddle = (window as any).Paddle || (window as any).PaddleBillingV1;
     if (paddle) {
       paddle.Checkout.open({
         items: [
