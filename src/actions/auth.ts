@@ -145,3 +145,64 @@ export async function sendVerificationEmail(email: string, verificationUrl: stri
     console.error("[Mailer] Exception in sendVerificationEmail:", error);
   }
 }
+
+/**
+ * Server Action to resend the verification email.
+ * Rate limited to prevent spam.
+ */
+export async function resendVerificationEmailAction(email: string) {
+  try {
+    if (!email || !email.includes("@")) {
+      return { success: false, error: "Введите корректный email адрес" };
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // Rate limit: max 3 attempts per 15 minutes per IP
+    const limiter = await rateLimit("resend_verification", {
+      limit: 3,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    if (!limiter.success) {
+      return {
+        success: false,
+        error: "Слишком много запросов. Пожалуйста, попробуйте позже."
+      };
+    }
+
+    // Find the user
+    const user = await prisma.user.findUnique({
+      where: { email: trimmedEmail }
+    });
+
+    if (!user) {
+      // Return success even if user not found to prevent user enumeration
+      return { success: true };
+    }
+
+    if (user.emailVerified) {
+      return { success: true, message: "Email уже подтвержден." };
+    }
+
+    // Generate a new verification token if one doesn't exist, or reuse/regenerate
+    const verificationToken = user.emailVerificationToken || crypto.randomUUID();
+
+    if (!user.emailVerificationToken) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerificationToken: verificationToken }
+      });
+    }
+
+    // Send email verification link
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}&email=${encodeURIComponent(trimmedEmail)}`;
+    await sendVerificationEmail(trimmedEmail, verificationUrl);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in resendVerificationEmailAction server action:", error);
+    return { success: false, error: "Не удалось отправить письмо. Пожалуйста, попробуйте позже." };
+  }
+}

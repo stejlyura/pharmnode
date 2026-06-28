@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { resendVerificationEmailAction } from "@/actions/auth";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -17,6 +18,89 @@ function VerifyEmailContent() {
   const [errorMessage, setErrorMessage] = useState("");
   const [devMessage, setDevMessage] = useState("");
   const verificationStarted = useRef(false);
+
+  // Resend email state & logic
+  const [resendCooldown, setResendCooldown] = useState(60);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [resendError, setResendError] = useState("");
+  const [resendClicked, setResendClicked] = useState(false);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const handleResend = async () => {
+    if (resendClicked || resendCooldown > 0) return;
+
+    const targetEmail = email || session?.user?.email;
+    if (!targetEmail) {
+      setResendStatus("error");
+      setResendError("Не удалось определить email. Пожалуйста, войдите в аккаунт.");
+      return;
+    }
+
+    setResendStatus("sending");
+    setResendError("");
+
+    try {
+      const res = await resendVerificationEmailAction(targetEmail);
+      if (res.success) {
+        setResendStatus("success");
+        setResendClicked(true);
+      } else {
+        setResendStatus("error");
+        setResendError(res.error || "Не удалось отправить письмо.");
+      }
+    } catch (err) {
+      setResendStatus("error");
+      setResendError("Произошла ошибка при отправке запроса.");
+    }
+  };
+
+  const renderResendButton = () => {
+    const targetEmail = email || session?.user?.email;
+    if (!targetEmail) return null;
+
+    let buttonText = "";
+    if (resendStatus === "sending") {
+      buttonText = "Отправка...";
+    } else if (resendClicked || resendStatus === "success") {
+      buttonText = "Письмо отправлено!";
+    } else if (resendCooldown > 0) {
+      buttonText = `Отправить еще раз (${resendCooldown}с)`;
+    } else {
+      buttonText = "Отправить письмо повторно";
+    }
+
+    const isDisabled = resendCooldown > 0 || resendClicked || resendStatus === "sending";
+
+    return (
+      <div className="mt-4 pt-4 border-t border-zinc-800/50">
+        <button
+          onClick={handleResend}
+          disabled={isDisabled}
+          className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
+            isDisabled
+              ? "bg-zinc-800/40 text-zinc-500 cursor-not-allowed border border-zinc-800/20"
+              : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/30"
+          }`}
+        >
+          {buttonText}
+        </button>
+        {resendStatus === "error" && (
+          <p className="text-rose-400 text-xs mt-2 text-center font-medium">{resendError}</p>
+        )}
+        {resendStatus === "success" && (
+          <p className="text-emerald-400 text-xs mt-2 text-center font-medium">Новая ссылка отправлена на {targetEmail}</p>
+        )}
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (token && !verificationStarted.current) {
@@ -98,6 +182,7 @@ function VerifyEmailContent() {
             <div className="pt-2 text-xs text-zinc-500">
               После подтверждения обновите эту страницу или войдите заново.
             </div>
+            {renderResendButton()}
           </div>
         )}
 
@@ -138,12 +223,15 @@ function VerifyEmailContent() {
               <h2 className="text-xl font-semibold text-rose-400">Ошибка подтверждения</h2>
               <p className="text-zinc-400 text-sm mt-2">{errorMessage}</p>
             </div>
-            <button
-              onClick={() => setStatus("pending")}
-              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition"
-            >
-              Вернуться назад
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setStatus("pending")}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition"
+              >
+                Вернуться назад
+              </button>
+              {renderResendButton()}
+            </div>
           </div>
         )}
 
