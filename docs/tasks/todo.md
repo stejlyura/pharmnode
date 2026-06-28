@@ -21,6 +21,12 @@
 > **Контекст**: MVP завершен, все базовые задачи выполнены. Фокус на рефакторинге, тестировании, производительности и качестве кода (на основе аудита проекта от 26.06.2026). Ниже перечислены задачи (без реализации самого кода), которые необходимо будет выполнить.
 
 ### 🔴 CRITICAL — Исправить сейчас
+- [x] **Исправление Email Verification Loop**: Пользователи блокируются на странице `/verify-email` после подтверждения почты. 
+  - **Причина**: JWT токен (используемый в `middleware.ts`) не обновляет поле `emailVerified` (или неактуален) после верификации в БД.
+  - **Решение**: 
+    1. Обновить `jwt` и `session` коллбеки NextAuth, чтобы актуализировать статус верификации.
+    2. Вызывать `update()` из `useSession()` (next-auth/react) на клиенте после успешного подтверждения почты для обновления токена.
+    3. Проверить в `middleware.ts` правильность приведения типов для `token.emailVerified` (может быть Date/string, а не boolean).
 - [x] **Декомпозиция Canvas.tsx**: Разделить гигантский компонент (1857 строк) на `CanvasToolbar`, `CanvasArea`, `AddIngredientModal`, `AuthModal`, `CanvasContextMenu`.
 - [x] **Исправление TypeScript ошибок**: Исправить ошибку typecheck в `src/app/api/admin/data/route.test.ts(158)` (Cannot assign to 'NODE_ENV').
 - [x] **Исправление ESLint ошибок**: Убрать 6 ошибок `@typescript-eslint/no-explicit-any` в тестах `src/lib/auth-2fa.test.ts`.
@@ -46,7 +52,7 @@
 - [ ] **Добавление индексов БД**: Добавить `@@index([userId])` в `AuditLog`, `Recipe`, `UserSession`, а также по `createdAt` в `AuditLog`.
 - [x] **CI/CD Pipeline**: Создать GitHub Actions пайплайн для автоматического запуска `typecheck`, `lint`, `test` и сборки на каждый PR.
 - [x] **Очистка проекта**: Удалить ненужные директории демо-примеров Sentry (`sentry-example-page`, `sentry-example-api`) и файл `Ptomotion.html` из корня проекта.
-
+`
 ### 🟣 PADDLE & LANDING PAGE (Для Gemini Flash 3.5 Medium)
 - [x] **Публичные тарифы (Paddle)**: Интегрировать секцию с тарифами (Hobby/Pro) на главную страницу (`src/app/page.tsx`) или создать отдельную страницу `/pricing`. Это обязательное требование Paddle (Clear Pricing до регистрации).
 - [x] **SEO оптимизация лендинга**: Добавить семантические теги и расширить мета-данные в `src/app/layout.tsx`. Дополнить контент релевантными ключевыми словами (фармацевтика, расчеты, B2B SaaS, таблетирование, DSS).

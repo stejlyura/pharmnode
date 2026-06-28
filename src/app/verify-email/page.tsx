@@ -20,6 +20,13 @@ function VerifyEmailContent() {
   const verificationStarted = useRef(false);
   const sessionChecked = useRef(false);
 
+  // Redirect to projects if already verified
+  useEffect(() => {
+    if (session?.user?.emailVerified) {
+      window.location.href = "/projects";
+    }
+  }, [session]);
+
   // Auto-refresh session on mount to detect if user has verified from another tab or context
   useEffect(() => {
     if (session?.user && !session.user.emailVerified && !sessionChecked.current) {
@@ -27,11 +34,11 @@ function VerifyEmailContent() {
       update().then((newSession) => {
         if (newSession?.user?.emailVerified) {
           setStatus("success");
-          router.push("/projects");
+          window.location.href = "/projects";
         }
       });
     }
-  }, [session, update, router]);
+  }, [session, update]);
 
   // Resend email state & logic
   const [resendCooldown, setResendCooldown] = useState(60);
@@ -128,7 +135,7 @@ function VerifyEmailContent() {
             setStatus("success");
             // Force refresh next-auth session to update emailVerified state
             await update({ emailVerified: true });
-            router.push("/projects");
+            window.location.href = "/projects";
           } else {
             setStatus("error");
             setErrorMessage(data.error || "Не удалось верифицировать email.");
@@ -139,7 +146,7 @@ function VerifyEmailContent() {
           setErrorMessage("Произошла ошибка при отправке запроса.");
         });
     }
-  }, [token, email, router, update]);
+  }, [token, email, update]);
 
   const handleDevBypass = async () => {
     if (!session?.user?.email) {
@@ -156,7 +163,7 @@ function VerifyEmailContent() {
       if (res.ok && data.success) {
         setDevMessage("Успешно! Email подтвержден в БД.");
         await update({ emailVerified: true });
-        router.push("/projects");
+        window.location.href = "/projects";
       } else {
         setDevMessage(data.error || "Ошибка эмуляции.");
       }

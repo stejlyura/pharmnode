@@ -39,7 +39,10 @@ export async function middleware(request: NextRequest) {
     const isAuthenticated = !!token || isMockAuthenticated;
 
     // ─── Email Verification Enforcement ──────────────────────────────────────
-    const isEmailVerified = token ? ((token.emailVerified as boolean) ?? false) : true;
+    const rawVerified = token?.emailVerified as unknown;
+    const isEmailVerified = token
+      ? (rawVerified === true || rawVerified === "true" || (!!rawVerified && rawVerified !== "false"))
+      : true;
     if (isAuthenticated && !isEmailVerified) {
       const isVerificationPage = pathname === "/verify-email";
       const isVerificationApi = pathname.startsWith("/api/auth/verify-email");

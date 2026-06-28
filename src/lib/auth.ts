@@ -200,6 +200,7 @@ export const authOptions: NextAuthOptions = {
       // Create user session on initial sign in
       if (user) {
         token.id = user.id;
+        token.email = user.email;
         token.tariff = user.tariff ?? "hobby";
         token.renewsAt = user.renewsAt ?? null;
         token.emailVerified = (user as { emailVerified?: boolean }).emailVerified ?? false;
@@ -287,12 +288,20 @@ export const authOptions: NextAuthOptions = {
       if (trigger === "update") {
         if (session?.tariff) {
           token.tariff = session.tariff;
+        } else if (session?.user?.tariff) {
+          token.tariff = session.user.tariff;
         }
+
         if (session?.renewsAt !== undefined) {
           token.renewsAt = session.renewsAt;
+        } else if (session?.user?.renewsAt !== undefined) {
+          token.renewsAt = session.user.renewsAt;
         }
+
         if (session?.emailVerified !== undefined) {
           token.emailVerified = session.emailVerified;
+        } else if (session?.user?.emailVerified !== undefined) {
+          token.emailVerified = session.user.emailVerified;
         }
       }
 
