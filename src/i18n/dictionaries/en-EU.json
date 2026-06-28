@@ -162,6 +162,8 @@
   "header_sign_in": "Sign In",
   "header_auth_title": "Authentication / Sign In",
   "header_demo_note": "* No passwords required for demo mode. Select an account to simulate the corresponding plan.",
+  "header_tour": "Tutorial",
+  "header_start_tour": "Start Onboarding Tour",
 
   "canvas_drop_add": "Add \"{name}\"",
   "canvas_drop_release": "Drop to add",
