@@ -74,6 +74,9 @@ export const Footer: React.FC = () => {
             <Link href="/refund" className="hover:text-zinc-200 transition-colors">
               {t("footer_refund")}
             </Link>
+            <Link href="/pricing" className="hover:text-zinc-200 transition-colors">
+              {t("footer_pricing")}
+            </Link>
           </nav>
         </div>
 
