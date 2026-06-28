@@ -27,9 +27,7 @@ function VerifyEmailContent() {
       update().then((newSession) => {
         if (newSession?.user?.emailVerified) {
           setStatus("success");
-          setTimeout(() => {
-            router.push("/projects");
-          }, 1500);
+          router.push("/projects");
         }
       });
     }
@@ -130,9 +128,7 @@ function VerifyEmailContent() {
             setStatus("success");
             // Force refresh next-auth session to update emailVerified state
             await update({ emailVerified: true });
-            setTimeout(() => {
-              router.push("/projects");
-            }, 3000);
+            router.push("/projects");
           } else {
             setStatus("error");
             setErrorMessage(data.error || "Не удалось верифицировать email.");
@@ -160,9 +156,7 @@ function VerifyEmailContent() {
       if (res.ok && data.success) {
         setDevMessage("Успешно! Email подтвержден в БД.");
         await update({ emailVerified: true });
-        setTimeout(() => {
-          router.push("/projects");
-        }, 1500);
+        router.push("/projects");
       } else {
         setDevMessage(data.error || "Ошибка эмуляции.");
       }
