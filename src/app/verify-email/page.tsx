@@ -32,6 +32,7 @@ function VerifyEmailContent() {
       }, 1000);
       return () => clearTimeout(timer);
     }
+    return;
   }, [resendCooldown]);
 
   const handleResend = async () => {
