@@ -31,7 +31,9 @@ function VerifyEmailContent() {
   useEffect(() => {
     if (session?.user && !session.user.emailVerified && !sessionChecked.current) {
       sessionChecked.current = true;
-      update().then((newSession) => {
+      // We pass dummy data { forceRefresh: true } to ensure update() sends a POST request.
+      // This forces NextAuth to generate a new token and send a Set-Cookie header.
+      update({ forceRefresh: true }).then((newSession) => {
         if (newSession?.user?.emailVerified) {
           setStatus("success");
           window.location.href = "/projects";
