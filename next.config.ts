@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: `default-src 'self'; ${scriptSrc} connect-src 'self' https://store.payproglobal.com https://api.paddle.com https://sandbox-api.paddle.com; frame-src 'self' https://store.payproglobal.com https://cc.payproglobal.com https://checkout.paddle.com https://sandbox-checkout.paddle.com https://buy.paddle.com https://sandbox-buy.paddle.com; img-src 'self' data: https://images.unsplash.com https://api.qrserver.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.paddle.com https://sandbox-cdn.paddle.com; font-src 'self' https://fonts.gstatic.com;`
+            value: `default-src 'self'; ${scriptSrc} worker-src 'self' blob:; connect-src 'self' https://store.payproglobal.com https://api.paddle.com https://sandbox-api.paddle.com https://cdn.paddle.com https://sandbox-cdn.paddle.com; frame-src 'self' https://store.payproglobal.com https://cc.payproglobal.com https://checkout.paddle.com https://sandbox-checkout.paddle.com https://buy.paddle.com https://sandbox-buy.paddle.com; img-src 'self' data: https://images.unsplash.com https://api.qrserver.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.paddle.com https://sandbox-cdn.paddle.com; font-src 'self' https://fonts.gstatic.com;`
           },
           {
             key: "X-Frame-Options",
