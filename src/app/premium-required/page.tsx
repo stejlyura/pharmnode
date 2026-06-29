@@ -180,7 +180,7 @@ export default function PremiumRequiredPage() {
                   {t("error_premium_back") || "Back to Workspace"}
                 </Link>
 
-                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && process.env.NODE_ENV !== "production" && (
+                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && (
                   <div className="mt-4 pt-4 border-t border-dashed border-zinc-800 flex flex-col gap-2 w-full">
                     <button
                       onClick={handleSimulateWebhook}
@@ -252,12 +252,12 @@ export default function PremiumRequiredPage() {
                   {t("error_premium_back") || "Back to Workspace"}
                 </Link>
 
-                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && process.env.NODE_ENV !== "production" && (
+                {process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT !== "production" && (
                   <div className="mt-4 pt-4 border-t border-dashed border-zinc-800 flex flex-col gap-2 w-full">
                     <p className="text-[10px] text-zinc-500 leading-normal text-left">
                       {isRu 
-                        ? "Локальный тест: так как Paddle не может отправить вебхук на ваш localhost, вы можете симулировать оплату через локальный подписанный вебхук." 
-                        : "Local Dev: Since Paddle cannot deliver webhooks to localhost, you can simulate the payment webhook using this signed local trigger."}
+                        ? "Режим Sandbox: вы можете симулировать оплату через внутренний скрипт, если вебхуки Paddle еще не настроены." 
+                        : "Sandbox Mode: you can simulate the payment webhook using this trigger if Paddle webhooks are not configured."}
                     </p>
                     <button
                       onClick={handleSimulateWebhook}
