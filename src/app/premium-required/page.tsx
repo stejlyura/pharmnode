@@ -57,9 +57,9 @@ export default function PremiumRequiredPage() {
       userId: user?.id
     });
     
-    const paddle = (window as any).Paddle || (window as any).PaddleBillingV1;
+    const paddle = window.Paddle || window.PaddleBillingV1;
     if (paddle) {
-      const checkoutOptions: any = {
+      const checkoutOptions = {
         items: [
           {
             priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID || "pri_test_placeholder",
@@ -68,14 +68,11 @@ export default function PremiumRequiredPage() {
         ],
         customData: {
           userId: user?.id || "",
-        }
-      };
-
-      if (user?.email && user.email.trim() !== "") {
-        checkoutOptions.customer = {
+        },
+        customer: (user?.email && user.email.trim() !== "") ? {
           email: user.email
-        };
-      }
+        } : undefined
+      };
 
       paddle.Checkout.open(checkoutOptions);
     } else {

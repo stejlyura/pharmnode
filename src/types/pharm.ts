@@ -1,5 +1,14 @@
 export type IngredientRole = 'active' | 'filler' | 'lubricant' | 'glidant' | 'dry-binder';
 
+import type { Paddle } from "@paddle/paddle-js";
+
+declare global {
+  interface Window {
+    Paddle?: Paddle;
+    PaddleBillingV1?: Paddle;
+  }
+}
+
 export type SeverityType = 'low' | 'medium' | 'high';
 
 export interface SideEffect {

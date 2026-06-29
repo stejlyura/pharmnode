@@ -5,7 +5,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PricingPanel } from './PricingPanel';
 
 // Mock context/analytics hooks
-let mockUser: any = null;
+interface TestMockUser {
+  id: string;
+  email: string;
+  tariff: string;
+}
+let mockUser: TestMockUser | null = null;
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
     user: mockUser,
@@ -55,11 +60,11 @@ describe('PricingPanel Component', () => {
   beforeEach(() => {
     mockUser = null;
     vi.clearAllMocks();
-    (window as any).Paddle = {
+    window.Paddle = {
       Checkout: {
         open: mockPaddleOpen,
       },
-    };
+    } as unknown as Window["Paddle"];
   });
 
   it('should render the pricing header and both plan cards', () => {
@@ -151,7 +156,7 @@ describe('PricingPanel Component', () => {
 
   it('should alert on missing Paddle SDK when logged-in user clicks Upgrade and Paddle is undefined', () => {
     mockUser = { id: 'user-123', email: 'user@example.com', tariff: 'hobby' };
-    delete (window as any).Paddle;
+    delete window.Paddle;
 
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 

@@ -61,9 +61,9 @@ export const PricingCard: React.FC<PricingCardProps> = ({
       userId: userId
     });
     
-    const paddle = (window as any).Paddle || (window as any).PaddleBillingV1;
+    const paddle = window.Paddle || window.PaddleBillingV1;
     if (paddle) {
-      const checkoutOptions: any = {
+      const checkoutOptions = {
         items: [
           {
             priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID || "pri_test_placeholder",
@@ -72,14 +72,11 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         ],
         customData: {
           userId: userId || "",
-        }
-      };
-
-      if (userEmail && userEmail.trim() !== "") {
-        checkoutOptions.customer = {
+        },
+        customer: (userEmail && userEmail.trim() !== "") ? {
           email: userEmail
-        };
-      }
+        } : undefined
+      };
 
       paddle.Checkout.open(checkoutOptions);
     } else {

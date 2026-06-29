@@ -50,7 +50,7 @@ export function PaddleInit() {
     })
       .then((paddle) => {
         if (paddle) {
-          (window as any).Paddle = paddle;
+          window.Paddle = paddle;
           const capitalizedEnv = paddleEnv === "production" ? "Production" : "Sandbox";
           console.log(`Paddle Billing (${capitalizedEnv}) initialized`);
         }
