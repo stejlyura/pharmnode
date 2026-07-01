@@ -199,11 +199,32 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       // Create user session on initial sign in
       if (user) {
-        token.id = user.id;
+        let dbUserId = user.id;
+        let dbUserVerified = (user as { emailVerified?: boolean }).emailVerified ?? false;
+        let dbUserTariff = user.tariff ?? "hobby";
+        let dbUserRenewsAt = user.renewsAt ?? null;
+
+        if (user.email) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { email: user.email },
+            });
+            if (dbUser) {
+              dbUserId = dbUser.id;
+              dbUserVerified = dbUser.emailVerified;
+              dbUserTariff = dbUser.tariff;
+              dbUserRenewsAt = dbUser.renewsAt ? dbUser.renewsAt.toISOString() : null;
+            }
+          } catch (dbErr) {
+            console.error("Error looking up user in jwt callback on signin:", dbErr);
+          }
+        }
+
+        token.id = dbUserId;
         token.email = user.email;
-        token.tariff = user.tariff ?? "hobby";
-        token.renewsAt = user.renewsAt ?? null;
-        token.emailVerified = (user as { emailVerified?: boolean }).emailVerified ?? false;
+        token.tariff = dbUserTariff;
+        token.renewsAt = dbUserRenewsAt;
+        token.emailVerified = dbUserVerified;
 
         const crypto = await import("node:crypto");
         const sessionToken = crypto.randomUUID();
@@ -223,7 +244,7 @@ export const authOptions: NextAuthOptions = {
         try {
           await prisma.userSession.create({
             data: {
-              userId: user.id,
+              userId: dbUserId,
               token: sessionToken,
               userAgent: userAgent.slice(0, 255),
               ipAddress: ipAddress.slice(0, 100),
@@ -233,7 +254,7 @@ export const authOptions: NextAuthOptions = {
           // Log login event
           const { logAuditEvent } = await import("./auditLogger");
           await logAuditEvent({
-            userId: user.id,
+            userId: dbUserId,
             email: user.email,
             action: "user_login",
             details: `Provider: Credentials/OAuth. OS/Browser: ${userAgent.slice(0, 150)}`
