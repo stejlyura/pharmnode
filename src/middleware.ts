@@ -1,34 +1,20 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { getMockUser } from "./lib/authHelpers";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   console.log(`[MIDDLEWARE] request pathname: ${pathname}`);
 
   try {
-    const isProduction =
-      process.env.NODE_ENV === "production" ||
-      process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
-
     // Check if there is an active mock session cookie
     const mockUserCookie = request.cookies.get("pharmnode_mock_user")?.value;
-    let isMockAuthenticated = false;
-    let mockEmail = "";
-    let mockTariff = "hobby";
-    
-    if (mockUserCookie && !isProduction) {
-      try {
-        const mockUser = JSON.parse(decodeURIComponent(mockUserCookie));
-        if (mockUser && mockUser.id) {
-          isMockAuthenticated = true;
-          mockEmail = mockUser.email || "";
-          mockTariff = mockUser.tariff || "hobby";
-        }
-      } catch {
-        // ignore malformed cookie
-      }
-    }
+    const {
+      isAuthenticated: isMockAuthenticated,
+      email: mockEmail,
+      tariff: mockTariff,
+    } = getMockUser(mockUserCookie);
 
     // Get NextAuth token if available
     const token = await getToken({

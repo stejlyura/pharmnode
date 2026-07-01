@@ -57,6 +57,15 @@ const AuthLoader: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }, 0);
   }, []);
 
+  useEffect(() => {
+    if (session?.error === "SessionExpired") {
+      console.warn("[AuthLoader] Session expired. Signing out...");
+      setMockUser(null);
+      setTariffOverride(null);
+      signOut({ callbackUrl: "/login" });
+    }
+  }, [session?.error]);
+
   const login = async (
     provider: string,
     customDetails?: { name: string; email: string; tariff?: "hobby" | "professional" }

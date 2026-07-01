@@ -11,6 +11,8 @@
     "db:cleanup": "npx tsx prisma/cleanup.ts",
     "db:backup": "npx tsx scripts/backup-db.ts",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.2",
     "@types/bcryptjs": "^2.4.6",

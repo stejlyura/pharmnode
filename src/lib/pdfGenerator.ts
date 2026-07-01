@@ -1,6 +1,9 @@
 import { CalculatedResults, EditorNode } from "../hooks/useNodeEditor";
 import { UserProfile } from "../context/AuthContext";
 import { Ingredient } from "../types/pharm";
+import { checkCompatibilityAndLimits, getPackagingRecommendations, validateProcessCompatibility } from "./calculator";
+import enUsDict from "../i18n/dictionaries/en-US.json";
+import enEuDict from "../i18n/dictionaries/en-EU.json";
 
 export async function generateGMPReport(
   nodes: EditorNode[],
@@ -17,6 +20,17 @@ export async function generateGMPReport(
   });
 
   let y = 20;
+
+  const blendIngredients = nodes
+    .filter((n) => n.type === "ingredient")
+    .map((node) => {
+      const ing = allIngredients.find((i) => String(i.id) === String(node.data.ingredientId));
+      return {
+        ingredient: ing!,
+        percentage: node.data.percentage ?? 0,
+      };
+    })
+    .filter((item) => item.ingredient !== undefined);
 
   function checkPageBreak(amount: number) {
     if (y + amount > 270) {
@@ -85,9 +99,8 @@ export async function generateGMPReport(
   doc.setTextColor(15, 23, 42);
   doc.text("Ingredient Name", 23, y + 4);
   doc.text("CAS Number", 75, y + 4);
-  doc.text("Role", 110, y + 4);
-  doc.text("Percentage", 145, y + 4);
-  doc.text("Cost/kg", 170, y + 4);
+  doc.text("Role", 112, y + 4);
+  doc.text("Percentage", 165, y + 4);
   y += 6;
 
   // Rows
@@ -114,9 +127,8 @@ export async function generateGMPReport(
         displayRole = "LUBRICANT / PLASTICIZER";
       }
 
-      doc.text(displayRole, 110, y + 4);
-      doc.text(`${(node.data.percentage ?? 0).toFixed(1)}%`, 145, y + 4);
-      doc.text(`$${ing.costPerKgUsd.toFixed(2)}`, 170, y + 4);
+      doc.text(displayRole, 112, y + 4);
+      doc.text(`${(node.data.percentage ?? 0).toFixed(1)}%`, 165, y + 4);
       y += 6;
     }
   });
@@ -207,17 +219,21 @@ export async function generateGMPReport(
   y += 38;
 
   // 4. CHEMICAL INCOMPATIBILITIES & WARNINGS
-  checkPageBreak(32);
+  checkPageBreak(35);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(0, 94, 184);
-  doc.text("3. Safety, Allergens & Compliance Auditing", 20, y);
+  doc.text("3. Safety & Allergen Auditing", 20, y);
   y += 6;
 
-  const hasWarnings = calculatedResults.warnings.length > 0;
+  const enDict = region === "US" ? enUsDict : enEuDict;
+  const enT = (key: string) => (enDict as Record<string, string>)[key] || key;
+  const englishWarnings = checkCompatibilityAndLimits(blendIngredients, enT);
+
+  const hasWarnings = englishWarnings.length > 0;
   if (hasWarnings) {
     doc.setFillColor(254, 242, 242);
-    doc.rect(20, y, 170, 26, "F");
+    doc.rect(20, y, 170, 22, "F");
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -228,12 +244,12 @@ export async function generateGMPReport(
     doc.setFontSize(8);
     doc.setTextColor(15, 23, 42);
     
-    calculatedResults.warnings.slice(0, 3).forEach((w, idx) => {
-      doc.text(`- ${w.message}`, 25, y + 12 + idx * 5);
+    englishWarnings.slice(0, 3).forEach((w, idx) => {
+      doc.text(`- ${w.message}`, 25, y + 12 + idx * 4);
     });
   } else {
     doc.setFillColor(240, 253, 250);
-    doc.rect(20, y, 170, 16, "F");
+    doc.rect(20, y, 170, 12, "F");
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -241,9 +257,11 @@ export async function generateGMPReport(
     doc.text("FORMULATION VERIFIED & COMPLIANT", 25, y + 6);
     
     doc.setFont("helvetica", "normal");
-    doc.text("- No chemical incompatibilities or allergen alerts found.", 25, y + 11);
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text("- No chemical incompatibilities or allergen alerts found.", 25, y + 10);
   }
-  y += hasWarnings ? 32 : 22;
+  y += hasWarnings ? 28 : 18;
 
   // Allergen profile
   if (calculatedResults.allergens.length > 0) {
@@ -253,8 +271,196 @@ export async function generateGMPReport(
     doc.text(`Contains Allergens: ${calculatedResults.allergens.join(", ")}`, 20, y);
     y += 8;
   }
+  y += 4;
 
-  // 5. REGULATORY NOTICE & DISCLAIMER
+  // 5. REGULATORY COMPLIANCE REPORT (Section 4)
+  checkPageBreak(45);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(0, 94, 184);
+  doc.text("4. Regulatory Compliance Report", 20, y);
+  y += 6;
+
+  // Table Headers
+  doc.setFillColor(241, 245, 249);
+  doc.rect(20, y, 170, 6, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.text("Ingredient", 23, y + 4.5);
+  doc.text("Quality Grade", 75, y + 4.5);
+  doc.text("Allergen Status", 112, y + 4.5);
+  doc.text("Compliance Status", 150, y + 4.5);
+  y += 6;
+
+  let hasMissingGrade = false;
+  blendIngredients.forEach((item, idx) => {
+    if (idx % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(20, y, 170, 6, "F");
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(item.ingredient.name, 23, y + 4);
+
+    const grade = item.ingredient.regulatoryInfo?.pharmacopoeiaGrade;
+    const allergen = item.ingredient.regulatoryInfo?.allergenStatus;
+
+    doc.text(grade || "N/A", 75, y + 4);
+    doc.text(allergen || "None", 112, y + 4);
+
+    if (grade) {
+      doc.setTextColor(13, 148, 136); // green
+      doc.text("Compliant", 150, y + 4);
+    } else {
+      hasMissingGrade = true;
+      doc.setTextColor(220, 38, 38); // red
+      doc.text("No Grade Data", 150, y + 4);
+    }
+    y += 6;
+  });
+
+  if (hasMissingGrade) {
+    y += 2;
+    doc.setFillColor(254, 242, 242);
+    doc.rect(20, y, 170, 8, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(220, 38, 38);
+    const missingWarningText = region === "US" 
+      ? "Warning: Not all ingredients have a verified pharmacopoeia standard."
+      : "Внимание: Не все ингредиенты имеют подтвержденный фармакопейный стандарт.";
+    doc.text(missingWarningText, 23, y + 5.5);
+    y += 12;
+  } else {
+    y += 4;
+  }
+
+  // 6. PACKAGING PROTOCOL (Section 5)
+  checkPageBreak(40);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(0, 94, 184);
+  doc.text("5. Packaging Protocol Recommendations", 20, y);
+  y += 6;
+
+  const packagingRecs = getPackagingRecommendations(blendIngredients);
+
+  // Table Headers
+  doc.setFillColor(241, 245, 249);
+  doc.rect(20, y, 170, 6, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.text("Protection Type", 23, y + 4.5);
+  doc.text("Recommended Action", 65, y + 4.5);
+  doc.text("Target / Cause", 130, y + 4.5);
+  y += 6;
+
+  packagingRecs.forEach((rec, idx) => {
+    if (idx % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(20, y, 170, 6, "F");
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(15, 23, 42);
+
+    let typeText = "Standard";
+    let iconText = "[Standard] ";
+    if (rec.type === "moisture_protection") {
+      typeText = "Moisture Protection";
+      iconText = "[Moisture] ";
+    } else if (rec.type === "light_protection") {
+      typeText = "Light Protection";
+      iconText = "[Light] ";
+    } else if (rec.type === "heat_protection") {
+      typeText = "Temperature Chain";
+      iconText = "[Temperature] ";
+    }
+
+    doc.text(typeText, 23, y + 4);
+    doc.text(rec.message, 65, y + 4);
+    doc.text(rec.details, 130, y + 4);
+    y += 6;
+  });
+  y += 4;
+
+  // 7. PROCESS VALIDATION (Section 6)
+  const blendingNode = nodes.find(n => n.type === 'blending');
+  const processType = blendingNode?.data.processType || pressNode?.data.processType;
+
+  if (processType) {
+    checkPageBreak(40);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(0, 94, 184);
+    doc.text("6. Process Validation Report", 20, y);
+    y += 6;
+
+    const processValidation = validateProcessCompatibility(blendIngredients, processType);
+    let processLabel = String(processType).replace(/_/g, ' ').toUpperCase();
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Selected Process: ${processLabel}`, 20, y + 4);
+    y += 8;
+
+    if (processValidation.warnings.length > 0) {
+      checkPageBreak(25);
+      doc.setFillColor(254, 242, 242);
+      const boxHeight = 10 + processValidation.warnings.length * 5;
+      doc.rect(20, y, 170, boxHeight, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(220, 38, 38);
+      doc.text("PROCESS WARNINGS:", 23, y + 5);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
+      processValidation.warnings.forEach((warn, idx) => {
+        doc.text(`• ${warn}`, 23, y + 10 + idx * 5);
+      });
+      y += boxHeight + 4;
+    }
+
+    if (processValidation.recommendations.length > 0) {
+      checkPageBreak(25);
+      doc.setFillColor(240, 253, 250);
+      const boxHeight = 10 + processValidation.recommendations.length * 5;
+      doc.rect(20, y, 170, boxHeight, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(13, 148, 136);
+      doc.text("PROCESS RECOMMENDATIONS:", 23, y + 5);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
+      processValidation.recommendations.forEach((rec, idx) => {
+        doc.text(`• ${rec}`, 23, y + 10 + idx * 5);
+      });
+      y += boxHeight + 4;
+    }
+
+    if (processValidation.isValid && processValidation.warnings.length === 0) {
+      doc.setFillColor(240, 253, 250);
+      doc.rect(20, y, 170, 10, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(13, 148, 136);
+      doc.text("✔ PROCESS COMPATIBLE: Selected process is compatible with blend stability profile.", 23, y + 6.5);
+      y += 14;
+    }
+  }
+
+  // 8. REGULATORY NOTICE & DISCLAIMER
   checkPageBreak(25);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
@@ -271,7 +477,7 @@ export async function generateGMPReport(
   doc.text(disclLine2, 20, y + 3.5);
   y += 12;
 
-  // 6. TECH SIGNATURE SIGN-OFF BLOCK
+  // 9. TECH SIGNATURE SIGN-OFF BLOCK
   checkPageBreak(30);
   doc.setDrawColor(203, 213, 225);
   doc.line(20, y, 190, y);

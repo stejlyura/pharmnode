@@ -8,7 +8,8 @@ import {
   PunchDimensions,
   FillCamResult,
   PressPresetsResult,
-  CompatibilityWarning
+  CompatibilityWarning,
+  ProcessType
 } from '../types/pharm';
 import { getIngredientsCompatibilityRule } from './chemicalRules';
 
@@ -571,3 +572,232 @@ export function calculatePressPresets(
 }
 
 
+// ─── Task 3.1 — Process Compatibility Validation ────────────────────────────
+
+export interface ProcessValidationResult {
+  isValid: boolean;
+  warnings: string[];
+  recommendations: string[];
+}
+
+/**
+ * Validates whether the selected manufacturing process is compatible with
+ * the ingredient set based on stability profiles and flowability data.
+ * Deterministic expert-system rules — no AI/ML.
+ */
+export function validateProcessCompatibility(
+  ingredients: { ingredient: Ingredient; percentage: number }[],
+  processType: ProcessType
+): ProcessValidationResult {
+  const warnings: string[] = [];
+  const recommendations: string[] = [];
+
+  const active = ingredients.filter(i => i.percentage > 0);
+
+  if (processType === 'wet_granulation') {
+    for (const { ingredient } of active) {
+      const sp = ingredient.stabilityProfile;
+      if (!sp) continue;
+
+      if (sp.hygroscopicity > 70) {
+        warnings.push(
+          `Ингредиент ${ingredient.name} гигроскопичен (hygroscopicity=${sp.hygroscopicity}). ` +
+          `Влажная грануляция может привести к деградации.`
+        );
+      }
+
+      if (sp.heatDegradation !== null && sp.heatDegradation !== undefined && sp.heatDegradation < 60) {
+        warnings.push(
+          `Ингредиент ${ingredient.name} термочувствителен (деградация при ${sp.heatDegradation}°C). ` +
+          `Сушка гранулята при стандартных температурах (50–60°C) может вызвать деградацию.`
+        );
+      }
+    }
+  }
+
+  if (processType === 'direct_compression') {
+    const blend = calculateBlendProperties(active);
+    if (blend.flowability.rating === 'Poor' || blend.flowability.rating === 'Very Poor') {
+      warnings.push(
+        `Сыпучесть смеси недостаточна для прямого прессования (${blend.flowability.rating}, ` +
+        `Hausner=${blend.flowability.hausner.toFixed(3)}). Рассмотрите грануляцию.`
+      );
+    }
+
+    const particleSizes = active
+      .map(i => i.ingredient.averageParticleSizeUm)
+      .filter((s): s is number => s !== undefined && s > 0);
+
+    if (particleSizes.length > 0) {
+      const avgSize = particleSizes.reduce((a, b) => a + b, 0) / particleSizes.length;
+      if (avgSize < 50) {
+        warnings.push(
+          `Средний размер частиц (${avgSize.toFixed(1)} мкм) < 50 мкм. ` +
+          `Мелкодисперсные частицы затрудняют прямое прессование.`
+        );
+      }
+    }
+  }
+
+  if (processType === 'dry_granulation' || processType === 'roller_compaction') {
+    for (const { ingredient } of active) {
+      const sp = ingredient.stabilityProfile;
+      if (!sp) continue;
+      if (sp.hygroscopicity > 80) {
+        recommendations.push(
+          `Ингредиент ${ingredient.name} очень гигроскопичен (${sp.hygroscopicity}). ` +
+          `Работайте в условиях контролируемой влажности (<40% RH).`
+        );
+      }
+    }
+  }
+
+  return {
+    isValid: warnings.length === 0,
+    warnings,
+    recommendations,
+  };
+}
+
+// ─── Task 3.2 — Formula Score Engine ────────────────────────────────────────
+
+export interface FormulaScoreResult {
+  totalScore: number;           // 0–100
+  benefitScore: number;
+  stabilityScore: number;
+  manufacturabilityScore: number;
+  riskPenalty: number;
+  breakdown: { ingredientName: string; score: number }[];
+}
+
+/**
+ * Calculates a composite quality score for the formula.
+ * score_i = benefit*0.4 + stability*0.2 + manufacturability*0.2 - risk*0.2
+ * totalScore = Σ (score_i * fraction_i)   — weighted by percentage
+ */
+export function calculateFormulaScore(
+  ingredients: { ingredient: Ingredient; percentage: number }[]
+): FormulaScoreResult {
+  const empty: FormulaScoreResult = {
+    totalScore: 0,
+    benefitScore: 0,
+    stabilityScore: 0,
+    manufacturabilityScore: 0,
+    riskPenalty: 0,
+    breakdown: [],
+  };
+
+  const active = ingredients.filter(i => i.percentage > 0);
+  if (active.length === 0) return empty;
+
+  const totalPct = active.reduce((s, i) => s + i.percentage, 0);
+  if (totalPct <= 0) return empty;
+
+  let weightedBenefit = 0;
+  let weightedStability = 0;
+  let weightedManufacturability = 0;
+  let weightedRisk = 0;
+  const breakdown: { ingredientName: string; score: number }[] = [];
+
+  for (const { ingredient, percentage } of active) {
+    const fraction = percentage / totalPct;
+
+    const benefit           = ingredient.benefit           ?? (ingredient.role === 'active' ? 80 : 10);
+    const stability         = ingredient.stability         ?? 85;
+    const manufacturability = ingredient.manufacturability ?? 85;
+    const risk              = ingredient.risk              ?? (ingredient.role === 'active' ? 15 : 5);
+
+    const score_i = benefit * 0.4 + stability * 0.2 + manufacturability * 0.2 - risk * 0.2;
+
+    weightedBenefit           += benefit           * fraction;
+    weightedStability         += stability         * fraction;
+    weightedManufacturability += manufacturability * fraction;
+    weightedRisk              += risk              * fraction;
+    breakdown.push({ ingredientName: ingredient.name, score: score_i * fraction });
+  }
+
+  const totalScore =
+    weightedBenefit * 0.4 +
+    weightedStability * 0.2 +
+    weightedManufacturability * 0.2 -
+    weightedRisk * 0.2;
+
+  return {
+    totalScore,
+    benefitScore: weightedBenefit,
+    stabilityScore: weightedStability,
+    manufacturabilityScore: weightedManufacturability,
+    riskPenalty: weightedRisk,
+    breakdown,
+  };
+}
+
+// ─── Task 3.3 — Packaging Recommendations Engine ────────────────────────────
+
+export interface PackagingRecommendation {
+  type: 'moisture_protection' | 'light_protection' | 'heat_protection' | 'standard';
+  message: string;
+  details: string;
+}
+
+/**
+ * Returns packaging recommendations based on ingredient stability profiles.
+ * Pure deterministic function — no side effects. Gracefully skips ingredients
+ * without a stabilityProfile.
+ */
+export function getPackagingRecommendations(
+  ingredients: { ingredient: Ingredient; percentage: number }[]
+): PackagingRecommendation[] {
+  const recommendations: PackagingRecommendation[] = [];
+  const active = ingredients.filter(i => i.percentage > 0);
+
+  // 1. Hygroscopicity check (> 70 → moisture protection)
+  const hygroscopicItems = active.filter(
+    i => i.ingredient.stabilityProfile?.hygroscopicity !== undefined
+      && i.ingredient.stabilityProfile.hygroscopicity > 70
+  );
+  if (hygroscopicItems.length > 0) {
+    recommendations.push({
+      type: 'moisture_protection',
+      message: 'Требуется влагозащитный блистер (ALU/ALU)',
+      details: `Ингредиенты с высокой гигроскопичностью: ${hygroscopicItems.map(i => i.ingredient.name).join(', ')}`,
+    });
+  }
+
+  // 2. Light sensitivity check
+  const lightSensitiveItems = active.filter(
+    i => i.ingredient.stabilityProfile?.lightSensitive === true
+  );
+  if (lightSensitiveItems.length > 0) {
+    recommendations.push({
+      type: 'light_protection',
+      message: 'Требуется светонепроницаемая упаковка',
+      details: `Светочувствительные ингредиенты: ${lightSensitiveItems.map(i => i.ingredient.name).join(', ')}`,
+    });
+  }
+
+  // 3. Heat degradation check (< 40°C → cold chain required)
+  const heatSensitiveItems = active.filter(
+    i => i.ingredient.stabilityProfile?.heatDegradation !== null
+      && i.ingredient.stabilityProfile?.heatDegradation !== undefined
+      && i.ingredient.stabilityProfile.heatDegradation < 40
+  );
+  if (heatSensitiveItems.length > 0) {
+    recommendations.push({
+      type: 'heat_protection',
+      message: 'Рекомендуется хранение при контролируемой температуре (2–8°C)',
+      details: `Термолабильные ингредиенты: ${heatSensitiveItems.map(i => i.ingredient.name).join(', ')}`,
+    });
+  }
+
+  // 4. Standard packaging if no special requirements
+  if (recommendations.length === 0) {
+    recommendations.push({
+      type: 'standard',
+      message: 'Стандартная упаковка (PVC/PVDC блистер)',
+      details: 'Особых требований к упаковке не выявлено.',
+    });
+  }
+
+  return recommendations;
+}

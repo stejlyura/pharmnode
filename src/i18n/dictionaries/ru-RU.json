@@ -562,5 +562,9 @@
   "footer_contacts_title": "Контакты компании",
   "nav_pricing": "Тарифы",
   "nav_about": "О проекте",
-  "nav_usecases": "Примеры"
+  "nav_usecases": "Примеры",
+  "card_packaging_protocol": "Протокол упаковки",
+  "card_packaging_locked": "Протокол упаковки доступен только в тарифе Professional.",
+  "card_formula_score_title": "Качество рецептуры",
+  "card_formula_score_breakdown": "Вклад ингредиентов (Breakdown)"
 }

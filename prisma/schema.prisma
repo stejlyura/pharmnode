@@ -117,7 +117,7 @@ model Ingredient {
   risk                  Float                        @default(0)
   cost                  Float                        @default(0) // cost field from KB
   costPerKgUsd          Float                        @default(0) // kept for codebase compatibility
-  stability             Float                        @default(0)
+  stabilityScore        Float                        @default(0)
   manufacturability     Float                        @default(0)
   maxSafePercentage     Float                        @default(100)
   source                String?
@@ -131,6 +131,8 @@ model Ingredient {
   contraindications     IngredientContraindication[]
   synergiesA            Synergy[]                    @relation("SynergyA")
   synergiesB            Synergy[]                    @relation("SynergyB")
+  stabilityData         IngredientStability?
+  regulatoryData        IngredientRegulatory?
   createdAt             DateTime                     @default(now())
   updatedAt             DateTime                     @updatedAt
 }
@@ -202,3 +204,24 @@ model CompatibilityRule {
   updatedAt  DateTime @updatedAt
 }
 
+model IngredientStability {
+  id              String     @id @default(uuid())
+  ingredientId    Int        @unique
+  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  ph              Float?     // pH в 10% растворе (напр. 3.5 для Витамина C)
+  hygroscopicity  Int        @default(0) // 0–100, где 100 = максимальная гигроскопичность
+  lightSensitive  Boolean    @default(false) // чувствительность к свету
+  heatDegradation Float?     // температура деградации в °C (напр. 190 для Парацетамола)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model IngredientRegulatory {
+  id                 String     @id @default(uuid())
+  ingredientId       Int        @unique
+  ingredient         Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  pharmacopoeiaGrade String?    // "USP", "BP", "EP", "JP" — стандарт качества
+  allergenStatus     String?    // "Lactose", "Gluten", "Soy", null — аллерген-маркировка
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}

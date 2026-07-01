@@ -30,6 +30,12 @@ let cachedStandardIngredients: Record<string, unknown>[] | null = null;
 let lastCacheTime = 0;
 const CACHE_TTL = 300 * 1000; // 5 minutes
 
+/** Exported for test isolation only — resets the module-level ingredient cache */
+export function resetIngredientsCache() {
+  cachedStandardIngredients = null;
+  lastCacheTime = 0;
+}
+
 // ─── GET /api/ingredients ─────────────────────────────────────────────────────
 // Query params:
 //   ?type=standard  → standard ingredients from Ingredient table (public, no auth)
@@ -59,6 +65,8 @@ export async function GET(request: Request) {
           activeMolecules: true,
           effects: { include: { effect: true } },
           contraindications: { include: { contraindication: true } },
+          stabilityData: true,
+          regulatoryData: true,
         },
       });
 
@@ -66,6 +74,24 @@ export async function GET(request: Request) {
         ...ing,
         effects: ing.effects.map(e => e.effect.name),
         contraindications: ing.contraindications.map(c => c.contraindication.name),
+        // Map 1:1 relations to clean optional nested objects
+        stabilityProfile: ing.stabilityData
+          ? {
+              ph: ing.stabilityData.ph,
+              hygroscopicity: ing.stabilityData.hygroscopicity,
+              lightSensitive: ing.stabilityData.lightSensitive,
+              heatDegradation: ing.stabilityData.heatDegradation,
+            }
+          : null,
+        regulatoryInfo: ing.regulatoryData
+          ? {
+              pharmacopoeiaGrade: ing.regulatoryData.pharmacopoeiaGrade,
+              allergenStatus: ing.regulatoryData.allergenStatus,
+            }
+          : null,
+        // Remove raw relation objects from top-level response
+        stabilityData: undefined,
+        regulatoryData: undefined,
       }));
     };
 

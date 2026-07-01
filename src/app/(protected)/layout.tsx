@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
+import { cookies } from "next/headers";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getMockUser } from "@/lib/authHelpers";
 import { TariffSynchronizer } from "@/components/TariffSynchronizer";
 
 export default async function ProtectedLayout({
@@ -29,8 +31,17 @@ export default async function ProtectedLayout({
       dbTariff = user.tariff;
     }
   } else {
-    // If there is no session, middleware should have redirected them, but just in case:
-    redirect("/login");
+    // Check if there is an active mock session cookie (only for non-production environments)
+    const cookieStore = await cookies();
+    const mockUserCookie = cookieStore.get("pharmnode_mock_user")?.value;
+    const { isAuthenticated: isMockAuthenticated, tariff: mockTariff } = getMockUser(mockUserCookie);
+
+    if (isMockAuthenticated) {
+      dbTariff = mockTariff;
+    } else {
+      // If there is no session, middleware should have redirected them, but just in case:
+      redirect("/login");
+    }
   }
 
   return (

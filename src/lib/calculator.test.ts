@@ -12,7 +12,10 @@ import {
   calculatePharmacokineticDose,
   calculateWetGranulation,
   calculateFillCamSize,
-  calculatePressPresets
+  calculatePressPresets,
+  validateProcessCompatibility,
+  calculateFormulaScore,
+  getPackagingRecommendations,
 } from './calculator';
 import { Ingredient } from '../types/pharm';
 
@@ -463,4 +466,321 @@ describe('calculatePressPresets', () => {
   });
 });
 
+describe('Explicit Math Precision & Edge Case Validations', () => {
+  describe('Hausner Ratio & Carr Index', () => {
+    it('verifies 4-decimal precision on standard inputs', () => {
+      const res = calculateFlowability(0.4851, 0.5892);
+      // Hausner = 0.5892 / 0.4851 = 1.214595... -> 1.2146
+      // Carr = 100 * (0.5892 - 0.4851) / 0.5892 = 17.668024... -> 17.6680%
+      expect(res.hausner).toBeCloseTo(1.2146, 4);
+      expect(res.carr).toBeCloseTo(17.6680, 4);
+    });
 
+    it('handles boundary and extreme values correctly', () => {
+      // Very close values
+      const resClose = calculateFlowability(0.5, 0.5001);
+      expect(resClose.hausner).toBeCloseTo(1.0002, 4);
+      expect(resClose.carr).toBeCloseTo(0.0200, 4);
+
+      // Huge densities
+      const resHuge = calculateFlowability(1000.1234, 1200.5678);
+      expect(resHuge.hausner).toBeCloseTo(1.2004, 4);
+      expect(resHuge.carr).toBeCloseTo(16.6958, 4);
+    });
+
+    it('returns default/unknown ratings on invalid input data', () => {
+      // Tapped density smaller than loose bulk density
+      expect(calculateFlowability(0.5, 0.4).rating).toBe('Unknown');
+      expect(calculateFlowability(0.5, 0.4).hausner).toBe(1.0);
+      expect(calculateFlowability(0.5, 0.4).carr).toBe(0.0);
+
+      // Zero or negative values
+      expect(calculateFlowability(0, 0.5).rating).toBe('Unknown');
+      expect(calculateFlowability(0.5, -0.5).rating).toBe('Unknown');
+    });
+  });
+
+  describe('Porosity', () => {
+    it('verifies 4-decimal precision on standard inputs', () => {
+      // massMg = 325.45, volumeCm3 = 0.2852, trueDensityBlend = 1.4582
+      // apparentDensity = (325.45 / 1000) / 0.2852 = 1.141129...
+      // porosity = 1 - (1.141129... / 1.4582) = 1 - 0.782560... = 0.217439... -> 0.2174
+      const porosity = calculatePorosity(325.45, 0.2852, 1.4582);
+      expect(porosity).toBeCloseTo(0.2174, 4);
+    });
+
+    it('handles boundary/extreme values and clamps correctly', () => {
+      // Negative parameters
+      expect(calculatePorosity(-100, 0.2, 1.5)).toBe(0);
+      expect(calculatePorosity(100, -0.2, 1.5)).toBe(0);
+      expect(calculatePorosity(100, 0.2, -1.5)).toBe(0);
+
+      // Zero values
+      expect(calculatePorosity(0, 0.2, 1.5)).toBe(0);
+      expect(calculatePorosity(100, 0, 1.5)).toBe(0);
+      expect(calculatePorosity(100, 0.2, 0)).toBe(0);
+
+      // Clamping: apparent density > true density blend -> clamps to 0
+      expect(calculatePorosity(500, 0.1, 1.2)).toBe(0); // apparent density is 5.0, true density is 1.2
+    });
+  });
+
+  describe('Die Volume (Объем матрицы)', () => {
+    it('verifies 4-decimal precision for round punch volume', () => {
+      // diameter = 0.7523 cm, depth = 0.4852 cm
+      // radius = 0.37615 cm
+      // volume = pi * r^2 * h = 3.14159265... * 0.141488... * 0.4852 = 0.215682... cm3 -> 0.2157
+      const res = calculateTableting(0.7523, 0.4852, 0.5);
+      expect(res.volume).toBeCloseTo(0.2157, 4);
+    });
+
+    it('handles boundary and negative/zero dimensions gracefully', () => {
+      expect(calculateTableting(0, 0.5, 0.5).volume).toBe(0);
+      expect(calculateTableting(0.5, 0, 0.5).volume).toBe(0);
+      expect(calculateTableting(0.5, 0.5, 0).maxWeightMg).toBe(0);
+
+      expect(calculateTableting(-0.5, 0.5, 0.5).volume).toBe(0);
+      expect(calculateTableting(0.5, -0.5, 0.5).volume).toBe(0);
+      expect(calculateTableting(0.5, 0.5, -0.5).maxWeightMg).toBe(0);
+    });
+  });
+
+  describe('Unit Cost & Batch Cost (Себестоимость)', () => {
+    it('verifies 4-decimal precision on standard inputs', () => {
+      // activeRawWeightG = 12.5, recommendedWeightMg = 185.2, activePercentage = 12.5%, costPerKg = 152.3
+      // recommendedWeightG = 0.1852g
+      // divisor = 0.1852 * 0.125 = 0.02315
+      // totalTablets = Math.floor(12.5 / 0.02315) = 539 tablets
+      // totalBatchWeight = 539 * 185.2mg / 1e6 = 0.0998228 kg
+      // costPerTablet = 185.2mg / 1e6 * 152.3 = 0.02820596 USD -> 0.0282 USD
+      // totalBatchCost = 0.0998228 * 152.3 = 15.20301244 USD -> 15.2030 USD
+      const res = calculateBatch(12.5, 185.2, 12.5, 152.3);
+      expect(res.totalTablets).toBe(539);
+      expect(res.costPerTabletUsd).toBeCloseTo(0.0282, 4);
+      expect(res.totalBatchCostUsd).toBeCloseTo(15.2030, 4);
+    });
+
+    it('handles negative, zero, and malformed inputs gracefully', () => {
+      // Zero active raw weight
+      const resZeroActive = calculateBatch(0, 185.2, 12.5, 152.3);
+      expect(resZeroActive.totalTablets).toBe(0);
+      expect(resZeroActive.totalBatchWeightKg).toBe(0);
+      expect(resZeroActive.totalBatchCostUsd).toBe(0);
+
+      // Zero active percentage (prevents division by zero)
+      const resZeroPct = calculateBatch(12.5, 185.2, 0, 152.3);
+      expect(resZeroPct.totalTablets).toBe(0);
+      expect(resZeroPct.totalBatchWeightKg).toBe(0);
+      expect(resZeroPct.totalBatchCostUsd).toBe(0);
+
+      // Negative values
+      const resNeg = calculateBatch(-12.5, 185.2, 12.5, 152.3);
+      expect(resNeg.totalTablets).toBe(0);
+      expect(resNeg.totalBatchWeightKg).toBe(0);
+      expect(resNeg.totalBatchCostUsd).toBe(0);
+    });
+  });
+});
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Helper: minimal Ingredient stub
+// ──────────────────────────────────────────────────────────────────────────────
+function makeIngredient(overrides: Partial<Ingredient> = {}): Ingredient {
+  return {
+    id: 1,
+    name: 'Test Ingredient',
+    role: 'filler',
+    chemicalClassId: 1,
+    looseBulkDensity: 0.5,
+    tappedBulkDensity: 0.6,
+    costPerKgUsd: 10,
+    maxSafePercentage: 100,
+    benefit: 50,
+    risk: 10,
+    stability: 70,
+    manufacturability: 80,
+    ...overrides,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Task 7.1 — validateProcessCompatibility
+// ──────────────────────────────────────────────────────────────────────────────
+describe('validateProcessCompatibility', () => {
+  it('wet_granulation: warns for hygroscopic ingredient (hygroscopicity > 70)', () => {
+    const ing = makeIngredient({
+      name: 'PVP',
+      stabilityProfile: { ph: null, hygroscopicity: 75, lightSensitive: false, heatDegradation: null },
+    });
+    const result = validateProcessCompatibility([{ ingredient: ing, percentage: 20 }], 'wet_granulation');
+    expect(result.isValid).toBe(false);
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings[0]).toContain('гигроскопичен');
+  });
+
+  it('wet_granulation: warns for heat-sensitive ingredient (heatDegradation < 60)', () => {
+    const ing = makeIngredient({
+      name: 'Ibuprofen',
+      stabilityProfile: { ph: null, hygroscopicity: 5, lightSensitive: false, heatDegradation: 50 },
+    });
+    const result = validateProcessCompatibility([{ ingredient: ing, percentage: 50 }], 'wet_granulation');
+    expect(result.isValid).toBe(false);
+    expect(result.warnings.some(w => w.includes('термочувствителен'))).toBe(true);
+  });
+
+  it('direct_compression: warns for poor flowability blend', () => {
+    // loose=0.2, tapped=0.4 → Hausner=2.0 → Very Poor
+    const ing = makeIngredient({ looseBulkDensity: 0.2, tappedBulkDensity: 0.4 });
+    const result = validateProcessCompatibility([{ ingredient: ing, percentage: 100 }], 'direct_compression');
+    expect(result.isValid).toBe(false);
+    expect(result.warnings.some(w => w.includes('Сыпучесть'))).toBe(true);
+  });
+
+  it('dry_granulation: no warnings for standard ingredient, recommendation for very hygroscopic', () => {
+    const standard = makeIngredient({ name: 'Lactose' });
+    const r1 = validateProcessCompatibility([{ ingredient: standard, percentage: 100 }], 'dry_granulation');
+    expect(r1.warnings).toHaveLength(0);
+
+    const veryHygro = makeIngredient({
+      name: 'SuperHygro',
+      stabilityProfile: { ph: null, hygroscopicity: 90, lightSensitive: false, heatDegradation: null },
+    });
+    const r2 = validateProcessCompatibility([{ ingredient: veryHygro, percentage: 100 }], 'dry_granulation');
+    expect(r2.recommendations.some(r => r.includes('гигроскопичен'))).toBe(true);
+  });
+
+  it('returns isValid=true and empty arrays for compatible ingredients', () => {
+    const ing = makeIngredient({
+      stabilityProfile: { ph: 6, hygroscopicity: 10, lightSensitive: false, heatDegradation: null },
+    });
+    const result = validateProcessCompatibility([{ ingredient: ing, percentage: 100 }], 'wet_granulation');
+    expect(result.isValid).toBe(true);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it('skips check gracefully when stabilityProfile is undefined', () => {
+    const ing = makeIngredient(); // no stabilityProfile
+    const result = validateProcessCompatibility([{ ingredient: ing, percentage: 100 }], 'wet_granulation');
+    expect(result.warnings).toHaveLength(0);
+    expect(result.isValid).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Task 7.1 — calculateFormulaScore
+// ──────────────────────────────────────────────────────────────────────────────
+describe('calculateFormulaScore', () => {
+  it('returns zero score for empty array', () => {
+    const result = calculateFormulaScore([]);
+    expect(result.totalScore).toBe(0);
+    expect(result.breakdown).toHaveLength(0);
+  });
+
+  it('calculates correct score for a single ingredient with known KB values', () => {
+    // benefit=80, stability=70, manufacturability=80, risk=10
+    // score = 80*0.4 + 70*0.2 + 80*0.2 - 10*0.2 = 32 + 14 + 16 - 2 = 60
+    const ing = makeIngredient({ benefit: 80, stability: 70, manufacturability: 80, risk: 10 });
+    const result = calculateFormulaScore([{ ingredient: ing, percentage: 100 }]);
+    expect(result.totalScore).toBeCloseTo(60, 4);
+    expect(result.breakdown).toHaveLength(1);
+  });
+
+  it('calculates weighted score correctly for a 3-ingredient blend', () => {
+    const a = makeIngredient({ name: 'A', benefit: 80, stability: 70, manufacturability: 80, risk: 10 });
+    const b = makeIngredient({ name: 'B', benefit: 60, stability: 80, manufacturability: 70, risk: 5  });
+    const c = makeIngredient({ name: 'C', benefit: 40, stability: 90, manufacturability: 90, risk: 20 });
+    const result = calculateFormulaScore([
+      { ingredient: a, percentage: 50 },
+      { ingredient: b, percentage: 30 },
+      { ingredient: c, percentage: 20 },
+    ]);
+    // score_A = 80*0.4+70*0.2+80*0.2−10*0.2 = 32+14+16−2 = 60
+    // score_B = 60*0.4+80*0.2+70*0.2−5*0.2  = 24+16+14−1 = 53
+    // score_C = 40*0.4+90*0.2+90*0.2−20*0.2 = 16+18+18−4 = 48
+    // totalScore = weighted sum → 55.5
+    expect(result.totalScore).toBeCloseTo(55.5, 1);
+    expect(result.breakdown).toHaveLength(3);
+  });
+
+  it('uses default KB values when fields are undefined', () => {
+    const ing: Ingredient = {
+      id: 99, name: 'Unknown', role: 'active',
+      chemicalClassId: 1, looseBulkDensity: 0.5, tappedBulkDensity: 0.6,
+      costPerKgUsd: 0, maxSafePercentage: 100,
+      // no benefit/risk/stability/manufacturability
+    };
+    const result = calculateFormulaScore([{ ingredient: ing, percentage: 100 }]);
+    // active defaults: benefit=80, risk=15, stability=85, manufacturability=85
+    // score = 80*0.4 + 85*0.2 + 85*0.2 - 15*0.2 = 32+17+17-3 = 63
+    expect(result.totalScore).toBeCloseTo(63, 4);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Task 7.1 — getPackagingRecommendations
+// ──────────────────────────────────────────────────────────────────────────────
+describe('getPackagingRecommendations', () => {
+  it('returns standard packaging for empty ingredient list', () => {
+    const result = getPackagingRecommendations([]);
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('standard');
+  });
+
+  it('skips ingredient without stabilityProfile (graceful fallback)', () => {
+    const ing = makeIngredient(); // no stabilityProfile
+    const result = getPackagingRecommendations([{ ingredient: ing, percentage: 100 }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].type).toBe('standard');
+  });
+
+  it('recommends moisture_protection for hygroscopicity > 70', () => {
+    const ing = makeIngredient({
+      name: 'PVP',
+      stabilityProfile: { ph: null, hygroscopicity: 75, lightSensitive: false, heatDegradation: null },
+    });
+    const result = getPackagingRecommendations([{ ingredient: ing, percentage: 20 }]);
+    const moisture = result.find(r => r.type === 'moisture_protection');
+    expect(moisture).toBeDefined();
+    expect(moisture?.details).toContain('PVP');
+  });
+
+  it('recommends light_protection for lightSensitive ingredient', () => {
+    const ing = makeIngredient({
+      name: 'Vitamin C',
+      stabilityProfile: { ph: 3.0, hygroscopicity: 15, lightSensitive: true, heatDegradation: 190 },
+    });
+    const result = getPackagingRecommendations([{ ingredient: ing, percentage: 30 }]);
+    const light = result.find(r => r.type === 'light_protection');
+    expect(light).toBeDefined();
+    expect(light?.details).toContain('Vitamin C');
+  });
+
+  it('recommends heat_protection for heatDegradation < 40°C', () => {
+    const ing = makeIngredient({
+      name: 'Heat Labile API',
+      stabilityProfile: { ph: null, hygroscopicity: 5, lightSensitive: false, heatDegradation: 30 },
+    });
+    const result = getPackagingRecommendations([{ ingredient: ing, percentage: 10 }]);
+    const heat = result.find(r => r.type === 'heat_protection');
+    expect(heat).toBeDefined();
+    expect(heat?.details).toContain('Heat Labile API');
+  });
+
+  it('can return multiple recommendations for complex formulas', () => {
+    const hygro = makeIngredient({
+      name: 'PVP',
+      stabilityProfile: { ph: null, hygroscopicity: 80, lightSensitive: false, heatDegradation: null },
+    });
+    const light = makeIngredient({
+      name: 'Vitamin C',
+      stabilityProfile: { ph: 3.0, hygroscopicity: 15, lightSensitive: true, heatDegradation: null },
+    });
+    const result = getPackagingRecommendations([
+      { ingredient: hygro, percentage: 20 },
+      { ingredient: light, percentage: 30 },
+    ]);
+    expect(result.some(r => r.type === 'moisture_protection')).toBe(true);
+    expect(result.some(r => r.type === 'light_protection')).toBe(true);
+  });
+});

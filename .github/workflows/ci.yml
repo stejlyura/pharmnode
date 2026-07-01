@@ -10,6 +10,32 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: pharmnode_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgrespassword@localhost:5432/pharmnode_test?schema=public"
+      NEXTAUTH_SECRET: "ci-secret-value-for-next-auth-build"
+      NEXTAUTH_URL: "http://localhost:3000"
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef"
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "PasswordforAdmin123"
+      PADDLE_WEBHOOK_SECRET: "paddle-webhook-secret-value"
+      PADDLE_API_KEY: "paddle-api-key-value"
+      NEXT_PUBLIC_PADDLE_ENVIRONMENT: "sandbox"
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -23,8 +49,14 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Install Playwright Browsers
+      run: npx playwright install chromium --with-deps
+
     - name: Generate Prisma Client
       run: npx prisma generate
+
+    - name: Initialize Database Schema
+      run: npx prisma db push
 
     - name: Run Linter
       run: npm run lint
@@ -32,11 +64,12 @@ jobs:
     - name: Run Type Checks
       run: npm run typecheck
 
-    - name: Run Unit Tests
+    - name: Run Unit & Integration Tests
       run: npm run test
+
+    - name: Run E2E Tests
+      run: npm run test:e2e
 
     - name: Build Application
       run: npm run build
-      env:
-        NEXTAUTH_SECRET: "ci-secret-value-for-next-auth-build"
 

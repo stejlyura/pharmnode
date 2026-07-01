@@ -7,6 +7,7 @@ import { useTranslation } from '../context/I18nContext';
 import { CalculatedResults } from '../hooks/useNodeEditor';
 import { generateGMPReport } from '../lib/pdfGenerator';
 import { EditorNode, Ingredient } from '../types/pharm';
+import { getPackagingRecommendations, calculateFormulaScore, validateProcessCompatibility } from '../lib/calculator';
 
 interface OutputNodeProps {
   node: EditorNode;
@@ -43,6 +44,35 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
     if (name.includes('Lactose')) return 'Milk (Lactose)';
     return name;
   });
+
+  const ingredientsList = React.useMemo(() => {
+    return (nodes || [])
+      .filter(n => n.type === 'ingredient')
+      .map(n => {
+        const ingredient = allIngredients.find(ing => String(ing.id) === String(n.data.ingredientId));
+        const percentage = Number(n.data.percentage ?? 0);
+        return { ingredient, percentage };
+      })
+      .filter((item): item is { ingredient: Ingredient; percentage: number } => !!item.ingredient);
+  }, [nodes, allIngredients]);
+
+  const packagingRecs = React.useMemo(() => {
+    return getPackagingRecommendations(ingredientsList);
+  }, [ingredientsList]);
+
+  const formulaScore = React.useMemo(() => {
+    return calculateFormulaScore(ingredientsList);
+  }, [ingredientsList]);
+
+  const processType = React.useMemo(() => {
+    const blendingNode = (nodes || []).find(n => n.type === 'blending');
+    return blendingNode?.data.processType;
+  }, [nodes]);
+
+  const processValidation = React.useMemo(() => {
+    if (!processType) return null;
+    return validateProcessCompatibility(ingredientsList, processType);
+  }, [ingredientsList, processType]);
 
   return (
     <div className={isMobile ? "flex flex-col gap-4" : "flex flex-col gap-3 p-4"}>
@@ -169,6 +199,130 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
           <span>
             <strong>Contains:</strong> {formattedAllergens.join(', ')} ({t('allergen_compliance')}).
           </span>
+        </div>
+      )}
+
+      {/* Packaging Protocol Section */}
+      <div className="bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/85 flex flex-col gap-2">
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+          <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+            📦 {t('card_packaging_protocol') || 'Протокол упаковки'}
+          </span>
+        </div>
+        {tariff === 'hobby' ? (
+          <div className={`bg-indigo-500/5 border border-indigo-500/10 flex flex-col gap-2 items-center text-center ${isMobile ? "p-3 rounded-xl gap-2.5" : "p-3 rounded"}`}>
+            <p className="text-[10px] text-zinc-400 leading-normal font-light">
+              🔒 {t('card_packaging_locked') || 'Протокол упаковки доступен только в тарифе Professional.'}
+            </p>
+            <button
+              onClick={onUpgradeClick}
+              className={`w-full bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold transition-all cursor-pointer ${
+                isMobile ? "py-2 text-xs rounded-lg shadow-md" : "py-1.5 px-3 text-[10px] rounded shadow"
+              }`}
+            >
+              {t('card_upgrade_pro')}
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5 text-[10px]">
+            {packagingRecs.map((rec, idx) => {
+              let icon = '📦';
+              if (rec.type === 'moisture_protection') icon = '💧';
+              else if (rec.type === 'light_protection') icon = '🔆';
+              else if (rec.type === 'heat_protection') icon = '🌡️';
+              return (
+                <div key={idx} className="bg-zinc-950/45 p-2 rounded border border-zinc-850 flex flex-col gap-0.5 text-zinc-350">
+                  <span className="font-bold text-zinc-200 flex items-center gap-1">
+                    <span>{icon}</span>
+                    <span>{rec.message}</span>
+                  </span>
+                  <span className="text-[9px] text-zinc-500 leading-normal">{rec.details}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Formula Score Section */}
+      {formulaScore && (
+        <div className="bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/85 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+              ⚖️ {t('card_formula_score_title') || 'Качество рецептуры'}
+            </span>
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded border ${
+              formulaScore.totalScore > 70 
+                ? 'bg-emerald-550/10 border-emerald-500/25 text-emerald-400' 
+                : formulaScore.totalScore >= 40 
+                  ? 'bg-amber-500/10 border-amber-500/25 text-amber-400' 
+                  : 'bg-rose-500/10 border-rose-500/25 text-rose-400'
+            }`}>
+              <span className="text-xs font-extrabold font-mono">
+                {formulaScore.totalScore.toFixed(1)}/100
+              </span>
+            </div>
+          </div>
+
+          {/* Breakdown per ingredient */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] text-zinc-500 font-medium">
+              {t('card_formula_score_breakdown') || 'Вклад ингредиентов (Breakdown):'}
+            </span>
+            <div className="flex flex-col gap-2 text-[10px]">
+              {formulaScore.breakdown.map((item, idx) => (
+                <div key={idx} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-[9px] text-zinc-400">
+                    <span className="truncate max-w-[150px]">{item.ingredientName}</span>
+                    <span className="font-mono text-zinc-300">+{item.score.toFixed(1)}</span>
+                  </div>
+                  {/* Mini Progress Bar */}
+                  <div className="w-full bg-zinc-950 rounded-full h-1 overflow-hidden border border-zinc-850">
+                    <div 
+                      className="bg-indigo-500 h-full rounded-full" 
+                      style={{ width: `${item.score}%` }} 
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Process Validation Section */}
+      {processType && (
+        <div className="bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/85 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+              ⚙️ {t('card_process_validation_title') || 'Валидация техпроцесса'}
+            </span>
+            <span className="text-[10px] uppercase font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded font-mono">
+              {String(processType).replace(/_/g, ' ')}
+            </span>
+          </div>
+
+          {processValidation && (
+            <div className="flex flex-col gap-1.5 text-[10px]">
+              {processValidation.warnings.map((warn, idx) => (
+                <div key={idx} className="p-2 bg-red-500/5 border border-red-500/10 text-red-400 flex items-start gap-1.5 rounded leading-normal">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{warn}</span>
+                </div>
+              ))}
+              {processValidation.recommendations.map((rec, idx) => (
+                <div key={idx} className="p-2 bg-indigo-500/5 border border-indigo-500/10 text-indigo-400 flex items-start gap-1.5 rounded leading-normal">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{rec}</span>
+                </div>
+              ))}
+              {processValidation.isValid && processValidation.warnings.length === 0 && (
+                <div className="p-2 bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 flex items-center gap-1.5 rounded">
+                  <span>✅</span>
+                  <span>{t('process_validation_compatible') || 'Техпроцесс полностью совместим с составом'}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

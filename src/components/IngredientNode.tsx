@@ -51,6 +51,11 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
             <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${roleBadgeColor}`}>
               {ingredient.role}
             </span>
+            {ingredient.regulatoryInfo?.pharmacopoeiaGrade && (
+              <span className="text-[10px] uppercase font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded">
+                {ingredient.regulatoryInfo.pharmacopoeiaGrade}
+              </span>
+            )}
             <span className="text-[10px] text-zinc-550 font-mono">
               CAS: {ingredient.casNumber}
             </span>
@@ -68,6 +73,31 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
           <Trash2 size={16} />
         </button>
       </div>
+
+      {/* Stability Profile Panel */}
+      {ingredient.stabilityProfile && (
+        <div className="bg-zinc-900/40 p-2 border border-zinc-800/60 rounded flex items-center justify-around text-[10px] text-zinc-400 font-mono">
+          <div>
+            <span className="text-zinc-550 mr-1">pH:</span>
+            <span className="text-zinc-300">{ingredient.stabilityProfile.ph !== null ? ingredient.stabilityProfile.ph.toFixed(1) : '—'}</span>
+          </div>
+          <div className="border-l border-zinc-800/60 h-3" />
+          <div>
+            <span className="text-zinc-550 mr-1">Hygro:</span>
+            <span className="text-zinc-300">{ingredient.stabilityProfile.hygroscopicity}%</span>
+          </div>
+          <div className="border-l border-zinc-800/60 h-3" />
+          <div>
+            <span className="text-zinc-550 mr-1">Light:</span>
+            <span className="text-zinc-300">{ingredient.stabilityProfile.lightSensitive ? '⚠️' : '✅'}</span>
+          </div>
+          <div className="border-l border-zinc-800/60 h-3" />
+          <div>
+            <span className="text-zinc-550 mr-1">Heat:</span>
+            <span className="text-zinc-300">{ingredient.stabilityProfile.heatDegradation !== null ? `${ingredient.stabilityProfile.heatDegradation}°C` : '—'}</span>
+          </div>
+        </div>
+      )}
 
       <div className="mt-1">
         <div className="flex justify-between items-center mb-1">

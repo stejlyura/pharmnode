@@ -24,6 +24,18 @@ export interface ActiveMolecule {
   chemicalClassId: number;
 }
 
+export interface IngredientStability {
+  ph: number | null;
+  hygroscopicity: number;         // 0–100
+  lightSensitive: boolean;
+  heatDegradation: number | null; // °C
+}
+
+export interface IngredientRegulatory {
+  pharmacopoeiaGrade: string | null; // "USP", "BP", "EP", "JP"
+  allergenStatus: string | null;     // "Lactose", "Gluten", "Soy", null
+}
+
 export interface Ingredient {
   id: number | string;
   name: string;
@@ -57,6 +69,12 @@ export interface Ingredient {
   effects?: string[];
   contraindications?: string[];
   sideEffects?: SideEffect[];
+
+  // Stability Profile (from IngredientStability relation)
+  stabilityProfile?: IngredientStability;
+
+  // Regulatory Info (from IngredientRegulatory relation)
+  regulatoryInfo?: IngredientRegulatory;
 }
 
 
@@ -124,6 +142,8 @@ export interface PressPresetsResult {
 
 export type TariffType = 'hobby' | 'professional';
 
+export type ProcessType = 'direct_compression' | 'wet_granulation' | 'dry_granulation' | 'roller_compaction';
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -144,7 +164,8 @@ export interface EditorNode {
     diameterCm?: number;
     depthCm?: number;
     activeRawWeightG?: number;
-    [key: string]: number | string | boolean | null | undefined;
+    processType?: ProcessType; // устанавливается в BlendingNode или PressNode
+    [key: string]: number | string | boolean | null | undefined | ProcessType;
   };
 }
 

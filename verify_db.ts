@@ -28,14 +28,14 @@ async function main() {
     console.log(`  Risk: ${ing.risk}`);
     console.log(`  Cost (KB): ${ing.cost}`);
     console.log(`  Cost per KG (USD): ${ing.costPerKgUsd}`);
-    console.log(`  Stability: ${ing.stability}`);
+    console.log(`  Stability Score: ${ing.stabilityScore}`);
     console.log(`  Manufacturability: ${ing.manufacturability}`);
     console.log(`  Max Safe %: ${ing.maxSafePercentage}`);
   }
 
   // Verify that benefit, risk, cost, stability, and manufacturability are numbers (and not all zero)
   const nonZeroBenefit = ingredients.some(ing => ing.benefit > 0);
-  const nonZeroStability = ingredients.some(ing => ing.stability > 0);
+  const nonZeroStability = ingredients.some(ing => ing.stabilityScore > 0);
   
   if (nonZeroBenefit && nonZeroStability) {
     console.log('\nVerification SUCCESS: New fields are populated with correct non-zero values.');

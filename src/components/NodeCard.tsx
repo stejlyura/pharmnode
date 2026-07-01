@@ -272,8 +272,12 @@ export const NodeCard = React.memo<NodeCardProps>(({
       case 'blending':
         return (
           <BlendingNode
+            node={node}
+            nodes={nodes}
             calculatedResults={calculatedResults}
+            onUpdateData={onUpdateData}
             onReplaceIngredient={onReplaceIngredient}
+            allIngredients={allIngredients}
             isMobile={isMobile}
           />
         );

@@ -493,5 +493,9 @@
   "footer_contacts_title": "Corporate Contact",
   "nav_pricing": "Pricing",
   "nav_about": "About Us",
-  "nav_usecases": "Use Cases"
+  "nav_usecases": "Use Cases",
+  "card_packaging_protocol": "Packaging Protocol",
+  "card_packaging_locked": "Packaging Protocol is locked. Upgrade to Professional tariff.",
+  "card_formula_score_title": "Formula Quality Score",
+  "card_formula_score_breakdown": "Ingredient Contribution Breakdown"
 }

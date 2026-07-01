@@ -4,21 +4,49 @@ import React from 'react';
 import { Cpu, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '../context/I18nContext';
 import { CalculatedResults } from '../hooks/useNodeEditor';
+import { EditorNode, Ingredient } from '../types/pharm';
+import { validateProcessCompatibility } from '../lib/calculator';
 
 interface BlendingNodeProps {
+  node: EditorNode;
+  nodes?: EditorNode[];
   calculatedResults: CalculatedResults;
+  onUpdateData: (nodeId: string, data: Partial<EditorNode['data']>) => void;
   onReplaceIngredient?: (oldId: number | string, newId: number | string) => void;
+  allIngredients: Ingredient[];
   isMobile?: boolean;
 }
 
 export const BlendingNode: React.FC<BlendingNodeProps> = ({
+  node,
+  nodes,
   calculatedResults,
+  onUpdateData,
   onReplaceIngredient,
+  allIngredients,
   isMobile = false,
 }) => {
   const { t } = useTranslation();
   const { looseDensity, tappedDensity, flowability } = calculatedResults.blend;
   const totalPct = calculatedResults.totalPercentage;
+
+  const processType = node.data.processType;
+
+  const ingredientsList = React.useMemo(() => {
+    return (nodes || [])
+      .filter(n => n.type === 'ingredient')
+      .map(n => {
+        const ingredient = allIngredients.find(ing => String(ing.id) === String(n.data.ingredientId));
+        const percentage = Number(n.data.percentage ?? 0);
+        return { ingredient, percentage };
+      })
+      .filter((item): item is { ingredient: Ingredient; percentage: number } => !!item.ingredient);
+  }, [nodes, allIngredients]);
+
+  const processValidation = React.useMemo(() => {
+    if (!processType) return null;
+    return validateProcessCompatibility(ingredientsList, processType);
+  }, [ingredientsList, processType]);
 
   let ratingColor = 'text-zinc-400';
   let ratingBg = 'bg-zinc-800/50';
@@ -74,6 +102,48 @@ export const BlendingNode: React.FC<BlendingNodeProps> = ({
           </span>
         </div>
       </div>
+
+      {/* Process Selection dropdown */}
+      <div className="flex flex-col gap-1.5 mt-1">
+        <span className="text-[10px] text-zinc-400 font-medium">
+          {t('card_process_type_label') || 'Технологический процесс:'}
+        </span>
+        <select
+          value={processType || ''}
+          onChange={(e) => onUpdateData(node.id, { processType: (e.target.value || undefined) as any })}
+          className="w-full bg-zinc-950/80 border border-zinc-800/80 text-zinc-200 rounded text-xs py-1.5 px-2 focus:outline-none focus:border-indigo-500 font-sans cursor-pointer transition-colors"
+        >
+          <option value="">{t('select_process_placeholder') || '-- Выберите техпроцесс --'}</option>
+          <option value="direct_compression">Прямое прессование (Direct Compression)</option>
+          <option value="wet_granulation">Влажная грануляция (Wet Granulation)</option>
+          <option value="dry_granulation">Сухая грануляция (Dry Granulation)</option>
+          <option value="roller_compaction">Роллер-компактирование (Roller Compaction)</option>
+        </select>
+      </div>
+
+      {/* Process validation warnings / recommendations in BlendingNode */}
+      {processType && processValidation && (
+        <div className="flex flex-col gap-1.5 mt-0.5">
+          {processValidation.warnings.map((warn, idx) => (
+            <div key={idx} className="p-2 bg-red-500/5 border border-red-500/10 text-red-400 flex items-start gap-1.5 rounded text-[10px] leading-normal">
+              <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+              <span>{warn}</span>
+            </div>
+          ))}
+          {processValidation.recommendations.map((rec, idx) => (
+            <div key={idx} className="p-2 bg-indigo-500/5 border border-indigo-500/10 text-indigo-400 flex items-start gap-1.5 rounded text-[10px] leading-normal">
+              <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+              <span>{rec}</span>
+            </div>
+          ))}
+          {processValidation.isValid && processValidation.warnings.length === 0 && (
+            <div className="p-2 bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 flex items-center gap-1.5 rounded text-[10px]">
+              <span>✅</span>
+              <span>{t('process_validation_compatible') || 'Совместимость подтверждена'}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Flowability evaluation */}
       <div className={`border ${ratingBg} ${ratingColor} flex flex-col gap-1.5 ${isMobile ? "p-3 rounded-xl" : "p-2.5 rounded"}`}>
