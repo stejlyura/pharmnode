@@ -141,3 +141,6 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 ```
+
+---
+⬅️ [Вернуться к индексу документации](../../index.md)

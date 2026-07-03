@@ -181,3 +181,6 @@ const { hausner, carr, rating } = calculateFlowability(loose, tapped);
 
 - Полная архитектура: [`docs/architecture/knowledge-base.md`](../../knowledge-base.md)
 - Матрица совместимости: [`src/lib/chemicalRules.ts`](../../../src/lib/chemicalRules.ts)
+
+---
+⬅️ [Вернуться к индексу документации](../../index.md)

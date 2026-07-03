@@ -66,3 +66,6 @@ export interface Ingredient {
   maxSafePercentage: number;
 }
 ```
+
+---
+⬅️ [Вернуться к индексу документации](../index.md)

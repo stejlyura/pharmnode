@@ -1,0 +1,116 @@
+# PharmNode - Full Documentation for RAG & LLMs
+
+This document contains the complete and detailed public documentation of the PharmNode virtual formulation platform.
+
+---
+
+## Platform Features
+
+### Visual Formulation Environment
+The visual node editor is a drag-and-drop workspace that lets formulators connect ingredients, binders, and active substances, dynamically calculating physical powder traits in real-time.
+
+- **Node-Based Formulation Canvas**: Interactive canvas allows constructing complex pharmaceutical blends visually. Connect raw materials, modify concentration percentages, and immediately observe propagation changes across the blending and output nodes.
+- **Computational Powder Flowability Simulator**: PharmNode automatically computes Carr's Index and Hausner's Ratio with 4 decimal places of accuracy to ensure dry powder mixtures maintain optimal flowability during high-speed tableting. The engine monitors critical bulk density parameters, tapped density, and particle size distribution.
+- **Rule-Based Chemical Compatibility Screen**: Our deterministic matrix screens active ingredients against excipients across 35 distinct chemical classes, flagging incompatibilities like Maillard browning and lactose allergen conflicts.
+- **GMP-Compliant PDF Documentation Export**: Generate strict regulatory PDFs containing complete formula logs, compatibility matrices, calculation results, and digital signatures.
+
+### Feature Matrix & Subscription Tiers
+- **Max Ingredients per Formula**: Hobby: 3 ingredients | Professional: Unlimited
+- **Chemical Compatibility Checking**: Hobby: Basic (10 classes) | Professional: Advanced (35 classes)
+- **Powder Flowability Calculations (Carr & Hausner)**: Hobby: Yes | Professional: Yes
+- **Tablet Press Volume & Porosity Simulation**: Hobby: Yes | Professional: Yes
+- **GMP PDF Report Export**: Hobby: No | Professional: Unlimited (with validator signatures)
+- **Custom Excipient Database Additions**: Hobby: No | Professional: Unlimited
+- **REST API Access**: Hobby: No | Professional: Yes
+- **Customer Support**: Hobby: Community | Professional: Priority B2B (24/7)
+
+---
+
+## Compounding Workflow
+
+### Structured Compounding Pipeline
+The digital compounding workflow streamlines drug design by replacing offline spreadsheet models with a guided three-step sequence: active ingredient specification, excipient mixing simulation, and automated GMP-compliant validation reporting.
+
+- **Step 1: Active Ingredient & Target Specification**: The formulation process begins by adding the target active pharmaceutical ingredients (APIs). The technologist specifies target dosages (in milligrams or percentage) and imports pre-populated chemical profiles containing molecular weights, density properties, and safety limits.
+- **Step 2: Excipient Addition & Mixing Simulation**: Formulators drag and drop binders, diluents, lubricants, and disintegrants into the blending node. As concentration sliders are adjusted, the physical engine recalculates the composite blend properties (bulk/tapped density, Carr index, and Hausner ratio) with 4 decimal places of accuracy.
+- **Step 3: Punch Settings & GMP Specification Export**: Finally, the user configures the tablet press punch geometry (e.g. flat round, double convex, oval) and targets. The simulator calculates the corresponding tablet volume, porosity, and compressibility.
+
+---
+
+## About PharmNode B2B CDMO Focus
+
+### Empowering B2B Formulation
+PharmNode is a specialized Decision Support System (DSS) designed to bridge the gap between initial recipe formulation and regulatory-compliant manufacturing. Our mission is to replace time-consuming trial-and-error laboratory iterations with instant physical simulations and deterministic compatibility rules.
+
+- **B2B CDMO & Laboratories**: Rather than carrying out days of HPLC, FTIR, and DSC trials for incompatible excipients, formulators use our visual tool to screen conflicts, calculate Hausner and Carr metrics, and pre-qualify formulas before physical mixing.
+- **Deterministic Science**: PharmNode does not rely on generative AI or probabilistic predictions for chemistry validation. Our platform uses a strictly deterministic expert rules engine built in collaboration with industry consultants. Every recommendation is traceable.
+
+---
+
+## Compounding Use Cases
+
+### Case Study 1: Excipient Flowability Tuning
+- **Problem**: A formulation with 15% Active Ingredient exhibits poor powder flowability (bulk density 0.38 g/cm³, tapped density 0.51 g/cm³), resulting in a Carr Index of 25.49% and a Hausner Ratio of 1.3421. This poor flow leads to inconsistent die filling and tablet weight variations.
+- **Solution**: Adding 1.5% colloidal silicon dioxide (Aerosil 200) as a glidant, and 35% microcrystalline cellulose (Avicel pH-102) as a binder/diluent. The simulator predicts an improved Carr Index of 12.00% (Excellent flowability) and stabilizes the target tablet weight.
+- **Metric**: Flow Index: Poor (25) → Excellent (12).
+
+### Case Study 2: Preventing Tablet Capping & Lamination
+- **Problem**: A high-dose 500mg Calcium Carbonate blend undergoes severe capping when pressed using a flat 10.0mm round punch design under 15kN of compression force.
+- **Solution**: Switching the punch geometry to a double-convex 11.0mm oval punch and reducing compression targets. The simulator models a porosity of 15.00%, ensuring stability at 8kN force.
+- **Metric**: Force Required: 15kN → 8kN.
+
+### Case Study 3: Chemical Incompatibility & Allergen Substitution
+- **Problem**: An R&D laboratory designs a new chewable tablet containing Glucosamine Hydrochloride (primary amine) and Lactose Monohydrate (reducing sugar). The compatibility engine flags Maillard browning (chemical rating 40%) and lactose allergen warnings.
+- **Solution**: Substituting Lactose Monohydrate with Mannitol (non-reducing sugar alcohol). The compatibility score updates to 100% (Compliant) and clears allergen warnings.
+- **Metric**: Compatibility Rating: 40% → 100% Compliant.
+
+---
+
+## Computational Technology & Stack
+
+### Powder Flowability Algorithmic Engine
+- **Hausner Ratio**: H = ρT / ρB
+- **Carr's Index**: C = 100 * (1 - ρB / ρT)
+  - ρB represents loose bulk density, ρT represents tapped bulk density.
+  - Carr Index < 10 represents "Excellent" flow; > 25 represents "Poor" flow.
+- **Porosity (ε)**: Calculates void volumes from tablet weight, true density, and punch volume parameters.
+- **Tech Stack**: Next.js 16, React 19, PostgreSQL via Prisma, MongoDB, Paddle billing.
+
+---
+
+## Regulatory Compliance
+
+### Standards Conformance
+- **FDA Title 21 CFR Part 11**: Immutable GxP audit logging, electronic signature support, and secure audit trailing.
+- **FALCPA & EU 1169/2011**: Automatic profiling of major allergens (milk/lactose, wheat/gluten, soy, nuts) and contains-statements printing.
+- **eCTD Module 3**: Document exports structured under Standard Common Technical Document formatting chapters (Quality section).
+
+---
+
+## Chemical Compatibility Matrix & Classes
+
+### Rule-Based Conflict Evaluation
+PharmNode matches compounds across 35 chemical classes to evaluate incompatibilities.
+- **Primary/Secondary Amines + Reducing Sugars**: Incompatible (Maillard reaction browning).
+- **Organic Acids + Carbonates/Bicarbonates**: Incompatible (Neutralization reaction releasing CO2).
+- **Alkali Salts + Heavy Metal Ions**: Incompatible (Precipitation).
+- **Esters + Strong Bases**: Incompatible (Alkaline hydrolysis/saponification).
+- **Reducing Agents + Oxidizing Agents**: Incompatible (Redox degradation).
+- **Polyols + Borates/Boric Acid**: Incompatible (Borate gel formation).
+
+---
+
+## Developer REST API Reference
+
+### Interface Protocols
+- **URL Base**: `https://api.pharmnode.com/v1`
+- **Rate Limits**: Professional: 60 requests/minute | Enterprise: Unlimited.
+- **Authentication**: HTTP header `Authorization: Bearer <token>`.
+- **Target Latency**: All computational endpoints (flowability, compatibility) process requests in under 20ms.
+
+#### Endpoints
+- `GET /v1/ingredients`: List materials (15ms latency).
+- `POST /v1/flowability`: Calculate composite densities, Carr, and Hausner (20ms latency).
+- `POST /v1/compatibility`: Evaluate chemical conflicts across 35 classes (20ms latency).
+- `GET /v1/recipes/:id`: Fetch recipe structure (10ms latency).
+- `POST /v1/recipes/gmp-export`: Export GMP PDF sheets (150ms latency).

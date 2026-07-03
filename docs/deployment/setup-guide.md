@@ -18,17 +18,20 @@
 
 ---
 
-## 2. Stripe (Платежи и подписки)
+## 2. Paddle Billing v2 (Платежи и подписки)
 
 **Что сделать:**
-1. Зарегистрируйтесь в [Stripe](https://stripe.com)
-2. Используйте режим «Test mode» для тестов, «Live mode» для продаж
-3. В **Developers → API keys** скопируйте `Secret key`
-4. В **Developers → Webhooks** создайте вебхук на `https://ВАШ_ДОМЕН.com/api/checkout`
+1. Зарегистрируйтесь в [Paddle](https://paddle.com) (или используйте [Sandbox](https://sandbox.paddle.com) для тестов).
+2. Создайте продукт и подписку (Professional тариф), чтобы получить Price ID (например, `pri_...`).
+3. В разделе **Developer Tools → Authentication** создайте боевой API Key и Client Token.
+4. В разделе **Developer Tools → Webhooks** добавьте адрес обработчика: `https://ВАШ_ДОМЕН.com/api/webhooks/paddle`. Выберите события транзакций и подписок, и скопируйте Webhook Secret Key.
 
 **Параметры:**
-- `STRIPE_API_KEY="sk_live_..."` (или `sk_test_...`)
-- `STRIPE_WEBHOOK_SECRET="whsec_..."`
+- `NEXT_PUBLIC_PADDLE_ENVIRONMENT="production"` (или `sandbox`)
+- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN="live_client_token..."`
+- `NEXT_PUBLIC_PADDLE_PRICE_ID="pri_..."`
+- `PADDLE_API_KEY="live_api_key..."`
+- `PADDLE_WEBHOOK_SECRET="pdl_ntf_..."`
 
 ---
 
@@ -95,7 +98,13 @@ GOOGLE_CLIENT_SECRET="..."
 GITHUB_ID="..."
 GITHUB_SECRET="..."
 
-# Stripe
-STRIPE_API_KEY="sk_live_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
+# Paddle
+NEXT_PUBLIC_PADDLE_ENVIRONMENT="production"
+NEXT_PUBLIC_PADDLE_CLIENT_TOKEN="live_client_token..."
+NEXT_PUBLIC_PADDLE_PRICE_ID="pri_..."
+PADDLE_API_KEY="live_api_key..."
+PADDLE_WEBHOOK_SECRET="pdl_ntf_..."
 ```
+
+---
+⬅️ [Вернуться к индексу документации](../index.md)

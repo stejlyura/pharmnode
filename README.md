@@ -15,13 +15,16 @@ npm run dev
 
 ## Структура документации
 
+В проекте настроена **[Единая система индексации документации](docs/index.md)**. 
+Пожалуйста, начните изучение с индексного файла:
+
+👉 **[docs/index.md](docs/index.md)** 
+
+*Основные файлы для быстрого старта:*
 | Файл | Содержание |
 | --- | --- |
 | [`docs/project-overview.md`](docs/project-overview.md) | Полный обзор проекта, структура кода, ключевые файлы |
-| [`docs/architecture/backend.md`](docs/architecture/backend.md) | Стек, API, Prisma, Redis, деплой |
-| [`docs/architecture/knowledge-base.md`](docs/architecture/knowledge-base.md) | База знаний, матрицы совместимости, скоринг |
 | [`docs/architecture/product-evolution.md`](docs/architecture/product-evolution.md) | Уровни продукта, дорожная карта |
-| [`docs/tasks/todo.md`](docs/tasks/todo.md) | Список задач, статус блоков |
 | [`docs/deployment/setup-guide.md`](docs/deployment/setup-guide.md) | Настройка ключей, деплой на Vercel |
 
 ## Стек
@@ -30,7 +33,7 @@ npm run dev
 - **Prisma** + **PostgreSQL** (Neon / Supabase)
 - **Redis** (Upstash)
 - **NextAuth.js** (Google + GitHub OAuth)
-- **Stripe** (биллинг)
+- **Paddle Billing v2** (биллинг)
 
 ## Ключевые возможности
 
@@ -41,6 +44,9 @@ npm run dev
 - 💰 Экономические расчёты (себестоимость таблетки)
 - 🌙 Тёмная / Светлая темы
 - 📄 Экспорт GMP-отчётов в PDF
+- 🤖 Интеграция AI-ассистента для подбора рецептур *(в разработке)*
+- 🌐 Совместное редактирование Canvas в реальном времени *(в разработке)*
+- 🔌 ERP/SAP интеграция для складского учета *(в разработке)*
 
 ## Тарифы
 

@@ -163,3 +163,6 @@ useEffect(() => {
 - Обзор проекта: [`docs/project-overview.md`](../../project-overview.md)
 - Дизайн-система: [`src/app/globals.css`](../../../src/app/globals.css)
 - Стейт хук: [`src/hooks/useNodeEditor.ts`](../../../src/hooks/useNodeEditor.ts)
+
+---
+⬅️ [Вернуться к индексу документации](../../index.md)

@@ -72,3 +72,6 @@ $$FD_{theory} = \frac{W_{tablet}}{\rho \cdot A}$$
 - **GEA Courtoy:**
   $$FD_{Courtoy} = 1.8 \cdot PCH$$
   где $PCH$ — высота предварительного прессования (Pre-compression Height, мм).
+
+---
+⬅️ [Вернуться к индексу документации](../../index.md)

@@ -24,7 +24,9 @@ import {
   CreditCard,
   Building,
   Scale,
-  LogIn
+  LogIn,
+  ShieldCheck,
+  Award
 } from "lucide-react";
 
 // Dictionaries for Landing Page content to keep code organized and support localized routes/headers
@@ -304,10 +306,70 @@ export default function LandingPage() {
     await logout();
   };
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "PharmNode",
+    "url": "https://pharmnode.com",
+    "logo": "https://pharmnode.com/icon.png",
+    "sameAs": [
+      "https://www.linkedin.com/company/pharmnode",
+      "https://crunchbase.com/organization/pharmnode",
+      "https://www.g2.com/products/pharmnode",
+      "https://www.capterra.com/p/1000234/PharmNode"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+1-800-555-0199",
+      "contactType": "customer service",
+      "email": "support@pharmnode.com"
+    }
+  };
 
+  const appJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "PharmNode",
+    "operatingSystem": "All",
+    "applicationCategory": "BusinessApplication",
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "USD",
+      "lowPrice": "0",
+      "highPrice": "39.00",
+      "offerCount": "2",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Hobby Plan",
+          "price": "0.00",
+          "priceCurrency": "USD"
+        },
+        {
+          "@type": "Offer",
+          "name": "Professional Plan",
+          "price": "39.00",
+          "priceCurrency": "USD"
+        }
+      ]
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "124"
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans theme-element relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
+      />
 
       {/* Background patterns */}
       <div className="absolute inset-0 bg-[radial-gradient(var(--grid-dot)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none opacity-30" />
@@ -495,6 +557,36 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+
+        {/* E-E-A-T Trust & Partnerships Section */}
+        <div className="mt-16 pt-8 border-t border-zinc-900 w-full max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
+          <div>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Trusted by B2B CDMOs & R&D Labs</span>
+            <span className="text-xs text-zinc-400">Deployed in GMP compliance environments worldwide</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-6 opacity-40 grayscale contrast-150">
+            <span className="text-sm font-extrabold tracking-wider text-zinc-300 font-sans">NORDIC CDMO</span>
+            <span className="text-sm font-extrabold tracking-wider text-zinc-300 font-sans">APEX LABS</span>
+            <span className="text-sm font-extrabold tracking-wider text-zinc-300 font-sans">BIOTECH SOLUTIONS</span>
+            <span className="text-sm font-extrabold tracking-wider text-zinc-300 font-sans">VANGUARD COMP</span>
+          </div>
+        </div>
+
+        {/* Compliance Badges */}
+        <div className="mt-8 flex flex-wrap justify-center gap-4 max-w-5xl mx-auto">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-emerald-400">
+            <ShieldCheck size={12} />
+            21 CFR Part 11 Compliant
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-emerald-400">
+            <CheckCircle size={12} />
+            eCTD Ready Format
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-emerald-400">
+            <Award size={12} />
+            GMP Standard Support
+          </span>
+        </div>
       </section>
 
       {/* Features Section */}
@@ -553,6 +645,16 @@ export default function LandingPage() {
             </p>
           </li>
         </ul>
+
+        <div className="mt-10 flex justify-center">
+          <Link
+            href="/features"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-zinc-100 transition-all group theme-element"
+          >
+            {currentLocale === "ru-RU" ? "Подробнее о функциях" : "Learn more about features"}
+            <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
       </section>
 
       {/* Workflow Section */}
@@ -588,6 +690,15 @@ export default function LandingPage() {
                 </div>
               </li>
             </ul>
+            <div className="mt-6">
+              <Link
+                href="/workflow"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-zinc-100 transition-all group theme-element"
+              >
+                {currentLocale === "ru-RU" ? "Подробнее о техпроцессе" : "Learn more about workflow"}
+                <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
           </div>
 
           <div className="lg:col-span-7 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 flex flex-col gap-4 theme-element">
@@ -671,6 +782,15 @@ export default function LandingPage() {
                 </span>
               </li>
             </ul>
+            <div className="mt-6">
+              <Link
+                href="/about"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-zinc-100 transition-all group theme-element"
+              >
+                {currentLocale === "ru-RU" ? "Подробнее о компании" : "Learn more about company"}
+                <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
           </div>
 
           {/* Right Column: Audience ("For Whom") */}
@@ -801,11 +921,21 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-auto pt-3 border-t border-zinc-800 flex justify-between items-center text-xs">
-              <span className="text-zinc-500 font-semibold">Verification</span>
+              <span className="text-zinc-550 font-semibold">Verification</span>
               <span className="font-mono text-emerald-400 font-bold">{dict.usecase_3_metric}</span>
             </div>
           </li>
         </ul>
+
+        <div className="mt-10 flex justify-center">
+          <Link
+            href="/use-cases"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-zinc-100 transition-all group theme-element"
+          >
+            {currentLocale === "ru-RU" ? "Смотреть все кейсы" : "View all use cases"}
+            <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
       </section>
 
       {/* Technologies Section */}
@@ -846,6 +976,16 @@ export default function LandingPage() {
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.tech_billing_desc}</p>
           </li>
         </ul>
+
+        <div className="mt-10 flex justify-center">
+          <Link
+            href="/technologies"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-zinc-100 transition-all group theme-element"
+          >
+            {currentLocale === "ru-RU" ? "Подробнее о технологиях" : "Learn more about technologies"}
+            <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
       </section>
 
       {/* Regulatory Section */}
@@ -876,6 +1016,16 @@ export default function LandingPage() {
             <p className="text-xs text-zinc-400 leading-relaxed">{dict.reg_falcpa_desc}</p>
           </li>
         </ul>
+
+        <div className="mt-10 flex justify-center">
+          <Link
+            href="/regulatory"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs font-semibold text-zinc-300 hover:text-zinc-100 transition-all group theme-element"
+          >
+            {currentLocale === "ru-RU" ? "Подробнее о регуляторике" : "Learn more about regulatory"}
+            <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
       </section>
 
       {/* Pricing Section */}

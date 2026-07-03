@@ -76,6 +76,21 @@ const pageContent = {
         q: "Do you offer refunds?",
         a: "We want you to be fully satisfied. If you encountered any billing issues or wish to request a refund, please contact us at billing@pharmnode.com within 14 days of purchase. Please refer to our Refund Policy page for full details."
       }
+    ],
+    tableTitle: "Detailed Tier Comparison",
+    tableSubtitle: "Understand limits and capabilities of Hobby and Professional license packages",
+    colFeature: "Platform Feature",
+    colHobby: "Hobby Tier ($0)",
+    colPro: "Professional Tier ($39/mo)",
+    tableFeatures: [
+      { name: "Max Ingredients per Formula", hobby: "3 ingredients", pro: "Unlimited" },
+      { name: "Chemical Compatibility Checking", hobby: "Basic (10 classes)", pro: "Advanced (35 classes)" },
+      { name: "Powder Flowability Calculations (Carr & Hausner)", hobby: "Yes", pro: "Yes" },
+      { name: "Tablet Press Volume & Porosity Simulation", hobby: "Yes", pro: "Yes" },
+      { name: "GMP PDF Report Export", hobby: "No", pro: "Unlimited (with validator signatures)" },
+      { name: "Custom Excipient Database Additions", hobby: "No", pro: "Unlimited" },
+      { name: "REST API Access", hobby: "No", pro: "Yes" },
+      { name: "Customer Support", hobby: "Community support", pro: "Priority B2B (24/7)" }
     ]
   },
   "ru-RU": {
@@ -135,6 +150,21 @@ const pageContent = {
         q: "Предоставляете ли вы возврат средств?",
         a: "Мы стремимся к тому, чтобы вы были довольны сервисом. Если у вас возникли технические проблемы или вы хотите запросить возврат, свяжитесь с нами по почте billing@pharmnode.com в течение 14 дней с момента оплаты. Подробности читайте на странице политики возврата."
       }
+    ],
+    tableTitle: "Подробное сравнение тарифов",
+    tableSubtitle: "Ограничения и возможности лицензионных пакетов Hobby и Professional",
+    colFeature: "Функция платформы",
+    colHobby: "Тариф Hobby ($0)",
+    colPro: "Тариф Professional ($39/мес)",
+    tableFeatures: [
+      { name: "Макс. ингредиентов в рецепте", hobby: "3 ингредиента", pro: "Без ограничений" },
+      { name: "Анализ химической совместимости", hobby: "Базовый (10 классов)", pro: "Продвинутый (35 классов)" },
+      { name: "Расчет сыпучести порошка (Карр и Хауснер)", hobby: "Да", pro: "Да" },
+      { name: "Симуляция пористости и параметров пресса", hobby: "Да", pro: "Да" },
+      { name: "Экспорт валидационных отчетов GMP PDF", hobby: "Нет", pro: "Без ограничений (с подписью)" },
+      { name: "Добавление собственных ингредиентов в базу", hobby: "Нет", pro: "Без ограничений" },
+      { name: "Доступ к REST API", hobby: "Нет", pro: "Да" },
+      { name: "Техническая поддержка", hobby: "Сообщество", pro: "Приоритетная B2B (24/7)" }
     ]
   }
 };
@@ -156,8 +186,25 @@ export default function PricingPage() {
     }
   };
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": dict.faqs.map((item: any) => ({
+      "@type": "Question",
+      "name": item.q,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": item.a
+      }
+    }))
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col font-sans text-zinc-100 selection:bg-indigo-500/30">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <Header showCanvasControls={false} />
       
       <main className="flex-1 bg-radial from-zinc-900 via-zinc-950 to-zinc-950 py-12 px-4 sm:px-6 lg:px-8">
@@ -216,6 +263,39 @@ export default function PricingPage() {
                   </div>
                 );
               })}
+            </div>
+          </section>
+
+          {/* Detailed comparison table */}
+          <section className="mb-20 border-t border-zinc-900 pt-16">
+            <div className="text-center mb-12">
+              <h2 className="text-xl sm:text-3xl font-extrabold text-zinc-100 font-sans">
+                {dict.tableTitle}
+              </h2>
+              <p className="mt-2 text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
+                {dict.tableSubtitle}
+              </p>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-zinc-900 bg-zinc-950">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-zinc-900 bg-zinc-900/40 text-zinc-300 font-bold uppercase tracking-wider">
+                    <th className="py-4 px-6">{dict.colFeature}</th>
+                    <th className="py-4 px-6">{dict.colHobby}</th>
+                    <th className="py-4 px-6 text-indigo-400">{dict.colPro}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900 text-zinc-400">
+                  {dict.tableFeatures.map((item: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-zinc-900/20 transition-colors">
+                      <td className="py-4 px-6 font-medium text-zinc-300">{item.name}</td>
+                      <td className="py-4 px-6">{item.hobby}</td>
+                      <td className="py-4 px-6 text-zinc-200 font-semibold">{item.pro}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
 

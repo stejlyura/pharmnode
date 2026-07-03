@@ -1,0 +1,19 @@
+# PharmNode
+> Advanced B2B Decision Support System (DSS) virtual formulation studio for pharmaceutical design, powder flowability calculations, raw material compatibility verification, and GMP-compliant PDF export.
+
+## Main Pages
+- [/features](/features): Detailed overview of formulation editing, physics simulation, compatibility screens, and GMP export.
+- [/workflow](/workflow): Step-by-step description of raw materials selection, mixing simulation, and press settings.
+- [/about](/about): Our mission to replace physical laboratory iterations with deterministic scientific rules.
+- [/use-cases](/use-cases): Real-world compounding challenges solved (flowability, capping, and chemical substitutions).
+- [/technologies](/technologies): Underlying physics equations (Carr Index, Hausner Ratio, porosity) and tech stack.
+- [/regulatory](/regulatory): Compliance specifications for FDA Title 21 CFR Part 11, FALCPA allergens, and eCTD module readiness.
+- [/pricing](/pricing): License tier matrix (Hobby vs. Professional limits, standard vs. custom raw materials).
+
+## Knowledge Base & Reference
+- [/knowledge-base/compatibility-matrix](/knowledge-base/compatibility-matrix): Explains chemical compatibility rules and matrices across 35 distinct chemical classes.
+- [/knowledge-base/excipients](/knowledge-base/excipients): Searchable directory of compounding raw materials, densities, and safe limits.
+- [/api-reference](/api-reference): Technical documentation of the REST API, schemas, endpoints, and latency specs.
+
+## Extended Resources
+- [/llms-full.txt](/llms-full.txt): Complete, raw text documentation and details of all platform pages for RAG systems.

@@ -108,3 +108,6 @@ pharmnode/
 - **Тёмная** (`[data-theme="dark"]`): премиум тёмная — `#000000` фон, `#05e69f` акцент
 
 **Компоненты:** glassmorphism, градиентные границы, SVG-линии связей (Bezier curves), animated transitions.
+
+---
+⬅️ [Вернуться к индексу документации](index.md)

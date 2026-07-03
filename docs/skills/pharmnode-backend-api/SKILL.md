@@ -195,3 +195,6 @@ STRIPE_WEBHOOK_SECRET="whsec_..."
 - Архитектура бэкенда: [`docs/architecture/backend.md`](../../architecture/backend.md)
 - Инструкция по деплою: [`docs/deployment/setup-guide.md`](../../deployment/setup-guide.md)
 - Prisma клиент: [`src/lib/prisma.ts`](../../../src/lib/prisma.ts)
+
+---
+⬅️ [Вернуться к индексу документации](../../index.md)

@@ -181,3 +181,6 @@ export function getPackagingRecommendations(
   return recommendations;
 }
 ```
+
+---
+⬅️ [Вернуться к индексу документации](../../index.md)

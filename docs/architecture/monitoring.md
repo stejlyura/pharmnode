@@ -93,3 +93,6 @@ In cloud platforms like **Vercel** or **AWS Amplify**:
 - Anything written via `console.log`, `console.warn`, or `console.error` is captured as stdout/stderr streams.
 - Since our logs are stringified JSON payloads, logs in the dashboard will be readable as structured fields.
 - You can create log-drain rules to route these JSON streams directly to external APMs (Datadog, Grafana, Logtail) for custom dashboard visualization.
+
+---
+⬅️ [Вернуться к индексу документации](../index.md)

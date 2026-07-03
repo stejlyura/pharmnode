@@ -166,3 +166,6 @@ npx prisma generate && next build
 | `STRIPE_WEBHOOK_SECRET` | Webhook секрет Stripe |
 | `GOOGLE_CLIENT_ID/SECRET` | OAuth Google |
 | `GITHUB_ID/SECRET` | OAuth GitHub |
+
+---
+⬅️ [Вернуться к индексу документации](../index.md)

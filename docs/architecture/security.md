@@ -107,3 +107,6 @@ For high-availability and WAF (Web Application Firewall) compliance, PharmNode s
 3. **DDoS Resiliency**:
    - Configure **HTTP DDoS Protection Rules** to automatically challenge (JS challenge or CAPTCHA) suspicious spikes in traffic.
    - Keep **Under Attack Mode** disabled by default, and activate it manually via API or dashboard during an active, high-volume layer 7 flood.
+
+---
+⬅️ [Вернуться к индексу документации](../index.md)

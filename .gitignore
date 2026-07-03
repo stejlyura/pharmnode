@@ -13,6 +13,8 @@
 # testing
 /coverage
 
+smm/
+
 img/
 *.webp
 *.png

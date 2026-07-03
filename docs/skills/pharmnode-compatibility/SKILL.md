@@ -127,3 +127,6 @@ const TARIFF_LIMITS = { hobby: 3, professional: 15, enterprise: Infinity };
 - База знаний: [`docs/architecture/knowledge-base.md`](../../knowledge-base.md)
 - Типы: [`src/types/pharm.ts`](../../../src/types/pharm.ts)
 - Калькулятор: [`src/lib/calculator.ts`](../../../src/lib/calculator.ts)
+
+---
+⬅️ [Вернуться к индексу документации](../../index.md)
