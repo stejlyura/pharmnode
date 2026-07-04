@@ -91,6 +91,28 @@ const pageContent = {
       { name: "Custom Excipient Database Additions", hobby: "No", pro: "Unlimited" },
       { name: "REST API Access", hobby: "No", pro: "Yes" },
       { name: "Customer Support", hobby: "Community support", pro: "Priority B2B (24/7)" }
+    ],
+    compTitle: "Traditional Software vs PharmNode",
+    compSubtitle: "Compare deployment costs, entry speed, and scientific focus",
+    colCompClass: "Software Class",
+    colCompCost: "Traditional Implementation / Cost",
+    colCompSolution: "PharmNode SaaS Solution",
+    compFeatures: [
+      {
+        class: "Heavy Molecular Software (CADD)",
+        cost: "Costs $10k–$50k/year per user license. Requires dedicated workstation hardware and a PhD in computational chemistry. Focuses on atomic behavior, which is useless for physical powder mixing.",
+        solution: "Operates at the practical formulation level (excipients, binders, APIs). Requires zero training, runs on any web browser, and starts at $39/mo."
+      },
+      {
+        class: "Digital CMC / PLM Databases",
+        cost: "Implementation costs $100,500+ and takes 6–12 months of IT integration. Clunky table structures designed purely for regulatory filings rather than R&D formulation creation.",
+        solution: "Interactive, node-based Canvas. Drag-and-drop excipients and immediately see physical properties, flowability parameters, and allergen warnings visually in real-time."
+      },
+      {
+        class: "Statistical DoE Software",
+        cost: "Costs $5,000+ per user license. Requires technologists to perform 15–20 physical experiments in the lab, wasting expensive active ingredients, to plot response surface curves.",
+        solution: "Works BEFORE physical lab entry. Predictive expert compatibility rules identify Maillard browning or bad flow at the design stage, saving up to 80% on physical raw materials."
+      }
     ]
   },
   "ru-RU": {
@@ -165,6 +187,28 @@ const pageContent = {
       { name: "Добавление собственных ингредиентов в базу", hobby: "Нет", pro: "Без ограничений" },
       { name: "Доступ к REST API", hobby: "Нет", pro: "Да" },
       { name: "Техническая поддержка", hobby: "Сообщество", pro: "Приоритетная B2B (24/7)" }
+    ],
+    compTitle: "Традиционные решения против PharmNode",
+    compSubtitle: "Сравнение стоимости, сроков внедрения и применимости ПО",
+    colCompClass: "Класс софта",
+    colCompCost: "Сложности и стоимость внедрения",
+    colCompSolution: "Преимущество PharmNode",
+    compFeatures: [
+      {
+        class: "Тяжелый молекулярный софт (CADD)",
+        cost: "Стоит $10,000–$50,000 в год за лицензию. Требует дорогого графического оборудования и ученой степени PhD. Фокусируется на квантовом моделировании атомов, что бесполезно при практическом смешивании порошков.",
+        solution: "Работает на уровне ингредиентов, связующих и АФС. Не требует обучения, открывается на любом компьютере в браузере и доступен по цене обычной SaaS-подписки ($39/мес)."
+      },
+      {
+        class: "Системы ведения комплаенса (Digital CMC)",
+        cost: "Внедрение стоит от $100,500+ и занимает 6–12 месяцев интеграции силами IT-отдела. Неудобные плоские таблицы, разработанные для подготовки отчетов, а не для создания рецептур.",
+        solution: "Интерактивный визуальный холст. Технолог перетаскивает ингредиенты и мгновенно видит физико-химические изменения, сыпучесть порошков и предупреждения об аллергенах."
+      },
+      {
+        class: "Статистический софт DoE (Планирование)",
+        cost: "Лицензия стоит $5,000+. Требует от технологов проводить 15–20 реальных опытов в лаборатории, тратя дорогостоящее сырье и АФИ, чтобы построить график сходимости.",
+        solution: "Работает ДО захода в лабораторию. Экспертная система сразу указывает на Майяра или плохую сыпучесть на этапе идеи, сберегая до 80% реактивов и сырья."
+      }
     ]
   }
 };
@@ -292,6 +336,39 @@ export default function PricingPage() {
                       <td className="py-4 px-6 font-medium text-zinc-300">{item.name}</td>
                       <td className="py-4 px-6">{item.hobby}</td>
                       <td className="py-4 px-6 text-zinc-200 font-semibold">{item.pro}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Competitor / Traditional vs PharmNode table */}
+          <section className="mb-20 border-t border-zinc-900 pt-16">
+            <div className="text-center mb-12">
+              <h2 className="text-xl sm:text-3xl font-extrabold text-zinc-100 font-sans">
+                {dict.compTitle}
+              </h2>
+              <p className="mt-2 text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
+                {dict.compSubtitle}
+              </p>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-zinc-900 bg-zinc-950 shadow-inner">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-zinc-900 bg-zinc-900/40 text-zinc-300 font-bold uppercase tracking-wider">
+                    <th className="py-4 px-6 w-[25%]">{dict.colCompClass}</th>
+                    <th className="py-4 px-6 w-[45%]">{dict.colCompCost}</th>
+                    <th className="py-4 px-6 text-indigo-400 w-[30%]">{dict.colCompSolution}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900 text-zinc-400">
+                  {dict.compFeatures.map((item: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-zinc-900/20 transition-colors">
+                      <td className="py-4 px-6 font-bold text-zinc-200">{item.class}</td>
+                      <td className="py-4 px-6 leading-relaxed">{item.cost}</td>
+                      <td className="py-4 px-6 text-indigo-300 font-bold leading-relaxed bg-indigo-950/10 border-l border-indigo-500/20">{item.solution}</td>
                     </tr>
                   ))}
                 </tbody>

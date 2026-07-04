@@ -26,7 +26,8 @@ import {
   Scale,
   LogIn,
   ShieldCheck,
-  Award
+  Award,
+  Sparkles
 } from "lucide-react";
 
 // Dictionaries for Landing Page content to keep code organized and support localized routes/headers
@@ -159,7 +160,32 @@ const translations = {
     usecase_3_subtitle: "Detecting active/excipient conflicts",
     usecase_3_challenge: "Developing a new chewable tablet containing Glucosamine Hydrochloride (primary amine) and Lactose Monohydrate (reducing sugar).",
     usecase_3_solution: "The engine flags a Maillard browning conflict. Substituting lactose with Mannitol avoids discoloration, while removing lactose allergens under FALCPA/EFSA guidelines.",
-    usecase_3_metric: "Compatibility Rating: 40% → 100% Compliant"
+    usecase_3_metric: "Compatibility Rating: 40% → 100% Compliant",
+    benefits_badge: "Enterprise Benefits",
+    benefits_title: "Why B2B Labs Choose PharmNode",
+    benefits_subtitle: "How we compare to traditional scientific software classes",
+    analogy_title: "Canva for Chemists: Visual prototyping",
+    analogy_desc: "AutoCAD is a powerful tool, but you wouldn't use it to design a simple social media post. Similarly, heavy molecular modeling packages are over-engineered for daily compounding. PharmNode provides a visual, drag-and-drop cloud alternative to prototype recipes in under 60 seconds.",
+    pillar1_title: "Smart Canvas (Real-Time Checking)",
+    pillar1_desc: "Standard spreadsheets silently calculate formulas. PharmNode actively warns you of chemical conflicts (e.g. amine Maillard browning) before you touch a single gram of raw material.",
+    pillar2_title: "10x Lower Entry Cost for QbD",
+    pillar2_desc: "Deploying enterprise compliance systems requires months and massive consultancy fees. PharmNode brings standard GxP validation tools to any team for $39/mo.",
+    pillar3_title: "80% Lab Material Savings",
+    pillar3_desc: "Virtual screening lets you test 10 recipe variants online, discard 8 poor-flow or high-porosity versions, and test only the top 2 candidate mixtures in physical labs.",
+    comp_title: "Traditional Solutions vs PharmNode",
+    comp_subtitle: "Comparison of traditional corporate software classes vs SaaS",
+    col_class: "Software Class",
+    col_drawback: "Traditional Drawbacks & Cost",
+    col_solution: "The PharmNode SaaS Solution",
+    comp_cadd_class: "Heavy Molecular Software (CADD)",
+    comp_cadd_drawback: "Costs $10k–$50k/yr. Requires a PhD in computational chemistry. Focuses on atomic behavior, which is useless for practical compounding of supplement blends.",
+    comp_cadd_solution: "Operates at the practical formulation level (excipients, binders, APIs). Requires zero training, runs in the browser, and is affordable for small teams.",
+    comp_cmc_class: "Digital CMC / PLM Databases",
+    comp_cmc_drawback: "Clunky, slow databases designed for regulatory filing. Boring spreadsheets tailored for compliance officers rather than R&D engineers.",
+    comp_cmc_solution: "Interactive, node-based Canvas. Technologists drag-and-drop ingredients and immediately see physical properties change visually in real-time.",
+    comp_doe_class: "Design of Experiments (DoE) Software",
+    comp_doe_drawback: "Requires you to run 15-20 physical experiments, waste kilograms of expensive raw materials, and manually input results to draw graphs.",
+    comp_doe_solution: "Works BEFORE the physical lab. The expert rules identify issues like Maillard browning or compaction failure before you buy a single gram of raw material."
   },
   "ru-RU": {
     nav_features: "Функции",
@@ -289,7 +315,32 @@ const translations = {
     usecase_3_subtitle: "Выявление скрытых конфликтов сырья",
     usecase_3_challenge: "Проблема: Проектирование жевательной таблетки с глюкозамином (первичный амин) и моногидратом лактозы (восстанавливающий сахар).",
     usecase_3_solution: "Решение: Система предупреждает о риске потемнения смеси. Замена лактозы на маннит предотвращает деградацию и убирает молочные аллергены по нормам FALCPA/EFSA.",
-    usecase_3_metric: "Совместимость: 40% (риск брака) → 100% (норма)"
+    usecase_3_metric: "Совместимость: 40% (риск брака) → 100% (норма)",
+    benefits_badge: "Преимущества для бизнеса",
+    benefits_title: "Почему B2B лаборатории выбирают PharmNode",
+    benefits_subtitle: "Сравнение PharmNode с традиционными классами научного ПО",
+    analogy_title: "Canva для химиков: виртуальное прототипирование",
+    analogy_desc: "AutoCAD — отличная программа, но вы не станете использовать ее для создания простого баннера. Так же и тяжелые молекулярные комплексы избыточны для повседневной сборки рецептур БАД или таблеток. PharmNode дает легкую облачную drag-and-drop альтернативу для расчетов за 60 секунд.",
+    pillar1_title: "Умный холст (Контроль несовместимостей)",
+    pillar1_desc: "Обычные калькуляторы молча складывают пропорции. PharmNode подсвечивает связи красным цветом при рисках химических реакций (например, Майяра) еще на этапе наброска.",
+    pillar2_title: "Вход в QbD в 10 раз дешевле",
+    pillar2_desc: "Внедрение корпоративных систем комплаенса занимает месяцы и требует сотен тысяч долларов. PharmNode дает стандартные валидационные инструменты за $39/мес.",
+    pillar3_title: "Снижение расхода сырья на 80%",
+    pillar3_desc: "Виртуальный скрининг позволяет отсекать 8 из 10 несыпучих рецептов онлайн, отправляя в физическую лабораторию только 2 наиболее перспективных образца.",
+    comp_title: "Традиционные решения против PharmNode",
+    comp_subtitle: "Сравнение корпоративных классов программного обеспечения",
+    col_class: "Класс софта",
+    col_drawback: "Сложности и стоимость внедрения",
+    col_solution: "Преимущество PharmNode",
+    comp_cadd_class: "Тяжелый молекулярный софт (CADD)",
+    comp_cadd_drawback: "Стоит $10,000–$50,000/год. Требует PhD по квантовой химии. Фокусируется на межатомном поведении, что неприменимо для обычного смешивания БАД и твердых форм.",
+    comp_cadd_solution: "Работает на уровне практического формулирования (ингредиенты, наполнители, АФС). Не требует обучения, доступен по цене обычной подписки.",
+    comp_cmc_class: "Системы ведения комплаенса (Digital CMC)",
+    comp_cmc_drawback: "Огромные, неповоротливые базы данных для хранения отчетов для регуляторов. Скучные текстовые таблицы, созданные для бюрократов, а не для инженеров.",
+    comp_cmc_solution: "Интерактивный визуальный холст. Технолог перетаскивает ингредиенты и в реальном времени наблюдает физико-химические изменения смеси на экране.",
+    comp_doe_class: "Статистический софт DoE (Планирование)",
+    comp_doe_drawback: "Требует провести 15 ручных тестов, испортить 20 кг дорогого сырья и вручную ввести эти цифры для построения графиков.",
+    comp_doe_solution: "Работает ДО захода в лабораторию. Экспертная система сразу указывает на Майяра или плохую сыпучесть на этапе идеи, сберегая реактивы."
   }
 };
 
@@ -457,7 +508,7 @@ export default function LandingPage() {
 
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
           <Link
-            href="/projects"
+            href="/configurator"
             className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-500/20 transition-all flex items-center gap-2 group theme-element"
           >
             {dict.hero_cta}
@@ -654,6 +705,107 @@ export default function LandingPage() {
             {currentLocale === "ru-RU" ? "Подробнее о функциях" : "Learn more about features"}
             <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section id="benefits" className="py-20 px-6 max-w-7xl mx-auto border-t border-zinc-900 w-full">
+        <div className="text-center flex flex-col gap-3 mb-16">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-wider mx-auto">
+            <Sparkles size={12} className="animate-pulse" />
+            {dict.benefits_badge}
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-zinc-100 tracking-tight leading-tight">
+            {dict.benefits_title}
+          </h2>
+          <p className="text-zinc-400 max-w-xl mx-auto text-xs sm:text-sm">
+            {dict.benefits_subtitle}
+          </p>
+        </div>
+
+        {/* Canva Analogy & Pillars */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-16">
+          {/* Left Block: Canva Analogy */}
+          <div className="lg:col-span-5 p-6 sm:p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/80 shadow-lg backdrop-blur-xl relative">
+            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 rounded-l-2xl" />
+            <h3 className="text-base sm:text-lg font-extrabold text-zinc-100 mb-3">{dict.analogy_title}</h3>
+            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-medium">{dict.analogy_desc}</p>
+          </div>
+
+          {/* Right Block: Three Pillars */}
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            <div className="p-5 rounded-xl border border-zinc-900 bg-zinc-900/10 hover:border-zinc-800 transition-colors flex gap-4">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0 border border-indigo-500/20">
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-zinc-200 mb-1">
+                  {dict.pillar1_title}
+                </h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">{dict.pillar1_desc}</p>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-xl border border-zinc-900 bg-zinc-900/10 hover:border-zinc-800 transition-colors flex gap-4">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/20">
+                <Scale size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-zinc-200 mb-1">
+                  {dict.pillar2_title}
+                </h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">{dict.pillar2_desc}</p>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-xl border border-zinc-900 bg-zinc-900/10 hover:border-zinc-800 transition-colors flex gap-4">
+              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400 shrink-0 border border-violet-500/20">
+                <Beaker size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-zinc-200 mb-1">
+                  {dict.pillar3_title}
+                </h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">{dict.pillar3_desc}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Competitor comparison table */}
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-zinc-150">{dict.comp_title}</h3>
+            <p className="text-xs text-zinc-400">{dict.comp_subtitle}</p>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-zinc-900 bg-zinc-950 shadow-inner">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-zinc-900 bg-zinc-900/40 text-zinc-300 font-bold uppercase tracking-wider">
+                  <th className="py-4 px-6 w-[25%]">{dict.col_class}</th>
+                  <th className="py-4 px-6 w-[45%]">{dict.col_drawback}</th>
+                  <th className="py-4 px-6 text-indigo-400 w-[30%]">{dict.col_solution}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-900 text-zinc-400">
+                <tr className="hover:bg-zinc-900/20 transition-colors">
+                  <td className="py-4 px-6 font-bold text-zinc-200">{dict.comp_cadd_class}</td>
+                  <td className="py-4 px-6 leading-relaxed">{dict.comp_cadd_drawback}</td>
+                  <td className="py-4 px-6 text-indigo-300 font-bold leading-relaxed bg-indigo-950/10 border-l border-indigo-500/20">{dict.comp_cadd_solution}</td>
+                </tr>
+                <tr className="hover:bg-zinc-900/20 transition-colors">
+                  <td className="py-4 px-6 font-bold text-zinc-200">{dict.comp_cmc_class}</td>
+                  <td className="py-4 px-6 leading-relaxed">{dict.comp_cmc_drawback}</td>
+                  <td className="py-4 px-6 text-indigo-300 font-bold leading-relaxed bg-indigo-950/10 border-l border-indigo-500/20">{dict.comp_cmc_solution}</td>
+                </tr>
+                <tr className="hover:bg-zinc-900/20 transition-colors">
+                  <td className="py-4 px-6 font-bold text-zinc-200">{dict.comp_doe_class}</td>
+                  <td className="py-4 px-6 leading-relaxed">{dict.comp_doe_drawback}</td>
+                  <td className="py-4 px-6 text-indigo-300 font-bold leading-relaxed bg-indigo-950/10 border-l border-indigo-500/20">{dict.comp_doe_solution}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -1052,7 +1204,7 @@ export default function LandingPage() {
         </p>
         <div className="mt-8">
           <Link
-            href="/projects"
+            href="/configurator"
             className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-xl shadow-indigo-500/10 hover:shadow-indigo-500/25 transition-all group theme-element"
           >
             {dict.cta_btn}

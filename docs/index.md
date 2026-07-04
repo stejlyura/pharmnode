@@ -10,6 +10,7 @@
 * [Архитектура бэкенда](architecture/backend.md)
 * [База знаний и алгоритмы](architecture/knowledge-base.md)
 * [Эволюция продукта и дорожная карта](architecture/product-evolution.md)
+* [Позиционирование и УТП (Positioning & Messaging)](architecture/positioning-and-messaging.md)
 * [Дизайн интеллектуальной базы (Intelligent KB)](architecture/intelligent-kb-design.md)
 * [План масштабирования](architecture/scaling-roadmap.md)
 * [Мониторинг и логирование](architecture/monitoring.md)
