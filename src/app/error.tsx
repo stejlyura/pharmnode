@@ -3,7 +3,6 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { logger } from "@/lib/logger";
 
 interface ErrorProps {
@@ -61,7 +60,6 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
           </div>
         </Link>
 
-        <ThemeToggle />
       </header>
 
       {/* Main content */}

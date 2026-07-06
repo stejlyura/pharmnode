@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Footer } from "@/components/Footer";
 import { PricingPanel } from "@/components/PricingPanel";
 import { useTranslation } from "@/context/I18nContext";
@@ -457,7 +456,6 @@ export default function LandingPage() {
             {locale === "ru-RU" ? "RU" : "EN"}
           </button>
 
-          <ThemeToggle />
 
           {status === "loading" ? (
             <div className="w-8 h-8 rounded-full border border-zinc-750 border-t-zinc-400 animate-spin" />

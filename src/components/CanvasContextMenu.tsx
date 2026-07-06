@@ -9,7 +9,8 @@ import {
   Sparkles,
   Grid,
   Search,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 interface CanvasContextMenuProps {
@@ -25,6 +26,7 @@ interface CanvasContextMenuProps {
   canRedo?: boolean;
   onOpenWizard?: () => void;
   onOpenMatrix?: () => void;
+  onRemoveUnconnected?: () => void;
 }
 
 export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
@@ -39,7 +41,8 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   canUndo = false,
   canRedo = false,
   onOpenWizard,
-  onOpenMatrix
+  onOpenMatrix,
+  onRemoveUnconnected
 }) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
@@ -65,7 +68,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   if (!isOpen) return null;
 
   const filteredIngredients = remainingIngredients
-    .filter((ing) => ing.name.toLowerCase().includes(search.toLowerCase()))
+    .filter((ing) => t(ing.name).toLowerCase().includes(search.toLowerCase()))
     .slice(0, 5); // Limit to top 5 results for compactness
 
   return (
@@ -108,7 +111,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
                 }}
                 className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-900 hover:text-indigo-400 text-zinc-300 rounded-lg flex items-center justify-between cursor-pointer transition-colors"
               >
-                <span className="truncate">{ing.name}</span>
+                <span className="truncate">{t(ing.name)}</span>
                 <Plus size={10} className="text-zinc-500" />
               </button>
             ))
@@ -192,6 +195,19 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
         >
           <Sparkles size={13} className="text-indigo-400" />
           <span>{t('wizard_launch_btn') || 'Formulation Wizard'}</span>
+        </button>
+      )}
+
+      {onRemoveUnconnected && (
+        <button
+          onClick={() => {
+            onRemoveUnconnected();
+            onClose();
+          }}
+          className="w-full text-left px-2.5 py-1.5 hover:bg-zinc-900 hover:text-red-400 text-zinc-300 rounded-lg flex items-center gap-2 cursor-pointer transition-colors group"
+        >
+          <Trash2 size={13} className="text-zinc-500 group-hover:text-red-400 transition-colors" />
+          <span>{t('canvas_remove_unconnected') || 'Remove unconnected nodes'}</span>
         </button>
       )}
     </div>

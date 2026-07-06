@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { I18nProvider } from "@/context/I18nContext";
-import { ThemeScript } from "@/components/ThemeScript";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { CookieConsent } from "@/components/CookieConsent";
 import { PaddleInit } from "@/components/PaddleInit";
@@ -66,11 +65,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="h-full antialiased"
+      className="dark h-full antialiased"
       suppressHydrationWarning
     >
       <head>
-        <ThemeScript />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

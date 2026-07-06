@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sparkles, Check, ArrowLeft } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
@@ -120,7 +119,6 @@ export default function PremiumRequiredPage() {
           >
             {isRu ? "RU" : "EN"}
           </button>
-          <ThemeToggle />
         </div>
       </header>
 

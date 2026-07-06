@@ -16,6 +16,9 @@ import {
   validateProcessCompatibility,
   calculateFormulaScore,
   getPackagingRecommendations,
+  getCapsuleSizes,
+  getTabletSizes,
+  calculateDosageFormFit,
 } from './calculator';
 import { Ingredient } from '../types/pharm';
 
@@ -211,7 +214,71 @@ describe('checkCompatibilityAndLimits', () => {
     expect(warnings[0].type).toBe('limit');
     expect(warnings[0].ingredientId).toBe(1);
   });
+
+  it('should report warning when Carr Index > 25 and there is no Granulator node between Blending and Press', () => {
+    // Carr Index = (0.45 - 0.3) / 0.45 = 33.3% (> 25)
+    const ingredients = [
+      {
+        ingredient: {
+          id: 2,
+          name: 'Poor Flow Ingredient',
+          role: 'active',
+          chemicalClassId: 2,
+          looseBulkDensity: 0.3,
+          tappedBulkDensity: 0.45,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100
+        },
+        percentage: 100
+      }
+    ];
+
+    const nodes = [
+      { id: 'node-blending', type: 'blending' },
+      { id: 'node-press', type: 'press' }
+    ];
+    const connections = [
+      { source: 'node-blending', target: 'node-press' }
+    ];
+
+    const warnings = checkCompatibilityAndLimits(ingredients, undefined, nodes, connections);
+    expect(warnings.length).toBe(1);
+    expect(warnings[0].type).toBe('compatibility');
+    expect(warnings[0].message).toContain('Carr Index > 25: poor flowability');
+  });
+
+  it('should NOT report warning when Carr Index > 25 and there IS a Granulator node between Blending and Press', () => {
+    const ingredients = [
+      {
+        ingredient: {
+          id: 2,
+          name: 'Poor Flow Ingredient',
+          role: 'active',
+          chemicalClassId: 2,
+          looseBulkDensity: 0.3,
+          tappedBulkDensity: 0.45,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100
+        },
+        percentage: 100
+      }
+    ];
+
+    const nodes = [
+      { id: 'node-blending', type: 'blending' },
+      { id: 'node-tech-granulator', type: 'granulator' },
+      { id: 'node-press', type: 'press' }
+    ];
+    const connections = [
+      { source: 'node-blending', target: 'node-tech-granulator' },
+      { source: 'node-tech-granulator', target: 'node-press' }
+    ];
+
+    const warnings = checkCompatibilityAndLimits(ingredients, undefined, nodes, connections);
+    expect(warnings.length).toBe(0);
+  });
 });
+
 
 describe('calculateSonnergaardCompaction', () => {
   it('should compute the correct compaction volume using Sonnergaard log-exp equation', () => {
@@ -784,3 +851,92 @@ describe('getPackagingRecommendations', () => {
     expect(result.some(r => r.type === 'light_protection')).toBe(true);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Task 2.1 — getCapsuleSizes & getTabletSizes Reference Data
+// ──────────────────────────────────────────────────────────────────────────────
+describe('Dosage form reference tables (Task 2.1)', () => {
+  it('getCapsuleSizes returns non-empty array with positive volumes', () => {
+    const sizes = getCapsuleSizes();
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const item of sizes) {
+      expect(typeof item.size).toBe('string');
+      expect(item.volumeMl).toBeGreaterThan(0);
+      expect(item.maxFillMg).toBeGreaterThan(0);
+    }
+  });
+
+  it('getTabletSizes returns non-empty array with valid ranges', () => {
+    const sizes = getTabletSizes();
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const item of sizes) {
+      expect(item.diameterMm).toBeGreaterThan(0);
+      expect(item.typicalWeightRangeMg[0]).toBeGreaterThan(0);
+      expect(item.typicalWeightRangeMg[1]).toBeGreaterThan(item.typicalWeightRangeMg[0]);
+    }
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Task 2.2 — calculateDosageFormFit
+// ──────────────────────────────────────────────────────────────────────────────
+describe('calculateDosageFormFit', () => {
+  it('handles negative or zero values gracefully', () => {
+    const res = calculateDosageFormFit(0, 0.5);
+    expect(res.recommendedCapsuleSize).toBeNull();
+    expect(res.capsuleCount).toBe(0);
+    expect(res.fitsInSingleCapsule).toBe(false);
+
+    const res2 = calculateDosageFormFit(500, -0.1);
+    expect(res2.recommendedCapsuleSize).toBeNull();
+    expect(res2.capsuleCount).toBe(0);
+  });
+
+  it('fits in a single capsule (matches exact size #1)', () => {
+    // 400 mg at 0.8 g/mL (800 mg/mL) -> 0.5 mL volume.
+    // Fits exactly in #1 (volumeMl: 0.50)
+    const res = calculateDosageFormFit(400, 0.8);
+    expect(res.recommendedCapsuleSize).toBe('#1');
+    expect(res.capsuleCount).toBe(1);
+    expect(res.fitsInSingleCapsule).toBe(true);
+    expect(res.volumeMl).toBeCloseTo(0.50, 4);
+    expect(res.fillPercentage).toBeCloseTo(100, 4);
+    // Alternative sizes: #000, #00, #0 (which are larger and can fit 0.5 mL)
+    expect(res.alternativeSizes.map(s => s.size)).toEqual(['#000', '#00', '#0']);
+    expect(res.warnings).toHaveLength(0);
+  });
+
+  it('fits in a single capsule (smaller volume fits in #5)', () => {
+    // 80 mg at 0.8 g/mL -> 0.1 mL volume.
+    // Smallest capsule is #5 (0.13 mL).
+    const res = calculateDosageFormFit(80, 0.8);
+    expect(res.recommendedCapsuleSize).toBe('#5');
+    expect(res.capsuleCount).toBe(1);
+    expect(res.fillPercentage).toBeCloseTo(76.923, 3);
+    expect(res.alternativeSizes.length).toBe(7); // #000, #00, #0, #1, #2, #3, #4
+  });
+
+  it('requires 2 capsules when volume exceeds largest single capsule size', () => {
+    // 1500 mg at 0.8 g/mL -> 1.875 mL volume.
+    // Largest capsule #000 has 1.37 mL volume.
+    // 1.875 / 1.37 = 1.368 -> ceil is 2 capsules.
+    const res = calculateDosageFormFit(1500, 0.8);
+    expect(res.recommendedCapsuleSize).toBeNull();
+    expect(res.capsuleCount).toBe(2);
+    expect(res.fitsInSingleCapsule).toBe(false);
+    expect(res.volumeMl).toBeCloseTo(1.875, 4);
+    expect(res.fillPercentage).toBeCloseTo(((1.875 / 2) / 1.37) * 100, 4);
+    expect(res.alternativeSizes).toHaveLength(0);
+    expect(res.warnings[0]).toBe('Порцию придётся разбить на 2 капсулы');
+  });
+
+  it('requires 6 capsules and formats Russian plural suffix correctly', () => {
+    // 6000 mg at 0.8 g/mL -> 7.5 mL volume.
+    // 7.5 / 1.37 = 5.474 -> ceil is 6 capsules.
+    const res = calculateDosageFormFit(6000, 0.8);
+    expect(res.capsuleCount).toBe(6);
+    expect(res.warnings[0]).toBe('Порцию придётся разбить на 6 капсул');
+  });
+});
+
+

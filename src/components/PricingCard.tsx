@@ -51,7 +51,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
 
   const handleCheckout = () => {
     if (!userId) {
-      onSelectTariff('professional');
+      window.location.href = `/login?callbackUrl=/configurator`;
       return;
     }
 
@@ -64,6 +64,10 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     const paddle = window.Paddle || window.PaddleBillingV1;
     if (paddle) {
       const checkoutOptions = {
+        settings: {
+          successUrl: `${window.location.origin}/projects?payment=success`,
+          displayMode: "overlay" as const
+        },
         items: [
           {
             priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID || "pri_test_placeholder",

@@ -18,6 +18,8 @@ import {
   Plus,
   Package,
   X,
+  RefreshCw,
+  Settings,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,6 +27,7 @@ interface SidebarProps {
   onToggle: () => void;
   activeNodeIngredientIds: (number | string)[];
   onAddIngredient: (id: number | string) => void;
+  onAddTechNode?: (type: 'granulator' | 'capsulator' | 'press') => void;
   customIngredients: Ingredient[];
   /** Standard ingredients from DB (falls back to baseIngredientsMatrix if empty) */
   standardIngredients?: Ingredient[];
@@ -74,26 +77,105 @@ const ROLE_VISUAL: Record<IngredientRole, {
     accentBorder: 'border-cyan-500/25',
     dotColor: '#22d3ee',
   },
+  // ─── New excipient roles (Задача 1.1) ───────────────────────────────────
+  disintegrant: {
+    icon: <FlaskConical size={13} />,
+    accent: 'text-violet-400',
+    accentBg: 'bg-violet-500/10',
+    accentBorder: 'border-violet-500/25',
+    dotColor: '#a78bfa',
+  },
+  coating: {
+    icon: <Package size={13} />,
+    accent: 'text-pink-400',
+    accentBg: 'bg-pink-500/10',
+    accentBorder: 'border-pink-500/25',
+    dotColor: '#f472b6',
+  },
+  sweetener: {
+    icon: <Sparkles size={13} />,
+    accent: 'text-lime-400',
+    accentBg: 'bg-lime-500/10',
+    accentBorder: 'border-lime-500/25',
+    dotColor: '#a3e635',
+  },
+  'anti-caking': {
+    icon: <Layers size={13} />,
+    accent: 'text-orange-400',
+    accentBg: 'bg-orange-500/10',
+    accentBorder: 'border-orange-500/25',
+    dotColor: '#fb923c',
+  },
 };
 
 const CATEGORY_ORDER: IngredientRole[] = ['active', 'filler', 'dry-binder', 'lubricant', 'glidant'];
+
+interface TechNodeItem {
+  id: 'granulator' | 'capsulator' | 'press';
+  name: string;
+  nameRu: string;
+  desc: string;
+  descRu: string;
+  color: string;
+}
+
+const TECH_NODES: TechNodeItem[] = [
+  { id: 'granulator', name: 'Granulator', nameRu: 'Гранулятор', desc: 'Wet / Dry granulation step', descRu: 'Влажная или сухая грануляция', color: '#6366f1' },
+  { id: 'capsulator', name: 'Capsulator', nameRu: 'Капсулятор', desc: 'Encapsulation step', descRu: 'Капсулирование смеси в оболочки', color: '#a78bfa' },
+  { id: 'press', name: 'Tablet Press', nameRu: 'Таблет-пресс', desc: 'Tableting step', descRu: 'Таблетирование смеси', color: '#10b981' },
+];
 
 export const Sidebar = React.memo<SidebarProps>(({
   isOpen,
   onToggle,
   activeNodeIngredientIds,
   onAddIngredient,
+  onAddTechNode,
   customIngredients = [],
   standardIngredients,
   onOpenAddModal,
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   // All categories open by default — like n8n / Scratch
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(
     Object.fromEntries(CATEGORY_ORDER.map(r => [r, true]))
   );
   const [draggingId, setDraggingId] = useState<number | string | null>(null);
+  const [draggingTechId, setDraggingTechId] = useState<string | null>(null);
+  const [isTechNodesExpanded, setIsTechNodesExpanded] = useState(true);
+
+  const handleDragStartTech = (e: React.DragEvent, type: 'granulator' | 'capsulator' | 'press', label: string) => {
+    setDraggingTechId(type);
+    e.dataTransfer.setData('text/plain', type);
+    e.dataTransfer.setData('application/pharmnode-node', type);
+    e.dataTransfer.setData('application/pharmnode-name', label);
+    e.dataTransfer.effectAllowed = 'copy';
+
+    // Rich ghost drag image
+    const ghost = document.createElement('div');
+    ghost.style.cssText = `
+      position: fixed; top: -200px; left: 0;
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(99,102,241,0.95);
+      color: white; font-size: 12px; font-weight: 600;
+      padding: 8px 14px; border-radius: 8px;
+      border: 1px solid rgba(165,180,252,0.5);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      font-family: var(--font-inter), sans-serif;
+      backdrop-filter: blur(4px);
+      pointer-events: none; white-space: nowrap;
+    `;
+    ghost.textContent = `⚙️ ${label}`;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 60, 20);
+    setTimeout(() => document.body.removeChild(ghost), 0);
+  };
+
+  const handleDragEndTech = () => {
+    setDraggingTechId(null);
+  };
+
 
 
   // Dynamic role meta with translated labels — recomputed on locale change
@@ -111,6 +193,11 @@ export const Sidebar = React.memo<SidebarProps>(({
     'dry-binder': { label: t('role_dry_binder'), shortLabel: t('role_dry_binder_short'), ...ROLE_VISUAL['dry-binder'] },
     lubricant: { label: t('role_lubricant'), shortLabel: t('role_lubricant_short'), ...ROLE_VISUAL.lubricant },
     glidant: { label: t('role_glidant'), shortLabel: t('role_glidant_short'), ...ROLE_VISUAL.glidant },
+    // ─── New excipient roles (Задача 1.1) ─────────────────────────────────
+    disintegrant: { label: t('role_disintegrant') ?? 'Disintegrant', shortLabel: t('role_disintegrant_short') ?? 'Disint.', ...ROLE_VISUAL.disintegrant },
+    coating: { label: t('role_coating') ?? 'Coating', shortLabel: t('role_coating_short') ?? 'Coat.', ...ROLE_VISUAL.coating },
+    sweetener: { label: t('role_sweetener') ?? 'Sweetener', shortLabel: t('role_sweetener_short') ?? 'Sweet.', ...ROLE_VISUAL.sweetener },
+    'anti-caking': { label: t('role_anti_caking') ?? 'Anti-Caking', shortLabel: t('role_anti_caking_short') ?? 'Anti-C.', ...ROLE_VISUAL['anti-caking'] },
   }), [t]);
 
   const toggleCategory = (role: string) => {
@@ -130,7 +217,7 @@ export const Sidebar = React.memo<SidebarProps>(({
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
       return (
-        ing.name.toLowerCase().includes(q) ||
+        t(ing.name).toLowerCase().includes(q) ||
         ing.role.toLowerCase().includes(q) ||
         ROLE_META[ing.role]?.label.toLowerCase().includes(q) ||
         (ing.casNumber && ing.casNumber.includes(q))
@@ -156,7 +243,7 @@ export const Sidebar = React.memo<SidebarProps>(({
     setDraggingId(ing.id);
     e.dataTransfer.setData('text/plain', ing.id.toString());
     e.dataTransfer.setData('application/pharmnode-node', 'ingredient');
-    e.dataTransfer.setData('application/pharmnode-name', ing.name);
+    e.dataTransfer.setData('application/pharmnode-name', t(ing.name));
     e.dataTransfer.effectAllowed = 'copy';
 
     // Build a rich ghost drag image
@@ -173,7 +260,7 @@ export const Sidebar = React.memo<SidebarProps>(({
       backdrop-filter: blur(4px);
       pointer-events: none; white-space: nowrap;
     `;
-    ghost.textContent = `⬡ ${ing.name}`;
+    ghost.textContent = `⬡ ${t(ing.name)}`;
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 60, 20);
     setTimeout(() => document.body.removeChild(ghost), 0);
@@ -415,8 +502,8 @@ export const Sidebar = React.memo<SidebarProps>(({
                             }}
                             title={
                               isOnCanvas
-                                ? `${ing.name} ${t('sidebar_already_on_canvas')}`
-                                : `${t('sidebar_drag_hint')} ${ing.name}`
+                                ? `${t(ing.name)} ${t('sidebar_already_on_canvas')}`
+                                : `${t('sidebar_drag_hint')} ${t(ing.name)}`
                             }
                             className="sidebar-ingredient-card group flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all"
                             style={{
@@ -471,7 +558,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                                 className="text-[11px] font-semibold truncate leading-tight"
                                 style={{ color: isOnCanvas ? 'var(--muted)' : 'var(--text)' }}
                               >
-                                {ing.name}
+                                {t(ing.name)}
                               </p>
                               <p className="text-[9px] font-mono leading-tight mt-0.5" style={{ color: 'var(--muted)' }}>
                                 {ing.casNumber ? `CAS ${ing.casNumber}` : `ρ ${ing.looseBulkDensity.toFixed(2)} g/mL`}
@@ -505,6 +592,119 @@ export const Sidebar = React.memo<SidebarProps>(({
               );
             })
           )}
+
+          {/* Collapsible Tech Nodes Section */}
+          <div className="sidebar-category border-t border-zinc-800/80">
+            <button
+              onClick={() => setIsTechNodesExpanded(!isTechNodesExpanded)}
+              className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer select-none transition-colors"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid var(--border)',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.background = 'rgba(128,128,128,0.05)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.background = 'transparent';
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
+                  style={{ background: 'var(--primary)' }}
+                />
+                <span className="text-zinc-300 text-[10px] font-bold uppercase tracking-widest">
+                  {locale === 'ru-RU' ? 'Технологические узлы' : 'Equipment'}
+                </span>
+                <span
+                  className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded"
+                  style={{
+                    background: 'var(--bg)',
+                    color: 'var(--muted)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  2
+                </span>
+              </div>
+              <ChevronDown
+                size={12}
+                style={{
+                  color: 'var(--muted)',
+                  transition: 'transform 0.2s ease',
+                  transform: isTechNodesExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                }}
+              />
+            </button>
+
+            {isTechNodesExpanded && (
+              <div className="px-2 py-2 flex flex-col gap-1.5">
+                {TECH_NODES.map(node => {
+                  const isDragging = draggingTechId === node.id;
+                  const label = locale === 'ru-RU' ? node.nameRu : node.name;
+                  const desc = locale === 'ru-RU' ? node.descRu : node.desc;
+
+                  return (
+                    <div
+                      key={node.id}
+                      draggable
+                      onDragStart={e => handleDragStartTech(e, node.id, label)}
+                      onDragEnd={handleDragEndTech}
+                      onClick={() => onAddTechNode && onAddTechNode(node.id)}
+                      className="sidebar-ingredient-card group flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all"
+                      style={{
+                        background: isDragging
+                          ? 'rgba(99,102,241,0.15)'
+                          : 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        cursor: 'grab',
+                        transform: isDragging ? 'scale(0.96)' : 'scale(1)',
+                        boxShadow: isDragging ? '0 0 0 2px var(--primary)' : 'none',
+                      }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.borderColor = 'var(--primary)';
+                        el.style.background = 'rgba(var(--primary-rgb, 0,94,184), 0.05)';
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.borderColor = 'var(--border)';
+                        el.style.background = 'var(--bg)';
+                      }}
+                    >
+                      {/* Grip icon */}
+                      <GripVertical
+                        size={12}
+                        className="flex-shrink-0 transition-colors"
+                        style={{ color: 'var(--muted)', opacity: 0.5 }}
+                      />
+
+                      {/* Color dot */}
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: node.color }}
+                      />
+
+                      {/* Text info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold truncate leading-tight text-zinc-100">
+                          {label}
+                        </p>
+                        <p className="text-[9px] leading-tight mt-0.5" style={{ color: 'var(--muted)' }}>
+                          {desc}
+                        </p>
+                      </div>
+
+                      {/* Add button icon */}
+                      <Plus size={12} className="text-zinc-500 group-hover:text-zinc-200 transition-colors" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Footer ── */}

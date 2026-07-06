@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "../context/I18nContext";
-import { ThemeToggle } from "./ThemeToggle";
 import { 
   LogIn, 
   LogOut, 
@@ -202,7 +201,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ? "text-zinc-650 cursor-not-allowed opacity-50"
                   : "text-zinc-400 hover:text-zinc-200 cursor-pointer"
               }`}
-              title={activeTariff === "professional" ? (locale === "ru-RU" ? "Нельзя переключиться на Hobby при активном Pro" : "Cannot downgrade to Hobby with active Pro") : undefined}
+              title={activeTariff === "professional" ? t("header_cant_downgrade") : undefined}
             >
               Hobby
             </button>
@@ -233,7 +232,6 @@ export const Header: React.FC<HeaderProps> = ({
           {locale === "ru-RU" ? "RU" : "EN"}
         </button>
 
-        <ThemeToggle />
 
         {status === "loading" ? (
           <div className="w-8 h-8 rounded-full border border-zinc-700 border-t-zinc-400 animate-spin" />
@@ -287,7 +285,7 @@ export const Header: React.FC<HeaderProps> = ({
                       ? "text-indigo-400 font-bold"
                       : "text-zinc-300 hover:bg-zinc-800 cursor-pointer"
                   }`}
-                  title={user.tariff === "professional" ? (locale === "ru-RU" ? "Нельзя переключиться на Hobby при активном Pro" : "Cannot downgrade to Hobby with active Pro") : undefined}
+                  title={user.tariff === "professional" ? t("header_cant_downgrade") : undefined}
                 >
                   <span>Hobby</span>
                   <span className="text-[9px] bg-zinc-850 px-1 py-0.2 rounded text-zinc-500">$0</span>
@@ -372,14 +370,14 @@ export const Header: React.FC<HeaderProps> = ({
                       className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-zinc-800 text-zinc-200 transition-colors flex items-center gap-2 cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
                     >
                       <div className="w-4 h-4 rounded bg-red-500/10 flex items-center justify-center text-red-400 text-[9px] font-bold">G</div>
-                      <span>Google Mock (Hobby)</span>
+                      <span>{t("header_google_mock")}</span>
                     </button>
                     <button
                       onClick={() => handleMockLogin("mock-github")}
                       className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-zinc-800 text-zinc-200 transition-colors flex items-center gap-2 cursor-pointer border border-zinc-800/50 bg-zinc-900/40"
                     >
                       <div className="w-4 h-4 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-[9px] font-bold">Git</div>
-                      <span>GitHub Mock (Pro)</span>
+                      <span>{t("header_github_mock")}</span>
                     </button>
 
 

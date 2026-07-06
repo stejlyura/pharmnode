@@ -17,7 +17,7 @@ describe("Database Seed Integration Test", () => {
     });
 
     // 3. Assertions
-    expect(ingredients.length).toBe(26);
+    expect(ingredients.length).toBe(30);
 
     // All ingredients must have an IngredientStability record
     for (const ing of ingredients) {

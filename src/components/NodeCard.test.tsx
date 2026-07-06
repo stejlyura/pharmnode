@@ -77,6 +77,15 @@ const mockCalculatedResults: CalculatedResults = {
     aggregatedContraindications: [],
     aggregatedSideEffects: [],
   },
+  dosageFormFit: {
+    recommendedCapsuleSize: '#0',
+    capsuleCount: 1,
+    fitsInSingleCapsule: true,
+    volumeMl: 0.25,
+    fillPercentage: 80,
+    alternativeSizes: [],
+    warnings: [],
+  },
 };
 
 describe('NodeCard Component', () => {

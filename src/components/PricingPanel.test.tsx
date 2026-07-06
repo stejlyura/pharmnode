@@ -112,8 +112,13 @@ describe('PricingPanel Component', () => {
     expect(downgradeBtn.hasAttribute('disabled')).toBe(true);
   });
 
-  it('should redirect guest user (call onSelectTariff with professional) when clicking Upgrade on Professional card', () => {
+  it('should redirect guest user by setting window.location.href when clicking Upgrade on Professional card', () => {
     // When guest is not logged in: mockUser = null
+    const originalLocation = window.location;
+    // @ts-ignore
+    delete window.location;
+    window.location = { ...originalLocation, href: '' } as any;
+
     render(
       <PricingPanel
         currentTariff="hobby"
@@ -124,9 +129,11 @@ describe('PricingPanel Component', () => {
     const proBtn = screen.getByRole('button', { name: 'Upgrade to Pro' });
     fireEvent.click(proBtn);
 
-    // Should call onSelectTariff('professional') so the parent can redirect to login
-    expect(mockSelectTariff).toHaveBeenCalledWith('professional');
+    expect(window.location.href).toBe('/login?callbackUrl=/configurator');
+    expect(mockSelectTariff).not.toHaveBeenCalled();
     expect(mockPaddleOpen).not.toHaveBeenCalled();
+
+    window.location = originalLocation;
   });
 
   it('should initiate Paddle Checkout when logged-in user clicks Upgrade on Professional card', () => {

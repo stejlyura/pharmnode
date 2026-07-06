@@ -1,26 +1,20 @@
 "use client";
 
-import React, { useState, useTransition, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../context/I18nContext';
-import { requestPasswordReset } from '../actions/auth';
 import { signOut } from "next-auth/react";
 import { 
   User, 
   Mail, 
-  ShieldCheck, 
   CreditCard, 
   ExternalLink, 
-  KeyRound, 
   Loader2, 
-  AlertCircle,
-  CheckCircle2,
-  Smartphone,
-  ShieldAlert,
-  Monitor,
-  Globe,
-  Download,
+  Monitor, 
+  Globe, 
+  Download, 
   Trash2,
-  Key
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 
 interface SettingsFormProps {
@@ -30,7 +24,6 @@ interface SettingsFormProps {
     tariff: string;
     isSubscribed: boolean;
     billingPortalUrl: string | null;
-    twoFactorEnabled: boolean;
     renewsAt?: string | null;
   };
 }
@@ -46,18 +39,6 @@ interface ActiveSession {
 export const SettingsForm: React.FC<SettingsFormProps> = ({ initialUser }) => {
   const { t, locale } = useTranslation();
   const isRu = locale === "ru-RU";
-  const [isPending, startTransition] = useTransition();
-  const [resetEmail, setResetEmail] = useState(initialUser.email);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // 2FA state
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(initialUser.twoFactorEnabled);
-  const [show2FaSetup, setShow2FaSetup] = useState(false);
-  const [totpSecret, setTotpSecret] = useState("");
-  const [totpUri, setTotpUri] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
-  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
 
   // Active Sessions state
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
@@ -67,26 +48,6 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ initialUser }) => {
   const [gdprLoading, setGdprLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
-
-  const handlePasswordResetSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage(null);
-
-    startTransition(async () => {
-      const result = await requestPasswordReset(resetEmail);
-      if (result.success) {
-        setMessage({ 
-          type: 'success', 
-          text: result.message || (isRu ? 'Ссылка для сброса пароля успешно отправлена.' : 'Password reset link sent successfully.')
-        });
-      } else {
-        setMessage({ 
-          type: 'error', 
-          text: result.error || (isRu ? 'Произошла ошибка при отправке запроса.' : 'An error occurred during submission.')
-        });
-      }
-    });
-  };
 
   // Fetch active sessions
   const fetchSessions = async () => {
@@ -107,93 +68,6 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ initialUser }) => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSessions();
   }, []);
-
-  // Setup 2FA
-  const handleInitiate2Fa = async () => {
-    setTwoFactorLoading(true);
-    setTwoFactorError(null);
-    try {
-      const res = await fetch("/api/auth/2fa/setup", { method: "POST" });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTotpSecret(data.secret);
-        setTotpUri(data.uri);
-        setShow2FaSetup(true);
-      } else {
-        setTwoFactorError(data.error || "Failed to initiate 2FA setup");
-      }
-    } catch {
-      setTwoFactorError("Network error during 2FA setup");
-    } finally {
-      setTwoFactorLoading(false);
-    }
-  };
-
-  // Verify and enable 2FA
-  const handleVerifyAndEnable2Fa = async () => {
-    if (verificationCode.length !== 6) {
-      setTwoFactorError(isRu ? "Введите 6-значный код" : "Enter a 6-digit code");
-      return;
-    }
-    setTwoFactorLoading(true);
-    setTwoFactorError(null);
-    try {
-      const res = await fetch("/api/auth/2fa/enable", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret: totpSecret, code: verificationCode }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTwoFactorEnabled(true);
-        setShow2FaSetup(false);
-        setVerificationCode("");
-        setMessage({
-          type: "success",
-          text: isRu ? "Двухфакторная аутентификация успешно активирована!" : "Two-factor authentication successfully enabled!",
-        });
-      } else {
-        setTwoFactorError(data.error || "Incorrect token code");
-      }
-    } catch {
-      setTwoFactorError("Network error verifying code");
-    } finally {
-      setTwoFactorLoading(false);
-    }
-  };
-
-  // Disable 2FA
-  const handleDisable2Fa = async () => {
-    if (verificationCode.length !== 6) {
-      setTwoFactorError(isRu ? "Введите 6-значный код" : "Enter a 6-digit code");
-      return;
-    }
-    setTwoFactorLoading(true);
-    setTwoFactorError(null);
-    try {
-      const res = await fetch("/api/auth/2fa/disable", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: verificationCode }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTwoFactorEnabled(false);
-        setShow2FaSetup(false);
-        setVerificationCode("");
-        setMessage({
-          type: "success",
-          text: isRu ? "Двухфакторная аутентификация отключена." : "Two-factor authentication disabled.",
-        });
-      } else {
-        setTwoFactorError(data.error || "Incorrect token code");
-      }
-    } catch {
-      setTwoFactorError("Network error disabling 2FA");
-    } finally {
-      setTwoFactorLoading(false);
-    }
-  };
 
   // Revoke session
   const handleRevokeSession = async (id: string) => {
@@ -364,193 +238,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ initialUser }) => {
         </div>
       </div>
 
-      {/* Two-Factor Authentication (2FA) */}
-      <div className="flex flex-col gap-4 border-t border-zinc-850 pt-6">
-        <h2 className="text-lg font-bold text-zinc-50 flex items-center gap-2">
-          <Smartphone size={18} className="text-indigo-400" />
-          {isRu ? 'Двухфакторная аутентификация (2FA)' : 'Two-Factor Authentication (2FA)'}
-        </h2>
-        <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
-          {isRu 
-            ? 'Повысьте безопасность учетной записи, активировав вход по одноразовым кодам TOTP через приложения вроде Google Authenticator.' 
-            : 'Enhance your account security by requiring a 6-digit TOTP verification token from authenticator apps.'}
-        </p>
 
-        {twoFactorError && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-xs text-rose-400 flex items-start gap-2">
-            <ShieldAlert size={16} className="shrink-0 mt-0.5" />
-            <span>{twoFactorError}</span>
-          </div>
-        )}
-
-        {twoFactorEnabled ? (
-          <div className="bg-zinc-950/40 border border-emerald-500/10 p-4 rounded-xl flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 text-xs text-emerald-400 font-bold">
-              <ShieldCheck size={18} />
-              <span>{isRu ? 'Двухфакторная защита (2FA) включена' : 'Two-factor protection (2FA) is Active'}</span>
-            </div>
-            
-            {!show2FaSetup ? (
-              <button
-                onClick={() => setShow2FaSetup(true)}
-                className="w-fit px-4 py-2 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 border border-rose-500/25 rounded-lg text-xs font-bold transition-all cursor-pointer"
-              >
-                {isRu ? 'Деактивировать 2FA' : 'Disable 2FA'}
-              </button>
-            ) : (
-              <div className="flex flex-col gap-3 max-w-sm">
-                <label className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block">
-                  {isRu ? 'Введите текущий код 2FA для отключения' : 'Enter current 2FA code to disable'}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="000000"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                    className="w-32 px-3 py-2 bg-zinc-950 border border-zinc-850 rounded-lg text-xs text-center tracking-widest font-mono focus:outline-none focus:border-rose-500"
-                  />
-                  <button
-                    onClick={handleDisable2Fa}
-                    disabled={twoFactorLoading || verificationCode.length !== 6}
-                    className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors disabled:opacity-50"
-                  >
-                    {twoFactorLoading ? <Loader2 className="animate-spin" size={13} /> : (isRu ? 'Отключить' : 'Confirm Disable')}
-                  </button>
-                  <button
-                    onClick={() => { setShow2FaSetup(false); setVerificationCode(""); }}
-                    className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-lg cursor-pointer"
-                  >
-                    {isRu ? 'Отмена' : 'Cancel'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div>
-            {!show2FaSetup ? (
-              <button
-                onClick={handleInitiate2Fa}
-                disabled={twoFactorLoading}
-                className="px-4.5 py-2.5 bg-indigo-500 hover:bg-indigo-650 text-white text-xs font-bold rounded-lg cursor-pointer shadow-lg shadow-indigo-500/10 transition-all flex items-center gap-1.5"
-              >
-                {twoFactorLoading ? <Loader2 className="animate-spin" size={13} /> : <Key size={13} />}
-                {isRu ? 'Настроить 2FA' : 'Configure 2FA'}
-              </button>
-            ) : (
-              <div className="bg-zinc-950/40 p-5 rounded-xl border border-zinc-900 flex flex-col md:flex-row gap-6 items-center">
-                <div className="bg-white p-2.5 rounded-xl border border-zinc-800/20 shrink-0">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(totpUri)}`}
-                    alt="Scan TOTP QR Code"
-                    width={150}
-                    height={150}
-                    className="block"
-                  />
-                </div>
-                
-                <div className="flex-1 flex flex-col gap-3">
-                  <span className="text-xs font-bold text-zinc-200">
-                    {isRu ? '1. Отсканируйте QR-код' : '1. Scan this QR Code'}
-                  </span>
-                  <p className="text-[11px] text-zinc-400 leading-normal">
-                    {isRu 
-                      ? 'Отсканируйте код вашим приложением-аутентификатором. Если код не сканируется, введите текстовый ключ вручную:' 
-                      : 'Scan this code with your authenticator application. If manual entry is required, use this textual secret key:'}
-                  </p>
-                  <div className="p-2 bg-zinc-950 border border-zinc-850 rounded text-center text-xs font-mono font-bold select-all tracking-wider text-indigo-400">
-                    {totpSecret}
-                  </div>
-                  
-                  <span className="text-xs font-bold text-zinc-200 mt-2">
-                    {isRu ? '2. Введите 6-значный проверочный код' : '2. Enter the 6-digit confirmation code'}
-                  </span>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      placeholder="000000"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                      className="w-32 px-3 py-2 bg-zinc-950 border border-zinc-850 rounded-lg text-xs text-center tracking-widest font-mono focus:outline-none focus:border-indigo-500"
-                    />
-                    <button
-                      onClick={handleVerifyAndEnable2Fa}
-                      disabled={twoFactorLoading || verificationCode.length !== 6}
-                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-650 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors disabled:opacity-50"
-                    >
-                      {twoFactorLoading ? <Loader2 className="animate-spin" size={13} /> : (isRu ? 'Активировать' : 'Verify & Enable')}
-                    </button>
-                    <button
-                      onClick={() => { setShow2FaSetup(false); setVerificationCode(""); }}
-                      className="px-3 py-2 bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 text-zinc-400 text-xs rounded-lg cursor-pointer transition-all"
-                    >
-                      {isRu ? 'Отмена' : 'Cancel'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Password Reset Request Form */}
-      <div className="flex flex-col gap-4 border-t border-zinc-850 pt-6">
-        <h2 className="text-lg font-bold text-zinc-50 flex items-center gap-2">
-          <KeyRound size={18} className="text-indigo-400" />
-          {isRu ? 'Сброс пароля' : 'Password Reset'}
-        </h2>
-        <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
-          {isRu ? 'Получите временную безопасную ссылку на ваш email для сброса пароля или подтверждения учетной записи.' : 'Request a secure password reset link sent directly to your registered email address.'}
-        </p>
-
-        {message && (
-          <div className={`p-3 border rounded-lg text-xs flex items-start gap-2 ${
-            message.type === 'success' 
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-          }`}>
-            {message.type === 'success' ? (
-              <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
-
-        <form onSubmit={handlePasswordResetSubmit} className="flex flex-col sm:flex-row gap-3 items-end">
-          <div className="flex-1 w-full">
-            <label className="block text-[10px] text-zinc-500 font-semibold mb-1.5 uppercase tracking-wider">Email</label>
-            <input
-              type="email"
-              required
-              value={resetEmail}
-              onChange={(e) => setResetEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 text-zinc-200 placeholder-zinc-650 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="w-full sm:w-auto h-9 px-4 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 hover:text-zinc-100 rounded-lg text-xs font-bold transition-all border border-zinc-700/50 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isPending ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                {isRu ? 'Отправка...' : 'Sending...'}
-              </>
-            ) : (
-              <>
-                {isRu ? 'Сбросить пароль' : 'Reset Password'}
-              </>
-            )}
-          </button>
-        </form>
-      </div>
 
       {/* Active Sessions */}
       <div className="flex flex-col gap-4 border-t border-zinc-850 pt-6">

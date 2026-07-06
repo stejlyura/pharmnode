@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { useTranslation } from "@/context/I18nContext";
 import { FileQuestion, Home } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function NotFound() {
   const { t, locale, setLocale } = useTranslation();
@@ -35,7 +34,6 @@ export default function NotFound() {
           >
             {isRu ? "RU" : "EN"}
           </button>
-          <ThemeToggle />
         </div>
       </header>
 

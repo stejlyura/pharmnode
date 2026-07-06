@@ -29,7 +29,6 @@ export default async function SettingsPage() {
     tariff: user.tariff,
     isSubscribed: user.isSubscribed,
     billingPortalUrl: user.billingPortalUrl,
-    twoFactorEnabled: user.twoFactorEnabled,
     renewsAt: user.renewsAt ? user.renewsAt.toISOString() : null,
   };
 

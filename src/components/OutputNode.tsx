@@ -8,6 +8,7 @@ import { CalculatedResults } from '../hooks/useNodeEditor';
 import { generateGMPReport } from '../lib/pdfGenerator';
 import { EditorNode, Ingredient } from '../types/pharm';
 import { getPackagingRecommendations, calculateFormulaScore, validateProcessCompatibility } from '../lib/calculator';
+import { REGULATORY_LIMITS } from '../lib/regulatoryLimits';
 
 interface OutputNodeProps {
   node: EditorNode;
@@ -18,6 +19,8 @@ interface OutputNodeProps {
   onUpgradeClick?: () => void;
   allIngredients: Ingredient[];
   isMobile?: boolean;
+  onAddTechNode?: (type: 'granulator' | 'capsulator' | 'press') => void;
+  onRemove?: (nodeId: string) => void;
 }
 
 export const OutputNode: React.FC<OutputNodeProps> = ({
@@ -29,15 +32,22 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
   onUpgradeClick,
   allIngredients,
   isMobile = false,
+  onAddTechNode,
+  onRemove,
 }) => {
   const { id, data } = node;
   const { user } = useAuth();
-  const { t, setLocale } = useTranslation();
+  const { t, setLocale, locale } = useTranslation();
 
   const activeRawWeightG = data.activeRawWeightG ?? 10;
   const region = String(data.region ?? 'US');
+  const formType = (data.formType as 'tablet' | 'capsule') || 'tablet';
   const { recommendedWeightMg } = calculatedResults.tableting;
   const { totalTablets, totalBatchWeightKg } = calculatedResults.batch;
+  const isRu = locale === 'ru-RU';
+  const market = (data.market as 'usa' | 'eu' | 'both') || 'both';
+  const servingsPerDay = Number(data.servingsPerDay ?? 1);
+  const regulatoryWarnings = calculatedResults.regulatoryWarnings || [];
 
   // Format allergens to match FALCPA Milk (Lactose) labeling
   const formattedAllergens = calculatedResults.allergens.map(name => {
@@ -152,43 +162,212 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
         </div>
       </div>
 
-      {/* Batch stats details */}
-      <div className={`flex flex-col gap-1.5 bg-zinc-900/40 p-2.5 border border-zinc-800/50 text-xs ${isMobile ? "rounded-xl p-3" : "rounded"}`}>
-        <div className="flex justify-between">
-          <span className="text-zinc-500">{t('card_active_share')}</span>
-          <span className="font-mono text-zinc-300 font-semibold">
-            {calculatedResults.activePercentage.toFixed(1)}%
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-zinc-500">{t('card_rec_tablet_weight')}</span>
-          <span className="font-mono text-zinc-300 font-semibold">
-            {recommendedWeightMg.toFixed(2)} {t('unit_mg')}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-zinc-500">{t('card_tablets_count')}</span>
-          <span className="font-mono text-indigo-400 font-bold">
-            {totalTablets.toLocaleString()} {t('unit_pcs')}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-zinc-500">{t('card_total_batch_weight')}</span>
-          <span className="font-mono text-zinc-300 font-semibold">
-            {totalBatchWeightKg.toFixed(4)} {t('unit_kg')}
-          </span>
+      {/* Dosage Form Selector */}
+      <div className={`flex items-center justify-between text-[11px] bg-zinc-800/30 p-2 border border-zinc-800/50 text-zinc-100 ${isMobile ? "rounded-xl" : "rounded"}`}>
+        <span className="text-zinc-400 font-medium ml-1">
+          {locale === 'ru-RU' ? 'Форма выпуска' : 'Dosage Form'}
+        </span>
+        <div className="flex bg-zinc-900 rounded p-0.5 border border-zinc-850">
+          <button
+            onClick={() => onUpdateData(id, { formType: 'tablet' })}
+            className={`px-3 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+              formType === 'tablet' 
+                ? 'bg-zinc-850 text-indigo-400 font-semibold' 
+                : 'text-zinc-500 hover:text-zinc-400'
+            } ${isMobile ? "px-4 py-1 rounded-md" : ""}`}
+          >
+            {locale === 'ru-RU' ? 'Таблетка' : 'Tablet'}
+          </button>
+          <button
+            onClick={() => onUpdateData(id, { formType: 'capsule' })}
+            className={`px-3 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+              formType === 'capsule' 
+                ? 'bg-zinc-850 text-indigo-400 font-semibold' 
+                : 'text-zinc-500 hover:text-zinc-400'
+            } ${isMobile ? "px-4 py-1 rounded-md" : ""}`}
+          >
+            {locale === 'ru-RU' ? 'Капсула' : 'Capsule'}
+          </button>
         </div>
       </div>
+
+      {/* Batch stats details or Capsule fit details */}
+      {formType === 'tablet' ? (
+        <div className={`flex flex-col gap-1.5 bg-zinc-900/40 p-2.5 border border-zinc-800/50 text-xs ${isMobile ? "rounded-xl p-3" : "rounded"}`}>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_active_share')}</span>
+            <span className="font-mono text-zinc-300 font-semibold">
+              {calculatedResults.activePercentage.toFixed(1)}%
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_rec_tablet_weight')}</span>
+            <span className="font-mono text-zinc-300 font-semibold">
+              {recommendedWeightMg.toFixed(2)} {t('unit_mg')}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_tablets_count')}</span>
+            <span className="font-mono text-indigo-400 font-bold">
+              {totalTablets.toLocaleString()} {t('unit_pcs')}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_total_batch_weight')}</span>
+            <span className="font-mono text-zinc-300 font-semibold">
+              {totalBatchWeightKg.toFixed(4)} {t('unit_kg')}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {/* Capsule fit details */}
+          <div className={`flex flex-col gap-1.5 bg-zinc-900/40 p-2.5 border border-zinc-800/50 text-xs ${isMobile ? "rounded-xl p-3" : "rounded"}`}>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">
+                {locale === 'ru-RU' ? 'Рекомендуемый размер капсулы:' : 'Recommended size:'}
+              </span>
+              <span className="font-mono text-indigo-400 font-bold">
+                {calculatedResults.dosageFormFit.recommendedCapsuleSize || (locale === 'ru-RU' ? 'Нет' : 'None')}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">
+                {locale === 'ru-RU' ? 'Заполнение капсулы:' : 'Capsule fill:'}
+              </span>
+              <span className="font-mono text-zinc-300 font-semibold">
+                {calculatedResults.dosageFormFit.fillPercentage.toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">
+                {locale === 'ru-RU' ? 'Объем смеси:' : 'Blend volume:'}
+              </span>
+              <span className="font-mono text-zinc-300 font-semibold">
+                {calculatedResults.dosageFormFit.volumeMl.toFixed(4)} {t('unit_ml') || 'мл'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">
+                {locale === 'ru-RU' ? 'Количество капсул на дозу:' : 'Capsules per dose:'}
+              </span>
+              <span className="font-mono text-zinc-300 font-semibold">
+                {calculatedResults.dosageFormFit.capsuleCount}
+              </span>
+            </div>
+          </div>
+
+          {/* Capsule fill visualization & alternative sizes / alerts */}
+          <div className={`flex items-stretch gap-3 bg-zinc-900/40 p-3 border border-zinc-800/50 ${isMobile ? "rounded-xl" : "rounded"}`}>
+            <div className="flex flex-col items-center justify-center shrink-0 w-16 bg-zinc-950/50 p-2 border border-zinc-850 rounded-lg">
+              {(() => {
+                const fillPct = calculatedResults.dosageFormFit.fillPercentage;
+                let colorClass = 'text-emerald-400';
+                if (fillPct > 95) {
+                  colorClass = 'text-rose-455';
+                } else if (fillPct > 80) {
+                  colorClass = 'text-amber-400';
+                }
+                return (
+                  <svg width="24" height="48" viewBox="0 0 24 48" className="overflow-visible">
+                    <rect x="2" y="2" width="20" height="44" rx="10" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-700" />
+                    <mask id="capsule-fill-mask">
+                      <rect x="3" y="3" width="18" height="42" rx="9" fill="white" />
+                    </mask>
+                    <rect 
+                      x="3" 
+                      y={3 + 42 * (1 - Math.min(100, fillPct) / 100)} 
+                      width="18" 
+                      height={42 * (Math.min(100, fillPct) / 100)} 
+                      mask="url(#capsule-fill-mask)" 
+                      className={colorClass} 
+                      fill="currentColor"
+                    />
+                    <line x1="2" y1="24" x2="22" y2="24" stroke="var(--surface)" strokeWidth="1.5" />
+                  </svg>
+                );
+              })()}
+              <span className="text-[9px] text-zinc-500 font-medium mt-1 font-mono">
+                {calculatedResults.dosageFormFit.fillPercentage.toFixed(0)}%
+              </span>
+            </div>
+
+            <div className="flex-1 flex flex-col justify-center gap-1.5 text-[10px]">
+              {/* Warnings (if any, e.g. "needs splitting") */}
+              {calculatedResults.dosageFormFit.warnings.map((warn, idx) => (
+                <div key={idx} className="p-2 bg-amber-500/5 border border-amber-500/10 text-amber-400 flex items-start gap-1.5 rounded leading-normal font-medium">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span>{warn}</span>
+                </div>
+              ))}
+
+              {/* Alternative sizes */}
+              {calculatedResults.dosageFormFit.alternativeSizes.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-zinc-500 font-semibold text-[8px] uppercase tracking-wider">
+                    {locale === 'ru-RU' ? 'Другие варианты капсул:' : 'Alternative sizes:'}
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {calculatedResults.dosageFormFit.alternativeSizes.slice(0, 3).map((alt, idx) => (
+                      <span key={idx} className="bg-zinc-950/60 px-1.5 py-0.5 rounded border border-zinc-850 text-zinc-400 font-mono text-[9px]">
+                        {alt.size}: {alt.fillPercentage.toFixed(0)}%
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                calculatedResults.dosageFormFit.fitsInSingleCapsule && (
+                  <span className="text-zinc-500 italic text-[9px]">
+                    {locale === 'ru-RU' ? 'Других подходящих размеров нет' : 'No alternative sizes fit'}
+                  </span>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Regulatory and Safety Warnings related to final product */}
       {calculatedResults.warnings.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          {calculatedResults.warnings.map((w, idx) => (
-            <div key={idx} className={`p-2 bg-red-500/5 border border-red-500/10 text-red-400 flex items-start gap-1.5 leading-normal ${isMobile ? "p-2.5 rounded-lg text-[10.5px]" : "rounded text-[10px]"}`}>
-              <AlertTriangle size={isMobile ? 13 : 12} className="shrink-0 mt-0.5" />
-              <span>{w.message}</span>
-            </div>
-          ))}
+          {calculatedResults.warnings.map((w, idx) => {
+            const isCarrIndexWarning = w.message.includes('Carr Index') || w.message.includes('flowability');
+            const ingNode = (nodes || []).find(n => n.type === 'ingredient' && String(n.data.ingredientId) === String(w.ingredientId));
+            const ing = allIngredients.find(i => String(i.id) === String(w.ingredientId));
+
+            return (
+              <div key={idx} className={`p-2.5 bg-red-500/5 border border-red-500/10 text-red-400 flex flex-col gap-1.5 leading-normal ${isMobile ? "rounded-lg text-[10.5px]" : "rounded text-[10px]"}`}>
+                <div className="flex items-start gap-1.5">
+                  <AlertTriangle size={isMobile ? 13 : 12} className="shrink-0 mt-0.5" />
+                  <span>{w.message}</span>
+                </div>
+                {isCarrIndexWarning && onAddTechNode && (
+                  <button
+                    onClick={() => onAddTechNode('granulator')}
+                    className={
+                      isMobile
+                        ? "mt-1 px-3 py-1.5 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 active:bg-indigo-500/30 text-[10px] font-bold rounded-lg border border-indigo-500/30 transition-colors cursor-pointer self-start"
+                        : "mt-1 self-start px-2 py-0.5 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-[9px] font-semibold rounded border border-indigo-500/30 transition-colors cursor-pointer"
+                    }
+                  >
+                    {isRu ? 'Добавить гранулятор' : 'Add Granulator Node'}
+                  </button>
+                )}
+                {w.type === 'limit' && w.ingredientId && ing && ingNode && (
+                  <button
+                    onClick={() => onUpdateData(ingNode.id, { percentage: ing.maxSafePercentage })}
+                    className={
+                      isMobile
+                        ? "mt-1 px-3 py-1.5 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 active:bg-indigo-500/30 text-[10px] font-bold rounded-lg border border-indigo-500/30 transition-colors cursor-pointer self-start"
+                        : "mt-1 self-start px-2 py-0.5 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-[9px] font-semibold rounded border border-indigo-500/30 transition-colors cursor-pointer"
+                    }
+                  >
+                    {isRu ? `Снизить долю до ${ing.maxSafePercentage}%` : `Reduce share to ${ing.maxSafePercentage}%`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -325,6 +504,179 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
           )}
         </div>
       )}
+
+      {/* ── Regulatory Compliance Section (Задача 4.3) ── */}
+      <div className="bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/85 flex flex-col gap-2.5">
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+          <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+            🛡️ {isRu ? 'Регуляторный комплаенс' : 'Regulatory Compliance'}
+          </span>
+        </div>
+
+        {/* Market Selector */}
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-zinc-500 font-semibold uppercase tracking-wider">
+            {isRu ? 'Рынок сбыта:' : 'Target Market:'}
+          </span>
+          <div className="flex bg-zinc-950 rounded p-0.5 border border-zinc-850">
+            <button
+              onClick={() => onUpdateData(id, { market: 'usa' })}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                market === 'usa'
+                  ? 'bg-zinc-850 text-indigo-400 font-semibold'
+                  : 'text-zinc-500 hover:text-zinc-400'
+              }`}
+            >
+              🇺🇸 US
+            </button>
+            <button
+              onClick={() => onUpdateData(id, { market: 'eu' })}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                market === 'eu'
+                  ? 'bg-zinc-850 text-indigo-400 font-semibold'
+                  : 'text-zinc-500 hover:text-zinc-400'
+              }`}
+            >
+              🇪🇺 EU
+            </button>
+            <button
+              onClick={() => onUpdateData(id, { market: 'both' })}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                market === 'both'
+                  ? 'bg-zinc-850 text-indigo-400 font-semibold'
+                  : 'text-zinc-500 hover:text-zinc-400'
+              }`}
+            >
+              {isRu ? 'Оба' : 'Both'}
+            </button>
+          </div>
+        </div>
+
+        {/* Servings per day input */}
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-zinc-550 font-semibold uppercase tracking-wider">
+            {isRu ? 'Приёмов в день:' : 'Servings per day:'}
+          </span>
+          <input
+            type="number"
+            min="1"
+            max="10"
+            value={servingsPerDay}
+            onChange={(e) => {
+              let val = parseInt(e.target.value, 10);
+              if (isNaN(val) || val < 1) val = 1;
+              onUpdateData(id, { servingsPerDay: val });
+            }}
+            className="w-12 bg-zinc-950 border border-zinc-850 text-zinc-200 text-center font-mono text-[10px] py-0.5 rounded focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        {/* Compliance Warnings List */}
+        <div className="flex flex-col gap-1.5 mt-1">
+          {regulatoryWarnings.length > 0 ? (
+            regulatoryWarnings.map((w, idx) => {
+              const isNovelOrGras = w.message.includes('Novel Food') || w.message.includes('GRAS');
+              
+              let styleClass = '';
+              let badge = '';
+
+              if (w.severity === 'error') {
+                styleClass = 'bg-red-500/5 border-red-550/30 text-red-400';
+                badge = '🔴';
+              } else if (isNovelOrGras) {
+                styleClass = 'bg-violet-500/5 border-violet-550/30 text-violet-400';
+                badge = '🟣';
+              } else {
+                styleClass = 'bg-amber-500/5 border-amber-550/30 text-amber-400';
+                badge = '🟡';
+              }
+
+              const ingNode = (nodes || []).find(n => n.type === 'ingredient' && String(n.data.ingredientId) === String(w.ingredientId));
+              const ing = allIngredients.find(i => String(i.id) === String(w.ingredientId));
+              
+              let safePct: number | null = null;
+              if (w.type === 'limit' && w.ingredientId && ing && ingNode && recommendedWeightMg > 0) {
+                // Find regulatory limit item
+                const limitItem = REGULATORY_LIMITS.find(r => {
+                  if (r.casNumber && ing.casNumber && r.casNumber === ing.casNumber) return true;
+                  return r.ingredientName.toLowerCase() === ing.name.toLowerCase() || 
+                         (r.synonyms && r.synonyms.some(s => s.toLowerCase() === ing.name.toLowerCase()));
+                });
+                
+                if (limitItem) {
+                  let ul: number | null = null;
+                  if (market === 'usa') {
+                    ul = limitItem.fdaUlMgPerDay;
+                  } else if (market === 'eu') {
+                    ul = limitItem.efsaUlMgPerDay;
+                  } else {
+                    // Both
+                    const fda = limitItem.fdaUlMgPerDay;
+                    const efsa = limitItem.efsaUlMgPerDay;
+                    if (fda !== null && efsa !== null) ul = Math.min(fda, efsa);
+                    else if (fda !== null) ul = fda;
+                    else if (efsa !== null) ul = efsa;
+                  }
+                  
+                  if (ul !== null) {
+                    // Calculate safe percentage: percentage = (ul / (recommendedWeightMg * servingsPerDay)) * 100
+                    const rawPct = (ul / (recommendedWeightMg * servingsPerDay)) * 100;
+                    // Provide a 0.5% buffer to prevent rounding issues causing it to hover on edge
+                    safePct = Math.floor(rawPct * 99.5) / 100;
+                    if (safePct < 0.001) safePct = 0.001;
+                    if (safePct > 100) safePct = 100;
+                  }
+                }
+              }
+
+              return (
+                <div key={idx} className={`p-2 border rounded-lg text-[9px] leading-normal flex flex-col gap-0.5 ${styleClass}`}>
+                  <span className="font-bold flex items-center gap-1">
+                    <span>{badge}</span>
+                    <span>{w.message}</span>
+                  </span>
+                  {w.suggestion && (
+                    <span className="text-zinc-500 text-[8px] pl-4">{w.suggestion}</span>
+                  )}
+                  {safePct !== null && ingNode && (
+                    <button
+                      onClick={() => onUpdateData(ingNode.id, { percentage: safePct! })}
+                      className={
+                        isMobile
+                          ? "mt-1.5 px-3 py-1.5 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 active:bg-indigo-500/30 text-[10px] font-bold rounded-lg border border-indigo-500/30 transition-colors cursor-pointer self-start"
+                          : "mt-1.5 self-start px-2 py-0.5 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 text-[9px] font-semibold rounded border border-indigo-500/30 transition-colors cursor-pointer"
+                      }
+                    >
+                      {isRu ? `Снизить долю до ${safePct.toFixed(2)}%` : `Reduce share to ${safePct.toFixed(2)}%`}
+                    </button>
+                  )}
+                  {isNovelOrGras && ingNode && onRemove && (
+                    <button
+                      onClick={() => onRemove(ingNode.id)}
+                      className={
+                        isMobile
+                          ? "mt-1.5 px-3 py-1.5 bg-rose-500/10 text-rose-450 hover:bg-rose-500/20 active:bg-rose-500/30 text-[10px] font-bold rounded-lg border border-rose-500/30 transition-colors cursor-pointer self-start"
+                          : "mt-1.5 self-start px-2 py-0.5 bg-rose-500/20 text-rose-350 hover:bg-rose-500/30 text-[9px] font-semibold rounded border border-rose-500/30 transition-colors cursor-pointer"
+                      }
+                    >
+                      {isRu ? 'Удалить ингредиент' : 'Remove ingredient'}
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-2 bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 flex items-center justify-center gap-1.5 rounded text-[10px] font-semibold text-center">
+              <span>✅</span>
+              <span>
+                {isRu 
+                  ? 'Формула соответствует требованиям FDA/EFSA' 
+                  : 'Formula complies with FDA/EFSA standards'}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Premium Recipe Analysis/Scoring Panel */}
       {calculatedResults.scoring && (

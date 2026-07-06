@@ -70,7 +70,7 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
     const rule = getCompatibilityRule(ing1.chemicalClassId, ing2.chemicalClassId);
 
     if (rule && rule.type === 'incompatible') {
-      const desc = rule.message.replace(/{nameA}/g, ing1.name).replace(/{nameB}/g, ing2.name);
+      const desc = rule.message.replace(/{nameA}/g, t(ing1.name)).replace(/{nameB}/g, t(ing2.name));
       return {
         status: "incompatible",
         title: rule.title,
@@ -144,10 +144,10 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                       <th
                         key={ing.id}
                         className="p-2 text-[9px] font-bold text-zinc-400 text-center border border-zinc-900 w-16 select-none"
-                        title={ing.name}
+                        title={t(ing.name)}
                       >
                         <div className="writing-mode-vertical rotate-180 inline-block h-20 leading-none py-1 truncate text-ellipsis max-w-[80px]" style={{ writingMode: 'vertical-lr' }}>
-                          {getShortName(ing.name)}
+                          {t(getShortName(ing.name))}
                         </div>
                       </th>
                     ))}
@@ -157,8 +157,8 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                   {ingredients.map((ingRow) => (
                     <tr key={ingRow.id} className="hover:bg-zinc-900/10">
                       {/* Row Header */}
-                      <td className="p-2 text-[10px] font-bold text-zinc-300 border border-zinc-900 sticky left-0 bg-zinc-950 z-10 truncate max-w-[130px]" title={ingRow.name}>
-                        {getShortName(ingRow.name)}
+                      <td className="p-2 text-[10px] font-bold text-zinc-300 border border-zinc-900 sticky left-0 bg-zinc-950 z-10 truncate max-w-[130px]" title={t(ingRow.name)}>
+                        {t(getShortName(ingRow.name))}
                       </td>
                       
                       {/* Cells */}
@@ -205,13 +205,13 @@ export const CompatibilityMatrix: React.FC<CompatibilityMatrixProps> = ({ isOpen
                 <div className="flex flex-col gap-2 p-3 bg-zinc-900/40 border border-zinc-850 rounded-xl">
                   <div>
                     <span className="text-[9px] text-zinc-500 block uppercase font-mono font-bold leading-none mb-1">{t('matrix_component_a')}</span>
-                    <span className="text-xs font-semibold text-zinc-200 block truncate">{selectedCell.ing1.name}</span>
+                    <span className="text-xs font-semibold text-zinc-200 block truncate">{t(selectedCell.ing1.name)}</span>
                     <span className="text-[9px] text-zinc-400 font-mono block">{t('matrix_class')} {getChemicalClassName(selectedCell.ing1.chemicalClassId)}</span>
                   </div>
                   <div className="h-px bg-zinc-850/60 my-1" />
                   <div>
                     <span className="text-[9px] text-zinc-500 block uppercase font-mono font-bold leading-none mb-1">{t('matrix_component_b')}</span>
-                    <span className="text-xs font-semibold text-zinc-200 block truncate">{selectedCell.ing2.name}</span>
+                    <span className="text-xs font-semibold text-zinc-200 block truncate">{t(selectedCell.ing2.name)}</span>
                     <span className="text-[9px] text-zinc-400 font-mono block">{t('matrix_class')} {getChemicalClassName(selectedCell.ing2.chemicalClassId)}</span>
                   </div>
                 </div>

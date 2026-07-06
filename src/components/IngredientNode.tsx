@@ -45,7 +45,7 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
       <div className="flex justify-between items-start">
         <div>
           <h3 className="font-semibold text-zinc-100 pr-6 text-sm md:text-base leading-tight">
-            {ingredient.name}
+            {t(ingredient.name)}
           </h3>
           <div className={`flex gap-2 items-center mt-1 flex-wrap`}>
             <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${roleBadgeColor}`}>
@@ -142,30 +142,30 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
         {ingredient.dilutionScale ? (
           <div className="flex flex-col gap-1.5 text-zinc-400">
             <div className="flex justify-between items-center">
-              <span className="text-zinc-550">{t('card_dilution_scale') || 'Разведение'}:</span>
+              <span className="text-zinc-550">{t('card_dilution_scale')}:</span>
               <span className="font-semibold text-zinc-200 font-mono bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">{ingredient.dilutionScale}</span>
             </div>
             {ingredient.source && (
               <div className="flex justify-between">
-                <span className="text-zinc-550">{t('card_source') || 'Источник'}:</span>
+                <span className="text-zinc-550">{t('card_source')}:</span>
                 <span className="text-zinc-300 text-right truncate max-w-[180px]">{ingredient.source}</span>
               </div>
             )}
             {ingredient.dosageForm && (
               <div className="flex justify-between">
-                <span className="text-zinc-550">{t('card_dosage_form') || 'Форма выпуска'}:</span>
+                <span className="text-zinc-550">{t('card_dosage_form')}:</span>
                 <span className="text-zinc-300 text-right">{ingredient.dosageForm}</span>
               </div>
             )}
             {ingredient.applicationArea && (
               <div className="flex justify-between">
-                <span className="text-zinc-550">{t('card_application_area') || 'Область применения'}:</span>
+                <span className="text-zinc-550">{t('card_application_area')}:</span>
                 <span className="text-zinc-300 text-right truncate max-w-[160px]">{ingredient.applicationArea}</span>
               </div>
             )}
             {ingredient.processingTech && (
               <div className={`flex flex-col gap-0.5 mt-1 bg-zinc-900/40 p-1.5 border border-zinc-850 ${isMobile ? "rounded-xl p-2" : "rounded"}`}>
-                <span className="text-zinc-550 text-[9px] uppercase font-bold tracking-wider">{t('card_processing_tech') || 'Технология'}:</span>
+                <span className="text-zinc-550 text-[9px] uppercase font-bold tracking-wider">{t('card_processing_tech')}:</span>
                 <span className="text-zinc-350 leading-relaxed text-[10px]">{ingredient.processingTech}</span>
               </div>
             )}
@@ -202,7 +202,7 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
                 <div className="flex flex-wrap gap-1">
                   {ingredient.effects.map((eff, idx) => (
                     <span key={idx} className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[10px]">
-                      {eff}
+                      {t(eff)}
                     </span>
                   ))}
                 </div>
@@ -216,7 +216,7 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
                   {ingredient.contraindications.map((contra, idx) => (
                     <div key={idx} className="text-rose-450 flex items-center gap-1">
                       <span className="w-1 h-1 rounded-full bg-rose-500" />
-                      <span>{contra}</span>
+                      <span>{t(contra)}</span>
                     </div>
                   ))}
                 </div>
@@ -236,9 +236,9 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
                       <div key={idx} className="flex items-center justify-between text-zinc-300">
                         <span className="flex items-center gap-1.5 font-sans">
                           <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                          {se.name}
+                          {t(se.name)}
                         </span>
-                        <span className="text-zinc-550 font-sans">({se.frequency})</span>
+                        <span className="text-zinc-550 font-sans">({t(se.frequency)})</span>
                       </div>
                     );
                   })}

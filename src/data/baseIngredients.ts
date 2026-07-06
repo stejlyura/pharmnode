@@ -521,5 +521,85 @@ export const baseIngredientsMatrix: Ingredient[] = [
     cost: 14.00,
     stability: 90,
     manufacturability: 85
+  },
+
+  // ─── Задача 1.4: Предустановленные вспомогательные вещества (excipients) ───
+  // NOTE: Физические данные взяты из технических листов производителей и USP/NF.
+  //       Перепроверить плотности по справочнику USP перед production-релизом.
+  {
+    id: 27,
+    name: "Avicel PH-102 (MCC Filler)",
+    casNumber: "9004-34-6",
+    role: "filler",
+    chemicalClassId: 16, // Polysaccharides
+    looseBulkDensity: 0.28,    // g/mL — USP/NF, среднее значение для PH-102
+    tappedBulkDensity: 0.43,   // g/mL — USP/NF, среднее значение для PH-102
+    trueDensity: 1.56,
+    averageParticleSizeUm: 100,
+    isAllergen: false,
+    costPerKgUsd: 8.50,
+    maxSafePercentage: 100.00,
+    benefit: 8,
+    risk: 3,
+    cost: 8.50,
+    stability: 95,
+    manufacturability: 95
+  },
+  {
+    id: 28,
+    name: "Magnesium Stearate (Lubricant)",
+    casNumber: "557-04-0",
+    role: "lubricant",
+    chemicalClassId: 9, // Alkaline salts of fatty acids
+    looseBulkDensity: 0.15,    // g/mL — USP/NF типичное значение
+    tappedBulkDensity: 0.25,   // g/mL — USP/NF типичное значение
+    trueDensity: 1.03,
+    averageParticleSizeUm: 10,
+    isAllergen: false,
+    costPerKgUsd: 12.00,
+    maxSafePercentage: 2.00,   // USP: не более 2 % для таблетирования
+    benefit: 5,
+    risk: 8,
+    cost: 12.00,
+    stability: 90,
+    manufacturability: 88
+  },
+  {
+    id: 29,
+    name: "Croscarmellose Sodium (Ac-Di-Sol)",
+    casNumber: "74811-65-7",
+    role: "disintegrant",
+    chemicalClassId: 16, // Polysaccharides
+    looseBulkDensity: 0.50,    // g/mL — FMC BioPolymer datasheet
+    tappedBulkDensity: 0.80,   // g/mL — FMC BioPolymer datasheet
+    trueDensity: 1.60,
+    averageParticleSizeUm: 60,
+    isAllergen: false,
+    costPerKgUsd: 28.00,
+    maxSafePercentage: 8.00,   // USP/NF: 2–8 % для таблеток прямого прессования
+    benefit: 10,
+    risk: 5,
+    cost: 28.00,
+    stability: 90,
+    manufacturability: 90
+  },
+  {
+    id: 30,
+    name: "Colloidal Silicon Dioxide (Aerosil 200 Pharma)",
+    casNumber: "7631-86-9",
+    role: "glidant",
+    chemicalClassId: 28, // Silicates/Silicon dioxide
+    looseBulkDensity: 0.04,    // g/mL — Evonik AEROSIL® 200 Pharma datasheet
+    tappedBulkDensity: 0.07,   // g/mL — Evonik AEROSIL® 200 Pharma datasheet
+    trueDensity: 2.20,
+    averageParticleSizeUm: 0.012, // primary particle size ~12 nm
+    isAllergen: false,
+    costPerKgUsd: 20.00,
+    maxSafePercentage: 1.00,   // USP/NF: обычно 0.1–1 % для улучшения сыпучести
+    benefit: 5,
+    risk: 5,
+    cost: 20.00,
+    stability: 98,
+    manufacturability: 92
   }
 ];

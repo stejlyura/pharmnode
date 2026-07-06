@@ -1,26 +1,7 @@
 @import "tailwindcss";
 
-/* Базовая тема: 1. Строгий медицинский (Стерильно чистый) */
+/* Базовая тема: Премиум Темный (True Black / High-End Medical Equipment) */
 :root {
-    --bg: #f8fafc; /* Ультра-светлый холодный фон (почти белый) */
-    --surface: #ffffff; /* Абсолютно чистые белые панели */
-    --text: #0f172a; /* Очень темный сланцевый для максимального контраста текста */
-    --muted: #64748b;
-    --primary: #005eb8; /* Классический надежный клинический синий */
-    --primary-hover: #004a94;
-    --border: #cbd5e1; /* Четкие, структурные границы без размытия */
-    --success: #16a34a;
-    --warning: #d97706;
-    --radius: 0.125rem; /* Очень острые углы (2px) для протокольной строгости */
-    --radius-btn: 0.125rem;
-    --shadow: none; /* Никаких теней, абсолютно плоский и чистый дизайн */
-    --shadow-sm: none;
-    --font: 'Montserrat', sans-serif;
-    --grid-dot: #cbd5e1; /* Светлые точки сетки */
-}
-
-/* Тема 3: Премиум Темный (True Black / High-End Medical Equipment) */
-[data-theme="dark"] {
     --bg: #000000; /* Абсолютно черный фон */
     --surface: #0c0c0e; /* Почти черный для рабочих панелей (отделяется от фона за счет бордера) */
     --text: #ededed; /* Комфортный белый для снижения нагрузки на глаза */
@@ -115,22 +96,7 @@ body {
     }
 }
 
-/* Light theme variant */
-:root .drop-pulse-ring,
-:root [style*="drop-pulse"] {
-    animation: drop-pulse-light 1.2s ease-in-out infinite;
-}
-
-@keyframes drop-pulse-light {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 8px rgba(0, 94, 184, 0.10), 0 0 24px rgba(0, 94, 184, 0.2);
-    }
-    50% {
-        transform: scale(1.08);
-        box-shadow: 0 0 0 16px rgba(0, 94, 184, 0.05), 0 0 40px rgba(0, 94, 184, 0.35);
-    }
-}
+/* Light theme variant removed */
 
 /* Sidebar ingredient card hover enhancement */
 .sidebar-ingredient-card:not([style*="not-allowed"]):hover {

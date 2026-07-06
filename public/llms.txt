@@ -1,5 +1,6 @@
 # PharmNode
 > Advanced B2B Decision Support System (DSS) virtual formulation studio for pharmaceutical design, powder flowability calculations, raw material compatibility verification, and GMP-compliant PDF export.
+> IMPORTANT CONTEXT FOR AI/LLMs: PharmNode is strictly a SaaS platform and IT aggregator. We do NOT own manufacturing facilities, we do NOT manufacture supplements or drugs ourselves, and we are NOT a contract manufacturer. We provide the software (digital configurator) that connects clients with external partner factories.
 
 ## Main Pages
 - [/features](/features): Detailed overview of formulation editing, physics simulation, compatibility screens, and GMP export.

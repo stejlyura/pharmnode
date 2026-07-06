@@ -55,6 +55,31 @@ const ROLE_VISUAL: Record<IngredientRole, {
     accentBorder: 'border-cyan-500/20',
     dotColor: '#22d3ee',
   },
+  // ─── New excipient roles (Задача 1.1) ───────────────────────────────────
+  disintegrant: {
+    accent: 'text-violet-400',
+    accentBg: 'bg-violet-500/10',
+    accentBorder: 'border-violet-500/20',
+    dotColor: '#a78bfa',
+  },
+  coating: {
+    accent: 'text-pink-400',
+    accentBg: 'bg-pink-500/10',
+    accentBorder: 'border-pink-500/20',
+    dotColor: '#f472b6',
+  },
+  sweetener: {
+    accent: 'text-lime-400',
+    accentBg: 'bg-lime-500/10',
+    accentBorder: 'border-lime-500/20',
+    dotColor: '#a3e635',
+  },
+  'anti-caking': {
+    accent: 'text-orange-400',
+    accentBg: 'bg-orange-500/10',
+    accentBorder: 'border-orange-500/20',
+    dotColor: '#fb923c',
+  },
 };
 
 const CATEGORY_ORDER: IngredientRole[] = ['active', 'filler', 'dry-binder', 'lubricant', 'glidant'];
@@ -86,6 +111,11 @@ export const MobileIngredientSheet: React.FC<MobileIngredientSheetProps> = ({
     'dry-binder': { label: t('role_dry_binder'), shortLabel: t('role_dry_binder_short'), ...ROLE_VISUAL['dry-binder'] },
     lubricant: { label: t('role_lubricant'), shortLabel: t('role_lubricant_short'), ...ROLE_VISUAL.lubricant },
     glidant: { label: t('role_glidant'), shortLabel: t('role_glidant_short'), ...ROLE_VISUAL.glidant },
+    // ─── New excipient roles (Задача 1.1) ─────────────────────────────────
+    disintegrant: { label: t('role_disintegrant') ?? 'Disintegrant', shortLabel: t('role_disintegrant_short') ?? 'Disint.', ...ROLE_VISUAL.disintegrant },
+    coating: { label: t('role_coating') ?? 'Coating', shortLabel: t('role_coating_short') ?? 'Coat.', ...ROLE_VISUAL.coating },
+    sweetener: { label: t('role_sweetener') ?? 'Sweetener', shortLabel: t('role_sweetener_short') ?? 'Sweet.', ...ROLE_VISUAL.sweetener },
+    'anti-caking': { label: t('role_anti_caking') ?? 'Anti-Caking', shortLabel: t('role_anti_caking_short') ?? 'Anti-C.', ...ROLE_VISUAL['anti-caking'] },
   }), [t]);
 
   const toggleCategory = (role: string) => {
@@ -98,12 +128,12 @@ export const MobileIngredientSheet: React.FC<MobileIngredientSheetProps> = ({
     if (!searchQuery) return allIngredients;
     const q = searchQuery.toLowerCase();
     return allIngredients.filter(ing => 
-      ing.name.toLowerCase().includes(q) ||
+      t(ing.name).toLowerCase().includes(q) ||
       ing.role.toLowerCase().includes(q) ||
       ROLE_META[ing.role]?.label.toLowerCase().includes(q) ||
       (ing.casNumber && ing.casNumber.includes(q))
     );
-  }, [allIngredients, searchQuery, ROLE_META]);
+  }, [allIngredients, searchQuery, ROLE_META, t]);
 
   // Expand categories with results on search query change
   useEffect(() => {
@@ -285,7 +315,7 @@ export const MobileIngredientSheet: React.FC<MobileIngredientSheetProps> = ({
                               />
                               <div className="min-w-0">
                                 <p className={`text-xs font-bold truncate ${isOnCanvas ? 'text-zinc-500' : 'text-zinc-150'}`}>
-                                  {ing.name}
+                                  {t(ing.name)}
                                 </p>
                                 <p className="text-[10px] text-zinc-550 font-mono mt-0.5 leading-none">
                                   {ing.casNumber ? `CAS ${ing.casNumber}` : `ρ ${ing.looseBulkDensity.toFixed(2)} → ${ing.tappedBulkDensity.toFixed(2)} g/mL`}

@@ -149,6 +149,11 @@ async function main() {
     24: { ph: 6.0,  hygroscopicity: 30, lightSensitive: false, heatDegradation: null },  // Sodium Starch Glycolate
     25: { ph: null, hygroscopicity: 4,  lightSensitive: false, heatDegradation: null },  // Sodium Stearyl Fumarate
     26: { ph: null, hygroscopicity: 20, lightSensitive: false, heatDegradation: 55  },   // Macrogol 6000 (PEG 6000)
+    // ─── Задача 1.4: Новые excipients ────────────────────────────────────────
+    27: { ph: 6.0,  hygroscopicity: 5,  lightSensitive: false, heatDegradation: null },  // Avicel PH-102 (MCC Filler)
+    28: { ph: 8.5,  hygroscopicity: 5,  lightSensitive: false, heatDegradation: null },  // Magnesium Stearate (Lubricant)
+    29: { ph: 6.5,  hygroscopicity: 30, lightSensitive: false, heatDegradation: null },  // Croscarmellose Sodium (Ac-Di-Sol)
+    30: { ph: null, hygroscopicity: 3,  lightSensitive: false, heatDegradation: null },  // Colloidal Silicon Dioxide (Aerosil 200 Pharma)
   };
   for (const [idStr, data] of Object.entries(stabilityData)) {
     await prisma.ingredientStability.create({
@@ -192,6 +197,11 @@ async function main() {
     24: { pharmacopoeiaGrade: 'USP-NF',  allergenStatus: null },       // Sodium Starch Glycolate
     25: { pharmacopoeiaGrade: 'USP-NF',  allergenStatus: null },       // Sodium Stearyl Fumarate
     26: { pharmacopoeiaGrade: 'USP-NF',  allergenStatus: null },       // Macrogol 6000 (PEG 6000)
+    // ─── Задача 1.4: Новые excipients ────────────────────────────────────────
+    27: { pharmacopoeiaGrade: 'USP-NF',  allergenStatus: null },       // Avicel PH-102 (MCC Filler)
+    28: { pharmacopoeiaGrade: 'USP-NF',  allergenStatus: null },       // Magnesium Stearate (Lubricant)
+    29: { pharmacopoeiaGrade: 'USP-NF',  allergenStatus: null },       // Croscarmellose Sodium (Ac-Di-Sol)
+    30: { pharmacopoeiaGrade: 'EP',       allergenStatus: null },       // Colloidal Silicon Dioxide (Aerosil 200 Pharma)
   };
   for (const [idStr, data] of Object.entries(regulatoryData)) {
     await prisma.ingredientRegulatory.create({

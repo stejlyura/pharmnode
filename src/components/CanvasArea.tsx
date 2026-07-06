@@ -21,6 +21,7 @@ interface CanvasAreaProps {
   allIngredients: Ingredient[];
   remainingIngredients: Ingredient[];
   handleAddIngredientAt: (id: number | string, position?: { x: number; y: number }) => void;
+  handleAddTechNodeAt?: (type: 'granulator' | 'capsulator' | 'press', position?: { x: number; y: number }) => void;
   onOpenUpgradeModal: () => void;
   undo: () => void;
   redo: () => void;
@@ -28,6 +29,7 @@ interface CanvasAreaProps {
   canRedo: boolean;
   onOpenWizard: () => void;
   onOpenCompatibilityMatrix: () => void;
+  handleRemoveUnconnected?: () => void;
 }
 
 export const CanvasArea: React.FC<CanvasAreaProps> = ({
@@ -42,13 +44,15 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
   allIngredients,
   remainingIngredients,
   handleAddIngredientAt,
+  handleAddTechNodeAt,
   onOpenUpgradeModal,
   undo,
   redo,
   canUndo,
   canRedo,
   onOpenWizard,
-  onOpenCompatibilityMatrix
+  onOpenCompatibilityMatrix,
+  handleRemoveUnconnected
 }) => {
   const { t } = useTranslation();
   const [scale, setScale] = useState(1.0);
@@ -56,6 +60,7 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
   const [dragIngredientName, setDragIngredientName] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
 
   const workspaceRef = useRef<HTMLDivElement>(null);
   const dragInfo = useRef<{
@@ -65,8 +70,8 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
     startY: number;
     nodeStartX?: number;
     nodeStartY?: number;
-    scrollStartX?: number;
-    scrollStartY?: number;
+    panStartX?: number;
+    panStartY?: number;
   } | null>(null);
 
   // Handle wheel events for zooming (trackpad pinch-to-zoom uses Ctrl + wheel)
@@ -175,8 +180,8 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
       type: 'pan',
       startX: e.clientX,
       startY: e.clientY,
-      scrollStartX: workspaceRef.current?.scrollLeft || 0,
-      scrollStartY: workspaceRef.current?.scrollTop || 0
+      panStartX: pan.x,
+      panStartY: pan.y
     };
   };
 
@@ -188,11 +193,13 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
         const deltaY = (e.clientY - info.startY) / scale;
 
         updateNodePosition(info.nodeId, (info.nodeStartX || 0) + deltaX, (info.nodeStartY || 0) + deltaY, false);
-      } else if (info.type === 'pan' && workspaceRef.current) {
+      } else if (info.type === 'pan') {
         const deltaX = e.clientX - info.startX;
         const deltaY = e.clientY - info.startY;
-        workspaceRef.current.scrollLeft = (info.scrollStartX || 0) - deltaX;
-        workspaceRef.current.scrollTop = (info.scrollStartY || 0) - deltaY;
+        setPan({
+          x: (info.panStartX || 0) + deltaX,
+          y: (info.panStartY || 0) + deltaY
+        });
       }
     }
   };
@@ -235,19 +242,22 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
     const nodeType = e.dataTransfer.getData('application/pharmnode-node');
     const ingredientIdStr = e.dataTransfer.getData('text/plain');
 
-    if (nodeType === 'ingredient' && ingredientIdStr && workspaceRef.current) {
-      let ingredientId: number | string = ingredientIdStr;
-      if (!isNaN(Number(ingredientIdStr))) {
-        ingredientId = parseInt(ingredientIdStr, 10);
-      }
-
+    if (workspaceRef.current) {
       const rect = workspaceRef.current.getBoundingClientRect();
-      const x = (e.clientX - rect.left + workspaceRef.current.scrollLeft) / scale - 80;
-      const y = (e.clientY - rect.top + workspaceRef.current.scrollTop) / scale - 30;
+      const x = (e.clientX - rect.left - pan.x) / scale - 80;
+      const y = (e.clientY - rect.top - pan.y) / scale - 30;
 
-      handleAddIngredientAt(ingredientId, { x, y });
+      if (nodeType === 'ingredient' && ingredientIdStr) {
+        let ingredientId: number | string = ingredientIdStr;
+        if (!isNaN(Number(ingredientIdStr))) {
+          ingredientId = parseInt(ingredientIdStr, 10);
+        }
+        handleAddIngredientAt(ingredientId, { x, y });
+      } else if ((nodeType === 'granulator' || nodeType === 'capsulator' || nodeType === 'press') && handleAddTechNodeAt) {
+        handleAddTechNodeAt(nodeType as 'granulator' | 'capsulator' | 'press', { x, y });
+      }
     }
-  }, [handleAddIngredientAt, scale]);
+  }, [handleAddIngredientAt, handleAddTechNodeAt, scale, pan, scale]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -261,8 +271,8 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
     if (workspaceRef.current) {
       const rect = workspaceRef.current.getBoundingClientRect();
       // Position new node roughly where right click happened
-      const x = (contextMenu ? contextMenu.x : rect.left + 200) - rect.left + workspaceRef.current.scrollLeft;
-      const y = (contextMenu ? contextMenu.y : rect.top + 200) - rect.top + workspaceRef.current.scrollTop;
+      const x = (contextMenu ? contextMenu.x : rect.left + 200) - rect.left - pan.x;
+      const y = (contextMenu ? contextMenu.y : rect.top + 200) - rect.top - pan.y;
       handleAddIngredientAt(id, { x: x / scale - 80, y: y / scale - 30 });
     } else {
       handleAddIngredientAt(id);
@@ -325,23 +335,27 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
       {/* Zoomable Canvas Area */}
       <div
         style={{
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-          width: '4000px',
-          height: '3000px',
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+          transformOrigin: '0 0',
         }}
-        className="relative"
+        className="absolute inset-0"
       >
         {/* Infinite Grid Background */}
         <div
-          className="absolute inset-0 bg-[radial-gradient(var(--grid-dot)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none opacity-40"
-        />
-        <div
-          className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,rgba(99,102,241,0.08),transparent)] pointer-events-none"
+          className="absolute inset-0 pointer-events-none opacity-40"
+          style={{
+            backgroundImage: 'radial-gradient(var(--grid-dot) 1px, transparent 1px)',
+            backgroundSize: `${20}px ${20}px`,
+            backgroundPosition: `${pan.x}px ${pan.y}px`,
+            transform: `scale(${1 / scale})`, // Undo the scale so grid stays consistent in screen space
+            transformOrigin: '0 0',
+            width: `${100 * scale}vw`, // Expand to cover visible area when zoomed out
+            height: `${100 * scale}vh`
+          }}
         />
 
         {/* SVG Drawing Layer for Connection Lines */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ overflow: 'visible' }}>
           <defs>
             <linearGradient id="glow-grad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.4" />
@@ -370,7 +384,7 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
         </svg>
 
         {/* Nodes Layer */}
-        <div className="relative w-full h-full min-h-[900px] z-10">
+        <div className="relative w-full h-full z-10">
           {nodes.map(node => (
             <NodeCard
               key={node.id}
@@ -390,6 +404,8 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
                 }));
               }}
               allIngredients={allIngredients}
+              addIngredientNode={handleAddIngredientAt}
+              onAddTechNode={handleAddTechNodeAt}
             />
           ))}
         </div>
@@ -417,6 +433,7 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
         canRedo={canRedo}
         onOpenWizard={onOpenWizard}
         onOpenMatrix={onOpenCompatibilityMatrix}
+        onRemoveUnconnected={handleRemoveUnconnected}
       />
     </main>
   );

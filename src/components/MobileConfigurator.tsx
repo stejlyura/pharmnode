@@ -144,6 +144,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
                   onUpgradeClick={handleUpgradeClick}
                   allIngredients={allIngredients}
                   isMobile={true}
+                  addIngredientNode={onAddIngredient}
                 />
               ))}
             </div>
@@ -170,6 +171,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onUpgradeClick={handleUpgradeClick}
             allIngredients={allIngredients}
             isMobile={true}
+            addIngredientNode={onAddIngredient}
           />
         )}
 
@@ -193,6 +195,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onUpgradeClick={handleUpgradeClick}
             allIngredients={allIngredients}
             isMobile={true}
+            addIngredientNode={onAddIngredient}
           />
         )}
 
@@ -215,6 +218,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
               onUpgradeClick={handleUpgradeClick}
               allIngredients={allIngredients}
               isMobile={true}
+              addIngredientNode={onAddIngredient}
             />
           </>
         )}
@@ -239,6 +243,7 @@ export const MobileConfigurator: React.FC<MobileConfiguratorProps> = ({
             onUpgradeClick={handleUpgradeClick}
             allIngredients={allIngredients}
             isMobile={true}
+            addIngredientNode={onAddIngredient}
           />
         )}
       </main>

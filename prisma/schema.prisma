@@ -19,11 +19,7 @@ model User {
   variantId         String?
   renewsAt          DateTime?          @map("renews_at")
   billingPortalUrl  String?
-  twoFactorEnabled  Boolean            @default(false)
-  twoFactorSecret   String?
-  passwordHash      String?
   emailVerified     Boolean            @default(false)
-  emailVerificationToken String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   recipes           Recipe[]

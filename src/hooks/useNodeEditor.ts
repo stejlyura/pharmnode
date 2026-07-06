@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Ingredient, EditorNode, EditorConnection, HistoryState, TariffType, CompatibilityWarning } from '../types/pharm';
+import { Ingredient, EditorNode, EditorConnection, HistoryState, TariffType, CompatibilityWarning, DosageFormFitResult } from '../types/pharm';
 export type { EditorNode, EditorConnection, HistoryState, TariffType, CompatibilityWarning };
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/I18nContext';
@@ -10,9 +10,11 @@ import {
   calculatePorosity,
   calculateBatch,
   checkCompatibilityAndLimits,
+  checkRegulatoryCompliance,
   BlendProperties,
   TabletingResult,
-  BatchResult
+  BatchResult,
+  calculateDosageFormFit,
 } from '../lib/calculator';
 import { analyzeRecipe, ScoringResult } from '../lib/scoring';
 
@@ -25,6 +27,8 @@ export interface CalculatedResults {
   activePercentage: number;
   allergens: string[];
   scoring: ScoringResult;
+  dosageFormFit: DosageFormFitResult;
+  regulatoryWarnings: CompatibilityWarning[];
 }
 
 const initialNodes: EditorNode[] = [
@@ -105,7 +109,19 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     }
   }, [user, isMockUser]);
 
-  // Removed loadLatestRecipe effect since Canvas will load the specific recipe if requested
+  // Sync internal recipeId state and handle resetting state when starting a new recipe
+  useEffect(() => {
+    setRecipeId(initialRecipeId || null);
+
+    if (!initialRecipeId) {
+      setState({
+        nodes: initialNodes,
+        connections: initialConnections
+      });
+      setPast([]);
+      setFuture([]);
+    }
+  }, [initialRecipeId]);
 
   // Autosave canvas state debounced by 2 seconds
   useEffect(() => {
@@ -262,11 +278,136 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     return { success: true, nodeId: newId };
   }, [state, tariff, updateState]);
 
+  // Add a tech node (granulator or capsulator)
+  // Add a tech node (granulator or capsulator)
+  const addTechNode = useCallback((type: 'granulator' | 'capsulator' | 'press', position?: { x: number; y: number }) => {
+    const newId = `node-tech-${type}-${Date.now()}`;
+    
+    if (type === 'granulator') {
+      const newNode: EditorNode = {
+        id: newId,
+        type,
+        position: position || { x: 600, y: 250 },
+        data: { granulationType: 'wet', intragranularPercentage: 90, moistureContentLod: 3, binderSolutionAddedPercentage: 10, expectedLossPercentage: 2 }
+      };
+
+      // Auto-connect: insert between node-blending and press/capsulator
+      const targetNode = state.nodes.find(n => n.type === 'press' || n.type === 'capsulator');
+      if (targetNode) {
+        const existingConn = state.connections.find(
+          c => c.source === 'node-blending' && c.target === targetNode.id
+        );
+
+        if (existingConn) {
+          const filteredConns = state.connections.filter(c => c.id !== existingConn.id);
+          const newConns = [
+            ...filteredConns,
+            { id: `conn-g1-${Date.now()}`, source: 'node-blending', target: newId },
+            { id: `conn-g2-${Date.now()}`, source: newId, target: targetNode.id }
+          ];
+          updateState([...state.nodes, newNode], newConns);
+          return { success: true, nodeId: newId };
+        }
+      }
+
+      updateState([...state.nodes, newNode], state.connections);
+      return { success: true, nodeId: newId };
+    } else if (type === 'press') {
+      const capsulatorNode = state.nodes.find(n => n.type === 'capsulator');
+      const targetPosition = capsulatorNode ? capsulatorNode.position : (position || { x: 750, y: 250 });
+      const pressId = 'node-press';
+
+      const newNode: EditorNode = {
+        id: pressId,
+        type: 'press',
+        position: targetPosition,
+        data: { diameterCm: 0.3, depthCm: 0.5 }
+      };
+
+      if (capsulatorNode) {
+        // Auto-connect: replace capsulator node with press
+        const filteredNodes = state.nodes.filter(n => n.id !== capsulatorNode.id);
+        const updatedConns = state.connections.map(c => {
+          let source = c.source;
+          let target = c.target;
+          if (c.source === capsulatorNode.id) source = pressId;
+          if (c.target === capsulatorNode.id) target = pressId;
+          return { ...c, source, target };
+        });
+
+        updateState([...filteredNodes, newNode], updatedConns);
+        return { success: true, nodeId: pressId };
+      }
+
+      const existingPressNode = state.nodes.find(n => n.id === pressId);
+      if (existingPressNode) {
+        return { success: true, nodeId: pressId };
+      }
+
+      updateState([...state.nodes, newNode], state.connections);
+      return { success: true, nodeId: pressId };
+    } else {
+      // type === 'capsulator'
+      const pressNode = state.nodes.find(n => n.type === 'press');
+      const targetPosition = pressNode ? pressNode.position : (position || { x: 750, y: 250 });
+
+      const newNode: EditorNode = {
+        id: newId,
+        type,
+        position: targetPosition,
+        data: { capsuleSize: '#0', capsuleMaterial: 'gelatin' }
+      };
+
+      if (pressNode) {
+        // Auto-connect: replace press node with capsulator
+        const filteredNodes = state.nodes.filter(n => n.id !== pressNode.id);
+        const updatedConns = state.connections.map(c => {
+          let source = c.source;
+          let target = c.target;
+          if (c.source === pressNode.id) source = newId;
+          if (c.target === pressNode.id) target = newId;
+          return { ...c, source, target };
+        });
+
+        updateState([...filteredNodes, newNode], updatedConns);
+        return { success: true, nodeId: newId };
+      }
+
+      updateState([...state.nodes, newNode], state.connections);
+      return { success: true, nodeId: newId };
+    }
+  }, [state.nodes, state.connections, updateState]);
+
+
   // Remove a node (prevent removing core singleton nodes)
   const removeNode = useCallback((nodeId: string) => {
     const isCoreNode = ['node-blending', 'node-press', 'node-output'].includes(nodeId);
     if (isCoreNode) {
       return { success: false, reason: 'core-node-protected' };
+    }
+
+    const nodeToRemove = state.nodes.find(n => n.id === nodeId);
+    if (nodeToRemove && nodeToRemove.type === 'capsulator') {
+      // Auto-connect: replace capsulator back with default press node
+      const pressId = 'node-press';
+      const pressNode: EditorNode = {
+        id: pressId,
+        type: 'press',
+        position: nodeToRemove.position,
+        data: { diameterCm: 0.3, depthCm: 0.5 }
+      };
+
+      const filteredNodes = state.nodes.filter(node => node.id !== nodeId);
+      const updatedConns = state.connections.map(c => {
+        let source = c.source;
+        let target = c.target;
+        if (c.source === nodeId) source = pressId;
+        if (c.target === nodeId) target = pressId;
+        return { ...c, source, target };
+      });
+
+      updateState([...filteredNodes, pressNode], updatedConns);
+      return { success: true };
     }
 
     const filteredNodes = state.nodes.filter(node => node.id !== nodeId);
@@ -276,6 +417,33 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
 
     updateState(filteredNodes, filteredConnections);
     return { success: true };
+  }, [state, updateState]);
+
+  // Remove all nodes that are not connected to any other node (excluding core singletons)
+  const removeUnconnectedNodes = useCallback(() => {
+    const coreNodeIds = ['node-blending', 'node-press', 'node-output'];
+    
+    // Find nodes that are in at least one connection
+    const connectedNodeIds = new Set<string>();
+    state.connections.forEach(conn => {
+      connectedNodeIds.add(conn.source);
+      connectedNodeIds.add(conn.target);
+    });
+
+    const unconnectedNodes = state.nodes.filter(node => {
+      const isCore = coreNodeIds.includes(node.id) || node.type === 'capsulator' || node.type === 'press' || node.type === 'output' || node.type === 'blending';
+      return !isCore && !connectedNodeIds.has(node.id);
+    });
+
+    if (unconnectedNodes.length === 0) return;
+
+    const unconnectedNodeIds = unconnectedNodes.map(n => n.id);
+    const newNodes = state.nodes.filter(node => !unconnectedNodeIds.includes(node.id));
+    const newConnections = state.connections.filter(
+      conn => !unconnectedNodeIds.includes(conn.source) && !unconnectedNodeIds.includes(conn.target)
+    );
+
+    updateState(newNodes, newConnections);
   }, [state, updateState]);
 
   // Update specific node data (e.g. percentages, punch size)
@@ -330,6 +498,17 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     updateState(state.nodes, filteredConnections);
   }, [state, updateState]);
 
+  // Nodes data representation to prevent recalculating when only coordinates change (panning/dragging)
+  const nodesDataDependency = useMemo(() => {
+    return JSON.stringify(
+      state.nodes.map(n => ({
+        id: n.id,
+        type: n.type,
+        data: n.data
+      }))
+    );
+  }, [state.nodes]);
+
   // Reactive calculations
   const calculatedResults = useMemo<CalculatedResults>(() => {
     // 1. Gather all ingredient node IDs connected to node-blending
@@ -362,7 +541,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
       .reduce((sum, item) => sum + item.percentage, 0);
 
     // 3. Compute warnings and limits
-    const warnings = checkCompatibilityAndLimits(blendIngredients, t);
+    const warnings = checkCompatibilityAndLimits(blendIngredients, t, state.nodes, state.connections);
 
     // 4. Read equipment/punch size from Press Node
     const pressNode = state.nodes.find(node => node.type === 'press');
@@ -395,6 +574,15 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
 
     const scoring = analyzeRecipe(blendIngredients, tableting.recommendedWeightMg, warnings);
 
+    const dosageFormFit = calculateDosageFormFit(tableting.recommendedWeightMg, blend.looseDensity, t);
+
+    const regulatoryWarnings = checkRegulatoryCompliance(
+      blendIngredients,
+      tabletingWithPorosity.recommendedWeightMg,
+      Number(outputNode?.data.servingsPerDay ?? 1),
+      (outputNode?.data.market as 'usa' | 'eu' | 'both') ?? 'both'
+    );
+
     return {
       blend,
       tableting: tabletingWithPorosity,
@@ -403,9 +591,11 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
       totalPercentage,
       activePercentage,
       allergens,
-      scoring
+      scoring,
+      dosageFormFit,
+      regulatoryWarnings,
     };
-  }, [state.nodes, state.connections, allIngredients, t]);
+  }, [nodesDataDependency, state.connections, allIngredients, t]);
 
   const setCanvasState = useCallback((nodes: EditorNode[], connections: EditorConnection[]) => {
     setState({ nodes, connections });
@@ -468,6 +658,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     setTariff,
     calculatedResults,
     addIngredientNode,
+    addTechNode,
     removeNode,
     updateNodeData,
     updateNodePosition,
@@ -478,6 +669,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     canUndo: past.length > 0,
     canRedo: future.length > 0,
     setCanvasState,
-    recipeId
+    recipeId,
+    removeUnconnectedNodes
   };
 }

@@ -3,7 +3,7 @@
 import React from 'react';
 import { EditorNode, CalculatedResults } from '../hooks/useNodeEditor';
 import { Ingredient } from '../types/pharm';
-import { Cpu, DollarSign, FileText, Layers, Minimize2, Settings, Sparkles } from 'lucide-react';
+import { Cpu, DollarSign, FileText, Layers, Minimize2, Settings, Sparkles, RefreshCw } from 'lucide-react';
 import { useTranslation } from '../context/I18nContext';
 
 import { IngredientNode } from './IngredientNode';
@@ -11,6 +11,8 @@ import { BlendingNode } from './BlendingNode';
 import { PressNode } from './PressNode';
 import { CostOptimizerNode } from './CostOptimizerNode';
 import { OutputNode } from './OutputNode';
+import { GranulatorNode } from './GranulatorNode';
+import { CapsulatorNode } from './CapsulatorNode';
 
 interface NodeCardProps {
   node: EditorNode;
@@ -26,6 +28,8 @@ interface NodeCardProps {
   /** All available ingredients (standard + custom), already merged by parent */
   allIngredients: Ingredient[];
   isMobile?: boolean;
+  addIngredientNode?: (ingredientId: number | string) => void;
+  onAddTechNode?: (type: 'granulator' | 'capsulator' | 'press') => void;
 }
 
 export const NodeCard = React.memo<NodeCardProps>(({
@@ -41,6 +45,8 @@ export const NodeCard = React.memo<NodeCardProps>(({
   onToggleExpand,
   allIngredients,
   isMobile = false,
+  addIngredientNode,
+  onAddTechNode,
 }) => {
   const { id, type, position, data } = node;
   const { t } = useTranslation();
@@ -57,8 +63,12 @@ export const NodeCard = React.memo<NodeCardProps>(({
       }
       case 'blending':
         return <Cpu className="w-7 h-7 text-indigo-400 animate-pulse" />;
+      case 'granulator':
+        return <RefreshCw className="w-7 h-7 text-indigo-400" />;
       case 'press':
         return <Settings className="w-7 h-7 text-amber-400 group-hover:rotate-45 transition-transform duration-500" />;
+      case 'capsulator':
+        return <Settings className="w-7 h-7 text-violet-400 animate-pulse" />;
       case 'cost-optimizer':
         return <DollarSign className="w-7 h-7 text-emerald-400" />;
       case 'output':
@@ -72,12 +82,16 @@ export const NodeCard = React.memo<NodeCardProps>(({
     switch (type) {
       case 'ingredient': {
         const ingredient = allIngredients.find(ing => String(ing.id) === String(data.ingredientId));
-        return ingredient ? ingredient.name : t('node_ingredient');
+        return ingredient ? t(ingredient.name) : t('node_ingredient');
       }
       case 'blending':
         return t('node_blender');
+      case 'granulator':
+        return t('node_granulator') || 'Granulator';
       case 'press':
         return t('node_tablet_press');
+      case 'capsulator':
+        return t('node_capsulator') || 'Capsulator';
       case 'cost-optimizer':
         return t('node_cost');
       case 'output':
@@ -106,7 +120,7 @@ export const NodeCard = React.memo<NodeCardProps>(({
         const percentage = data.percentage ?? 0;
         return (
           <>
-            <div className="text-zinc-200 font-bold text-[11px] truncate">{ingredient.name}</div>
+            <div className="text-zinc-200 font-bold text-[11px] truncate">{t(ingredient.name)}</div>
             <div className="text-[9px] text-zinc-500 uppercase tracking-wide">{getRoleLabel(ingredient.role)}</div>
             <div className="mt-1.5 border-t border-zinc-800/60 pt-1.5 flex justify-between text-[10px] font-mono">
               <span className="text-zinc-500 font-sans">{t('tooltip_share')}</span>
@@ -279,11 +293,33 @@ export const NodeCard = React.memo<NodeCardProps>(({
             onReplaceIngredient={onReplaceIngredient}
             allIngredients={allIngredients}
             isMobile={isMobile}
+            addIngredientNode={addIngredientNode}
+            onAddTechNode={onAddTechNode}
+          />
+        );
+      case 'granulator':
+        return (
+          <GranulatorNode
+            id={id}
+            data={data}
+            calculatedResults={calculatedResults}
+            onUpdateData={onUpdateData}
+            isMobile={isMobile}
           />
         );
       case 'press':
         return (
           <PressNode
+            id={id}
+            data={data}
+            calculatedResults={calculatedResults}
+            onUpdateData={onUpdateData}
+            isMobile={isMobile}
+          />
+        );
+      case 'capsulator':
+        return (
+          <CapsulatorNode
             id={id}
             data={data}
             calculatedResults={calculatedResults}
@@ -311,6 +347,8 @@ export const NodeCard = React.memo<NodeCardProps>(({
             onUpgradeClick={onUpgradeClick}
             allIngredients={allIngredients}
             isMobile={isMobile}
+            onAddTechNode={onAddTechNode}
+            onRemove={onRemove}
           />
         );
       default:
@@ -327,8 +365,12 @@ export const NodeCard = React.memo<NodeCardProps>(({
       }
       case 'blending':
         return { accent: 'bg-indigo-500', label: t('card_blender_label') };
+      case 'granulator':
+        return { accent: 'bg-indigo-500', label: t('node_granulator') || 'Granulator' };
       case 'press':
         return { accent: 'bg-amber-500', label: t('card_press_label') };
+      case 'capsulator':
+        return { accent: 'bg-violet-500', label: t('node_capsulator') || 'Capsulator' };
       case 'cost-optimizer':
         return { accent: 'bg-emerald-500', label: t('card_cost_label') };
       case 'output':
@@ -361,7 +403,7 @@ export const NodeCard = React.memo<NodeCardProps>(({
         onClick={() => onToggleExpand && onToggleExpand(true)}
         data-drag-handle="true"
         data-node-id={id}
-        className={`w-[72px] h-[72px] rounded-2xl bg-zinc-900/90 backdrop-blur-md border theme-element shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center cursor-pointer select-none group hover:scale-105 active:scale-95 z-10 hover:z-40 focus-within:z-40 ${borderClass}`}
+        className={`w-[72px] h-[72px] rounded-2xl bg-zinc-900/90 hover:bg-zinc-800/90 backdrop-blur-md border theme-element shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center cursor-pointer select-none group active:scale-95 z-10 hover:z-40 focus-within:z-40 ${borderClass}`}
       >
         {renderCompactIcon()}
 

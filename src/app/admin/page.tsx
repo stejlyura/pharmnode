@@ -18,7 +18,6 @@ import {
   Shield,
   FileText
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/context/AuthContext";
 
 
@@ -372,7 +371,6 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <ThemeToggle />
           
           <button
             onClick={() => fetchDatabaseData()}

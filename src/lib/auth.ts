@@ -37,8 +37,7 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
-        totpCode: { label: "2FA Code", type: "text" }
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         // Apply login rate limit: max 10 attempts per 15 minutes per IP
@@ -83,19 +82,6 @@ export const authOptions: NextAuthOptions = {
             });
           }
 
-          // Check if user has 2FA enabled
-          if (adminUser.twoFactorEnabled) {
-            if (!credentials.totpCode || !adminUser.twoFactorSecret) {
-              return null; // 2FA code is missing
-            }
-            const { verifyTOTP } = await import("./totp");
-            const { decrypt } = await import("./encryption");
-            const is2FaValid = verifyTOTP(credentials.totpCode, decrypt(adminUser.twoFactorSecret));
-            if (!is2FaValid) {
-              return null; // Invalid 2FA token
-            }
-          }
-
           return {
             id: adminUser.id,
             name: adminUser.name,
@@ -106,52 +92,7 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
-        // Regular user credentials login check
-        const email = credentials?.username;
-        const password = credentials?.password;
-        if (!email || !password) return null;
-
-        const user = await prisma.user.findUnique({
-          where: { email: String(email).toLowerCase().trim() },
-        });
-
-        if (!user || !user.passwordHash) return null;
-
-        const { verifyPassword, needsUpgrade, hashPassword } = await import("./password");
-        const isValid = verifyPassword(password, user.passwordHash);
-
-        if (!isValid) return null;
-
-        // Upgrade password hash if it is in legacy format (PBKDF2)
-        if (needsUpgrade(user.passwordHash)) {
-          const newHash = hashPassword(password);
-          prisma.user.update({
-            where: { id: user.id },
-            data: { passwordHash: newHash },
-          }).catch(err => console.error("Failed to upgrade user password hash during login:", err));
-        }
-
-        // Check if user has 2FA enabled
-        if (user.twoFactorEnabled) {
-          if (!credentials.totpCode || !user.twoFactorSecret) {
-            return null; // 2FA code is missing
-          }
-          const { verifyTOTP } = await import("./totp");
-          const { decrypt } = await import("./encryption");
-          const is2FaValid = verifyTOTP(credentials.totpCode, decrypt(user.twoFactorSecret));
-          if (!is2FaValid) {
-            return null; // Invalid 2FA token
-          }
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          tariff: user.tariff,
-          renewsAt: user.renewsAt ? user.renewsAt.toISOString() : null,
-          emailVerified: user.emailVerified,
-        };
+        return null;
       }
     }),
   ],

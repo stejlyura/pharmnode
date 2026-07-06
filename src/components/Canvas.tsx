@@ -64,6 +64,7 @@ export const Canvas: React.FC = () => {
     setTariff,
     calculatedResults,
     addIngredientNode,
+    addTechNode,
     removeNode,
     updateNodeData,
     updateNodePosition,
@@ -71,15 +72,11 @@ export const Canvas: React.FC = () => {
     redo,
     canUndo,
     canRedo,
-    setCanvasState
+    setCanvasState,
+    removeUnconnectedNodes
   } = useNodeEditor('hobby', allIngredients, initialRecipeId);
 
-  // Redirect to projects list if no recipeId is specified
-  React.useEffect(() => {
-    if (!initialRecipeId) {
-      router.push('/projects');
-    }
-  }, [initialRecipeId, router]);
+  // Removed redirect to /projects. Guests and users can start a new recipe without an ID.
 
   // Fetch initial recipe if recipeId is provided
   React.useEffect(() => {
@@ -309,6 +306,10 @@ export const Canvas: React.FC = () => {
     handleAddIngredientAt(id);
   }, [handleAddIngredientAt]);
 
+  const handleAddTechNodeAt = useCallback((type: 'granulator' | 'capsulator' | 'press', position?: { x: number; y: number }) => {
+    addTechNode(type, position);
+  }, [addTechNode]);
+
   const handleGenerateFromWizard = useCallback((generatedIngs: { id: number | string; name: string; role: string; percentage: number }[], dosageForm: string) => {
     const newNodes = generatedIngs.map((ing, i) => ({
       id: `node-ing-${i + 1}`,
@@ -481,6 +482,7 @@ export const Canvas: React.FC = () => {
           onToggle={handleToggleSidebar}
           activeNodeIngredientIds={activeNodeIngredientIds}
           onAddIngredient={handleAddIngredient}
+          onAddTechNode={addTechNode}
           customIngredients={customIngredients}
           standardIngredients={standardIngredients}
           onOpenAddModal={handleOpenAddModal}
@@ -498,6 +500,7 @@ export const Canvas: React.FC = () => {
           allIngredients={allIngredients}
           remainingIngredients={remainingIngredients}
           handleAddIngredientAt={handleAddIngredientAt}
+          handleAddTechNodeAt={handleAddTechNodeAt}
           onOpenUpgradeModal={handleOpenUpgradeModal}
           undo={undo}
           redo={redo}
@@ -505,6 +508,7 @@ export const Canvas: React.FC = () => {
           canRedo={canRedo}
           onOpenWizard={handleOpenWizard}
           onOpenCompatibilityMatrix={handleOpenCompatibilityMatrix}
+          handleRemoveUnconnected={removeUnconnectedNodes}
         />
       </div>
 

@@ -9,9 +9,12 @@ import {
   FillCamResult,
   PressPresetsResult,
   CompatibilityWarning,
-  ProcessType
+  ProcessType,
+  ExcipientRecommendation,
+  DosageFormFitResult,
 } from '../types/pharm';
 import { getIngredientsCompatibilityRule } from './chemicalRules';
+import { REGULATORY_LIMITS } from './regulatoryLimits';
 
 export interface FlowabilityResult {
   hausner: number;
@@ -229,7 +232,9 @@ export function calculateBatch(
  */
 export function checkCompatibilityAndLimits(
   ingredients: { ingredient: Ingredient; percentage: number }[],
-  t?: (key: string) => string
+  t?: (key: string) => string,
+  nodes?: { id: string; type: string }[],
+  connections?: { source: string; target: string }[]
 ): CompatibilityWarning[] {
   const warnings: CompatibilityWarning[] = [];
   const activeIngredients = ingredients.filter(item => item.percentage > 0);
@@ -298,6 +303,59 @@ export function checkCompatibilityAndLimits(
           relatedIngredientId: itemB.ingredient.id,
           message: `⚠️ ${ruleTitle}: ${msg}`,
           suggestion: `💡 ${translate('card_suggestion')} ${sugg}`
+        });
+      }
+    }
+  }
+
+  // 3. Process Graph Validation: Carr Index > 25 and no Granulator node between Blending and Press
+  if (nodes && connections) {
+    const blendProps = calculateBlendProperties(ingredients);
+    const carr = blendProps.flowability.carr;
+    if (carr > 25) {
+      const adj = new Map<string, string[]>();
+      for (const conn of connections) {
+        if (!adj.has(conn.source)) adj.set(conn.source, []);
+        adj.get(conn.source)!.push(conn.target);
+      }
+
+      let hasPath = false;
+      let hasGranulatorInPath = false;
+
+      const queue: { current: string; pathHasGranulator: boolean }[] = [
+        { current: 'node-blending', pathHasGranulator: false }
+      ];
+      const visited = new Set<string>();
+
+      while (queue.length > 0) {
+        const { current, pathHasGranulator } = queue.shift()!;
+        if (current === 'node-press') {
+          hasPath = true;
+          if (pathHasGranulator) {
+            hasGranulatorInPath = true;
+          }
+          continue;
+        }
+        visited.add(current);
+        const neighbors = adj.get(current) || [];
+        for (const next of neighbors) {
+          if (!visited.has(next)) {
+            const nextNode = nodes.find(n => n.id === next);
+            const isGranulator = nextNode?.type === 'granulator';
+            queue.push({
+              current: next,
+              pathHasGranulator: pathHasGranulator || isGranulator
+            });
+          }
+        }
+      }
+
+      if (hasPath && !hasGranulatorInPath) {
+        warnings.push({
+          type: 'compatibility',
+          severity: 'warning',
+          message: 'Carr Index > 25: poor flowability. Add a Granulator node before tableting.',
+          suggestion: 'Insert a Granulation node between Blending and Press to improve powder flow.'
         });
       }
     }
@@ -801,3 +859,456 @@ export function getPackagingRecommendations(
 
   return recommendations;
 }
+
+
+// ─── Task 2.1 — Dosage Form Reference Data ──────────────────────────────────
+
+/**
+ * Standard hard-gelatin capsule sizes per USP/NF.
+ * Volumes are nominal body+cap values (ml).
+ * `maxFillMg` is pre-computed at the reference bulk density of 0.800 g/mL:
+ *   maxFillMg = volumeMl * 0.800 g/mL * 1000 mg/g
+ *
+ * In practice, `maxFillMg` should be recalculated using the actual
+ * `looseBulkDensity` of the blend (see `calculateDosageFormFit()`).
+ *
+ * Source: USP/NF capsule monograph; Capsugel / ACG Technical Reference.
+ */
+export interface CapsuleSize {
+  /** USP size designation, e.g. '#0', '#00', '#000' */
+  size: string;
+  /** Nominal internal volume in mL (body + cap) */
+  volumeMl: number;
+  /**
+   * Reference maximum fill in mg at ρ = 0.800 g/mL.
+   * Actual capacity = volumeMl * looseBulkDensity * 1000.
+   */
+  maxFillMg: number;
+}
+
+/**
+ * Standard tablet diameters with typical weight ranges.
+ * Ranges are indicative values for direct compression blends
+ * with looseBulkDensity ≈ 0.40–0.65 g/mL.
+ *
+ * Source: Pharmaceutical Technology, common industry practice.
+ */
+export interface TabletSize {
+  /** Nominal punch diameter in mm */
+  diameterMm: number;
+  /** Typical tablet weight range [min, max] in mg */
+  typicalWeightRangeMg: [number, number];
+}
+
+/**
+ * USP standard capsule size table (#000 → #5), sorted largest → smallest.
+ * Kept private; access via `getCapsuleSizes()`.
+ */
+const CAPSULE_SIZES: readonly CapsuleSize[] = Object.freeze([
+  { size: '#000', volumeMl: 1.37, maxFillMg: 1096 },
+  { size: '#00',  volumeMl: 0.91, maxFillMg: 728  },
+  { size: '#0',   volumeMl: 0.68, maxFillMg: 544  },
+  { size: '#1',   volumeMl: 0.50, maxFillMg: 400  },
+  { size: '#2',   volumeMl: 0.37, maxFillMg: 296  },
+  { size: '#3',   volumeMl: 0.30, maxFillMg: 240  },
+  { size: '#4',   volumeMl: 0.21, maxFillMg: 168  },
+  { size: '#5',   volumeMl: 0.13, maxFillMg: 104  },
+]);
+
+/**
+ * Standard tablet diameters with typical weight ranges.
+ * Sorted smallest → largest diameter.
+ * Kept private; access via `getTabletSizes()`.
+ */
+const TABLET_SIZES: readonly TabletSize[] = Object.freeze([
+  { diameterMm: 6,  typicalWeightRangeMg: [80,  150]  },
+  { diameterMm: 8,  typicalWeightRangeMg: [150, 350]  },
+  { diameterMm: 10, typicalWeightRangeMg: [300, 600]  },
+  { diameterMm: 12, typicalWeightRangeMg: [500, 1000] },
+  { diameterMm: 13, typicalWeightRangeMg: [700, 1200] },
+]);
+
+/**
+ * Returns an immutable copy of the USP capsule size reference table.
+ * Sorted from largest (#000) to smallest (#5).
+ */
+export function getCapsuleSizes(): readonly CapsuleSize[] {
+  return CAPSULE_SIZES;
+}
+
+/**
+ * Returns an immutable copy of the standard tablet size reference table.
+ * Sorted from smallest (6 mm) to largest (13 mm) diameter.
+ */
+export function getTabletSizes(): readonly TabletSize[] {
+  return TABLET_SIZES;
+}
+
+/**
+ * Calculates how the blend volume per unit fits into standard USP capsules.
+ * 
+ * @param totalBlendMassMg Recommended weight of a single dose in mg.
+ * @param looseBulkDensity Loose bulk density of the blend in g/mL.
+ * @param t Optional translator function.
+ */
+export function calculateDosageFormFit(
+  totalBlendMassMg: number,
+  looseBulkDensity: number,
+  t?: (key: string) => string
+): DosageFormFitResult {
+  if (totalBlendMassMg <= 0 || looseBulkDensity <= 0) {
+    return {
+      recommendedCapsuleSize: null,
+      capsuleCount: 0,
+      fitsInSingleCapsule: false,
+      volumeMl: 0,
+      fillPercentage: 0,
+      alternativeSizes: [],
+      warnings: [],
+    };
+  }
+
+  // Volume in mL = mass in mg / (loose bulk density in g/mL * 1000 mg/g)
+  const volumeMl = totalBlendMassMg / (looseBulkDensity * 1000);
+
+  // Find all capsule sizes that can fit the volume
+  const fittingCapsules = CAPSULE_SIZES.filter(c => volumeMl <= c.volumeMl);
+
+  if (fittingCapsules.length > 0) {
+    // Since CAPSULE_SIZES is sorted from largest (#000) to smallest (#5),
+    // the last one in fittingCapsules is the smallest capsule that fits.
+    const recommended = fittingCapsules[fittingCapsules.length - 1];
+    const fillPercentage = (volumeMl / recommended.volumeMl) * 100;
+
+    // Alternative sizes: all other fitting capsules
+    const alternativeSizes = fittingCapsules
+      .filter(c => c.size !== recommended.size)
+      .map(c => ({
+        size: c.size,
+        fillPercentage: (volumeMl / c.volumeMl) * 100,
+      }));
+
+    return {
+      recommendedCapsuleSize: recommended.size,
+      capsuleCount: 1,
+      fitsInSingleCapsule: true,
+      volumeMl,
+      fillPercentage,
+      alternativeSizes,
+      warnings: [],
+    };
+  }
+
+  // Does not fit in any single capsule
+  const largestCapsule = CAPSULE_SIZES[0];
+  const capsuleCount = Math.ceil(volumeMl / largestCapsule.volumeMl);
+  const fillPercentage = ((volumeMl / capsuleCount) / largestCapsule.volumeMl) * 100;
+
+  // Warning translation / formatting
+  let warningMessage = '';
+  if (t) {
+    const key = 'warning_split_capsules';
+    const translated = t(key);
+    if (translated !== key) {
+      warningMessage = translated.replace('{count}', String(capsuleCount));
+    }
+  }
+
+  if (!warningMessage) {
+    let suffix = 'капсул';
+    const mod10 = capsuleCount % 10;
+    const mod100 = capsuleCount % 100;
+    if (mod10 === 1 && mod100 !== 11) {
+      suffix = 'капсулу';
+    } else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      suffix = 'капсулы';
+    }
+    warningMessage = `Порцию придётся разбить на ${capsuleCount} ${suffix}`;
+  }
+
+  return {
+    recommendedCapsuleSize: null,
+    capsuleCount,
+    fitsInSingleCapsule: false,
+    volumeMl,
+    fillPercentage,
+    alternativeSizes: [],
+    warnings: [warningMessage],
+  };
+}
+
+
+
+// ─── Task 1.2 — Excipient Auto-Selection Engine ──────────────────────────────
+
+
+/**
+ * Dosage form types supported by the excipient recommendation engine.
+ * Kept here (not in pharm.ts) because it is specific to this calculation context.
+ */
+export type DosageFormType = 'tablet' | 'capsule' | 'powder' | 'syrup';
+
+/**
+ * Candidate excipient IDs that correspond to the seed data defined in Задача 1.4.
+ * These IDs are stable references to pre-seeded ingredients in the database.
+ *
+ * ID mapping (matches baseIngredients.ts and prisma/seed.ts):
+ *   27 – Avicel PH-102 / MCC Filler (filler)
+ *   28 – Magnesium Stearate (lubricant)
+ *   29 – Croscarmellose Sodium Ac-Di-Sol (disintegrant)
+ *   30 – Colloidal Silicon Dioxide / Aerosil 200 Pharma (glidant)
+ */
+const EXCIPIENT_CANDIDATES = {
+  lubricant: {
+    ingredientId: 28,            // Magnesium Stearate
+    minPercentage: 0.5,
+    maxPercentage: 2.0,
+    defaultPercentage: 1.0,
+    reason:
+      'Смазывающее вещество предотвращает налипание порошка на пуансоны и матрицу при прессовании.',
+  },
+  filler: {
+    ingredientId: 27,            // Avicel PH-102 (MCC Filler)
+    minPercentage: 5.0,
+    maxPercentage: 95.0,
+    defaultPercentage: 0,        // computed dynamically as the gap to 100 %
+    reason:
+      'Наполнитель МКЦ добавляет объём и улучшает прессуемость при низком содержании активных веществ.',
+  },
+  disintegrant: {
+    ingredientId: 29,            // Croscarmellose Sodium (Ac-Di-Sol)
+    minPercentage: 2.0,
+    maxPercentage: 8.0,
+    defaultPercentage: 4.0,
+    reason:
+      'Разрыхлитель обеспечивает распадаемость таблетки в желудочно-кишечном тракте в течение 15 мин.',
+  },
+  glidant: {
+    ingredientId: 30,            // Colloidal Silicon Dioxide (Aerosil 200 Pharma)
+    minPercentage: 0.1,
+    maxPercentage: 1.0,
+    defaultPercentage: 0.5,
+    reason:
+      'Глидант (коллоидный SiO₂) улучшает сыпучесть порошка при Индексе Карра > 20.',
+  },
+} as const;
+
+
+/**
+ * Automatically generates a list of excipient recommendations for an in-development
+ * pharmaceutical blend, based on pharmaceutical technology rules.
+ *
+ * Rules applied (deterministic expert-system, no AI/ML):
+ *  1. Lubricant — recommended when no lubricant is present in the blend.
+ *  2. Filler    — recommended when total active-ingredient percentage < 80 %
+ *                 and no filler is already present.
+ *  3. Disintegrant — recommended for tablets and capsules when no disintegrant
+ *                    is already present.
+ *  4. Glidant   — recommended when Carr Index > 20 and no glidant is present.
+ *
+ * @param blendIngredients  Current list of ingredients with their percentages.
+ * @param dosageForm        Target dosage form ('tablet' | 'capsule' | 'powder' | 'syrup').
+ * @param totalWeightMg     Target unit weight in mg (used for contextual calculations;
+ *                          does not affect role-based logic directly).
+ * @returns An array of ExcipientRecommendation objects. Returns an empty array when
+ *          all relevant excipient roles are already covered.
+ */
+export function calculateExcipientRequirements(
+  blendIngredients: { ingredient: Ingredient; percentage: number }[],
+  dosageForm: DosageFormType,
+  totalWeightMg: number,
+): ExcipientRecommendation[] {
+  // Guard: nonsensical inputs
+  if (blendIngredients.length === 0 || totalWeightMg <= 0) {
+    return [];
+  }
+
+  const recommendations: ExcipientRecommendation[] = [];
+
+  // Build a quick lookup of roles already present (only those with percentage > 0)
+  const existingRoles = new Set(
+    blendIngredients
+      .filter(item => item.percentage > 0)
+      .map(item => item.ingredient.role),
+  );
+
+  // ── Rule 1: Lubricant ────────────────────────────────────────────────────
+  if (!existingRoles.has('lubricant')) {
+    const cand = EXCIPIENT_CANDIDATES.lubricant;
+    recommendations.push({
+      role: 'lubricant',
+      ingredientId: cand.ingredientId,
+      minPercentage: cand.minPercentage,
+      maxPercentage: cand.maxPercentage,
+      defaultPercentage: cand.defaultPercentage,
+      reason: cand.reason,
+    });
+  }
+
+  // ── Rule 2: Filler ───────────────────────────────────────────────────────
+  // Active percentage = sum of all 'active' role ingredient percentages
+  const activePercentage = blendIngredients
+    .filter(item => item.ingredient.role === 'active' && item.percentage > 0)
+    .reduce((sum, item) => sum + item.percentage, 0);
+
+  if (!existingRoles.has('filler') && activePercentage < 80) {
+    const cand = EXCIPIENT_CANDIDATES.filler;
+    const totalExistingPercentage = blendIngredients
+      .filter(item => item.percentage > 0)
+      .reduce((sum, item) => sum + item.percentage, 0);
+
+    if (totalExistingPercentage < 100) {
+      // Fill the gap to 100 % — clamp within [minPercentage, maxPercentage]
+      const rawDefault = Math.max(0, 100 - totalExistingPercentage);
+      const defaultPercentage = Math.min(
+        cand.maxPercentage,
+        Math.max(cand.minPercentage, rawDefault),
+      );
+
+      recommendations.push({
+        role: 'filler',
+        ingredientId: cand.ingredientId,
+        minPercentage: cand.minPercentage,
+        maxPercentage: cand.maxPercentage,
+        defaultPercentage,
+        reason: cand.reason,
+      });
+    }
+  }
+
+  // ── Rule 3: Disintegrant (tablets and capsules only) ─────────────────────
+  if (
+    (dosageForm === 'tablet' || dosageForm === 'capsule') &&
+    !existingRoles.has('disintegrant')
+  ) {
+    const cand = EXCIPIENT_CANDIDATES.disintegrant;
+    recommendations.push({
+      role: 'disintegrant',
+      ingredientId: cand.ingredientId,
+      minPercentage: cand.minPercentage,
+      maxPercentage: cand.maxPercentage,
+      defaultPercentage: cand.defaultPercentage,
+      reason: cand.reason,
+    });
+  }
+
+  // ── Rule 4: Glidant (Carr Index > 20) ────────────────────────────────────
+  if (!existingRoles.has('glidant')) {
+    const blendProps = calculateBlendProperties(blendIngredients);
+    const carr = blendProps.flowability.carr;
+
+    if (carr > 20) {
+      const cand = EXCIPIENT_CANDIDATES.glidant;
+      recommendations.push({
+        role: 'glidant',
+        ingredientId: cand.ingredientId,
+        minPercentage: cand.minPercentage,
+        maxPercentage: cand.maxPercentage,
+        defaultPercentage: cand.defaultPercentage,
+        reason: `${cand.reason} (Текущий Индекс Карра: ${carr.toFixed(4)} %)`,
+      });
+    }
+  }
+
+  return recommendations;
+}
+
+/**
+ * Validates daily intake levels against FDA and EFSA Tolerable Upper Intake Levels (UL),
+ * and checks FDA GRAS / EFSA Novel Food compliance status.
+ */
+export function checkRegulatoryCompliance(
+  ingredients: { ingredient: Ingredient; percentage: number }[],
+  servingSizeMg: number,
+  servingsPerDay: number = 1,
+  market: 'usa' | 'eu' | 'both' = 'both'
+): CompatibilityWarning[] {
+  const warnings: CompatibilityWarning[] = [];
+
+  for (const item of ingredients) {
+    if (item.percentage <= 0) continue;
+
+    const ing = item.ingredient;
+    const dailyDoseMg = (item.percentage / 100) * servingSizeMg * servingsPerDay;
+
+    // Look up in regulatory limits by CAS or name/synonyms
+    const limit = REGULATORY_LIMITS.find(r => {
+      // 1. Match by CAS number if both have it
+      if (r.casNumber && ing.casNumber && r.casNumber === ing.casNumber) {
+        return true;
+      }
+      // 2. Match by exact name (case-insensitive)
+      const ingNameLower = ing.name.toLowerCase();
+      if (r.ingredientName.toLowerCase() === ingNameLower) {
+        return true;
+      }
+      // 3. Match by synonyms
+      if (r.synonyms && r.synonyms.some(s => s.toLowerCase() === ingNameLower)) {
+        return true;
+      }
+      // 4. Substring match for convenience
+      if (ingNameLower.includes(r.ingredientName.toLowerCase()) || r.ingredientName.toLowerCase().includes(ingNameLower)) {
+        return true;
+      }
+      return false;
+    });
+
+    if (!limit) continue;
+
+    const checkLimit = (ul: number | null, limitName: string) => {
+      if (ul === null) return;
+      if (dailyDoseMg > ul) {
+        warnings.push({
+          type: 'limit',
+          severity: 'error',
+          ingredientId: ing.id,
+          message: `Daily dose of ${ing.name} (${dailyDoseMg.toFixed(2)} mg) exceeds the ${limitName} UL limit of ${ul.toFixed(2)} mg/day. Not allowed for sale as a dietary supplement.`,
+          suggestion: `Reduce the percentage of ${ing.name} or lower the serving size to comply with ${limitName} guidelines.`
+        });
+      } else if (dailyDoseMg > ul * 0.8) {
+        warnings.push({
+          type: 'limit',
+          severity: 'warning',
+          ingredientId: ing.id,
+          message: `Daily dose of ${ing.name} (${dailyDoseMg.toFixed(2)} mg) is close to the ${limitName} UL limit of ${ul.toFixed(2)} mg/day (exceeds 80%).`,
+          suggestion: `Consider reducing the concentration of ${ing.name} to maintain a safe margin.`
+        });
+      }
+    };
+
+    // Check FDA UL (USA)
+    if (market === 'usa' || market === 'both') {
+      checkLimit(limit.fdaUlMgPerDay, 'FDA');
+    }
+
+    // Check EFSA UL (EU)
+    if (market === 'eu' || market === 'both') {
+      checkLimit(limit.efsaUlMgPerDay, 'EFSA');
+    }
+
+    // Check Novel Food (EU)
+    if (limit.isNovelFood && (market === 'eu' || market === 'both')) {
+      warnings.push({
+        type: 'compatibility',
+        severity: 'warning',
+        ingredientId: ing.id,
+        message: `Ingredient "${ing.name}" is classified as a Novel Food in the European Union.`,
+        suggestion: `Separate pre-market authorization is required before selling in the EU market.`
+      });
+    }
+
+    // Check GRAS (USA)
+    if (!limit.isGras && (market === 'usa' || market === 'both')) {
+      warnings.push({
+        type: 'compatibility',
+        severity: 'warning',
+        ingredientId: ing.id,
+        message: `Ingredient "${ing.name}" does not have FDA GRAS status.`,
+        suggestion: `Verify regulatory pathways or use an alternative ingredient with GRAS status.`
+      });
+    }
+  }
+
+  return warnings;
+}
+

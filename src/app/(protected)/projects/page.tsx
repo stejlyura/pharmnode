@@ -8,7 +8,6 @@ import { useTranslation } from "@/context/I18nContext";
 import { useRecipes } from "@/hooks/useRecipes";
 import type { EditorNode, EditorConnection } from "@/hooks/useNodeEditor";
 import { trackEvent } from "@/lib/analytics";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { FolderPlus, FileText, Calendar, ArrowRight, FlaskConical, Loader2, Trash2, LogOut } from "lucide-react";
 
 const initialNodes: EditorNode[] = [
@@ -147,7 +146,6 @@ export default function ProjectsPage() {
         </Link>
 
         <div className="flex items-center gap-3">
-          <ThemeToggle />
           <div className="text-xs font-bold text-zinc-400 bg-zinc-900/60 px-3 py-1.5 rounded-lg border border-zinc-800 animate-fade-in">
             {user?.name || "Guest"}
           </div>

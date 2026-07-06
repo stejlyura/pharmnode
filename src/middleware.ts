@@ -52,7 +52,6 @@ export async function middleware(request: NextRequest) {
     // ─── 2. Private Page Route Protection ────────────────────────────────────
     const isPrivateRoute = 
       pathname === "/projects" || pathname.startsWith("/projects/") ||
-      pathname === "/configurator" || pathname.startsWith("/configurator/") ||
       pathname === "/settings" || pathname.startsWith("/settings/");
 
     const isAdminRoute =
@@ -66,23 +65,24 @@ export async function middleware(request: NextRequest) {
         url.searchParams.set("callbackUrl", pathname);
         return NextResponse.redirect(url);
       }
+    }
 
-      // Premium subscription check for /configurator
-      const isPremiumRoute =
-        pathname === "/configurator" || pathname.startsWith("/configurator/");
+    // Premium subscription check for /configurator
+    // Since /configurator is now public, this check only applies if they ARE logged in
+    const isConfiguratorRoute =
+      pathname === "/configurator" || pathname.startsWith("/configurator/");
 
-      if (isPremiumRoute) {
-        const tariff = token ? ((token.tariff as string) ?? "hobby") : mockTariff;
+    if (isConfiguratorRoute && isAuthenticated) {
+      const tariff = token ? ((token.tariff as string) ?? "hobby") : mockTariff;
 
-        if (tariff !== "professional" && tariff !== "enterprise" && tariff !== "hobby") {
-          const url = request.nextUrl.clone();
-          url.pathname = "/premium-required";
-          return NextResponse.redirect(url);
-        }
+      if (tariff !== "professional" && tariff !== "enterprise" && tariff !== "hobby") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/premium-required";
+        return NextResponse.redirect(url);
       }
+    }
 
-      // Admin route email validation
-      if (isAdminRoute) {
+    if (isAdminRoute && isAuthenticated) {
         const email = token?.email || mockEmail;
         if (email !== "admin@pharmnode.com") {
           const url = request.nextUrl.clone();
@@ -90,7 +90,6 @@ export async function middleware(request: NextRequest) {
           return NextResponse.rewrite(url);
         }
       }
-    }
 
     // ─── 3. Locale routing rewrites ──────────────────────────────────────────
     // Redirect /ru/admin (and /ru/admin/...) to /admin (always English)

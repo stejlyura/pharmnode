@@ -1,4 +1,32 @@
-export type IngredientRole = 'active' | 'filler' | 'lubricant' | 'glidant' | 'dry-binder';
+export type IngredientRole =
+  | 'active'
+  | 'filler'
+  | 'lubricant'
+  | 'glidant'
+  | 'dry-binder'
+  | 'disintegrant'   // разрыхлитель
+  | 'coating'        // оболочка
+  | 'sweetener'      // подсластитель
+  | 'anti-caking';   // агент против слёживания
+
+/**
+ * Рекомендация по вспомогательному веществу, которое следует добавить
+ * в рецептуру для улучшения технологических или потребительских свойств.
+ */
+export interface ExcipientRecommendation {
+  /** Роль вспомогательного вещества в рецептуре */
+  role: IngredientRole;
+  /** ID рекомендуемого ингредиента в базе данных */
+  ingredientId: number | string;
+  /** Минимальный рекомендуемый % от общей массы (напр. 0.5 для стеарата магния) */
+  minPercentage: number;
+  /** Максимальный рекомендуемый % от общей массы (напр. 2 для стеарата магния) */
+  maxPercentage: number;
+  /** Рекомендуемый % по умолчанию */
+  defaultPercentage: number;
+  /** Обоснование рекомендации (напр. "Предотвращает налипание на пуансоны") */
+  reason: string;
+}
 
 import type { Paddle } from "@paddle/paddle-js";
 
@@ -156,7 +184,7 @@ export interface UserProfile {
 
 export interface EditorNode {
   id: string;
-  type: 'ingredient' | 'blending' | 'press' | 'cost-optimizer' | 'output';
+  type: 'ingredient' | 'blending' | 'granulator' | 'press' | 'capsulator' | 'cost-optimizer' | 'output';
   position: { x: number; y: number };
   data: {
     ingredientId?: number | string;
@@ -165,6 +193,9 @@ export interface EditorNode {
     depthCm?: number;
     activeRawWeightG?: number;
     processType?: ProcessType; // устанавливается в BlendingNode или PressNode
+    granulationType?: 'wet' | 'dry';
+    capsuleSize?: string;
+    capsuleMaterial?: 'gelatin' | 'hpmc';
     [key: string]: number | string | boolean | null | undefined | ProcessType;
   };
 }
@@ -192,3 +223,14 @@ export interface CompatibilityWarning {
   ingredientId?: number | string;
   relatedIngredientId?: number | string;
 }
+
+export interface DosageFormFitResult {
+  recommendedCapsuleSize: string | null;
+  capsuleCount: number;
+  fitsInSingleCapsule: boolean;
+  volumeMl: number;
+  fillPercentage: number;
+  alternativeSizes: { size: string; fillPercentage: number }[];
+  warnings: string[];
+}
+

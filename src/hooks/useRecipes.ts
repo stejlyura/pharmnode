@@ -185,6 +185,9 @@ export function useRecipes(userId?: string | null, isMockUser?: boolean): UseRec
     async (recipeId: string): Promise<{ success: boolean }> => {
       if (!userId) return { success: false };
 
+      const canvasDraftKey = `pharmnode_canvas_state_${userId}`;
+      localStorage.removeItem(canvasDraftKey);
+
       if (isMockUser) {
         try {
           const storedKey = `pharmnode_recipes_mock_${userId}`;
