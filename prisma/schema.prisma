@@ -61,14 +61,15 @@ model ProcessedWebhook {
 
 
 model Recipe {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  nodes       Json     @default("[]")
-  connections Json     @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  nodes           Json     @default("[]")
+  connections     Json     @default("[]")
+  productionYield Float    @default(100.0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model CustomIngredient {
@@ -94,6 +95,10 @@ model CustomIngredient {
   effects           Json?    @default("[]")
   contraindications Json?    @default("[]")
   sideEffects       Json?    @default("[]")
+  moistureContent   Float?
+  solubility        String?
+  bitterness        Float?
+  overagePercent    Float    @default(0.0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -122,6 +127,10 @@ model Ingredient {
   applicationArea       String?
   processingTech        String?
   sideEffects           Json?                        @default("[]")
+  moistureContent       Float?
+  solubility            String?
+  bitterness            Float?
+  overagePercent        Float                        @default(0.0)
   activeMolecules       ActiveMolecule[]
   effects               IngredientEffect[]
   contraindications     IngredientContraindication[]
@@ -220,4 +229,12 @@ model IngredientRegulatory {
   allergenStatus     String?    // "Lactose", "Gluten", "Soy", null — аллерген-маркировка
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
+}
+
+model CapsuleSize {
+  id        Int      @id @default(autoincrement())
+  size      String   @unique // e.g. "000", "00", "0", "1", "2", "3", "4", "5"
+  volume    Float    // volume in ml
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

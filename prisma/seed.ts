@@ -47,6 +47,9 @@ async function main() {
         applicationArea: (ing as unknown as Record<string, unknown>).applicationArea as string || null,
         processingTech: (ing as unknown as Record<string, unknown>).processingTech as string || null,
         sideEffects: (ing.sideEffects || []) as unknown as object,
+        moistureContent: ing.moistureContent || null,
+        solubility: ing.solubility || null,
+        bitterness: ing.bitterness || null,
       },
     });
 
@@ -245,6 +248,25 @@ async function main() {
     },
   });
   console.log('Admin account seeded.');
+
+  console.log('Seeding capsule sizes...');
+  const capsuleSizes = [
+    { size: '000', volume: 1.37 },
+    { size: '00', volume: 0.91 },
+    { size: '0', volume: 0.68 },
+    { size: '1', volume: 0.50 },
+    { size: '2', volume: 0.37 },
+    { size: '3', volume: 0.30 },
+    { size: '4', volume: 0.21 },
+    { size: '5', volume: 0.13 },
+  ];
+  for (const cap of capsuleSizes) {
+    await prisma.capsuleSize.upsert({
+      where: { size: cap.size },
+      update: { volume: cap.volume },
+      create: { size: cap.size, volume: cap.volume }
+    });
+  }
 
   console.log(`Successfully seeded standard ingredients & relations.`);
 }

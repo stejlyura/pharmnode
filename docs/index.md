@@ -7,14 +7,9 @@
 * [Список задач (TODO)](tasks/todo.md) — Текущий статус разработки, баги и новые фичи.
 
 ## 🏗 Архитектура и Развитие
-* [Архитектура бэкенда](architecture/backend.md)
+* [Архитектура бэкенда (Infrastructure, Security, Monitoring)](architecture/backend.md)
 * [База знаний и алгоритмы](architecture/knowledge-base.md)
-* [Эволюция продукта и дорожная карта](architecture/product-evolution.md)
-* [Позиционирование и УТП (Positioning & Messaging)](architecture/positioning-and-messaging.md)
-* [Дизайн интеллектуальной базы (Intelligent KB)](architecture/intelligent-kb-design.md)
-* [План масштабирования](architecture/scaling-roadmap.md)
-* [Мониторинг и логирование](architecture/monitoring.md)
-* [Архитектура безопасности](architecture/security.md)
+* [Эволюция продукта и стратегия (Roadmap & Positioning)](architecture/product-evolution.md)
 
 ## 🚀 Развертывание и DevOps
 * [Руководство по развертыванию (Setup Guide)](deployment/setup-guide.md) — Настройка переменных окружения, базы данных и Paddle.
@@ -31,5 +26,3 @@
 * [Технологические процессы](skills/pharmnode-tech-processes/SKILL.md)
 * [E2E Тестирование](skills/pharmnode-e2e/SKILL.md)
 
-## 📦 Архив
-* [Pre-MVP Research](archive/pre-mvp-research.md)

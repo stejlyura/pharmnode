@@ -20,6 +20,8 @@ import {
   X,
   RefreshCw,
   Settings,
+  Palette,
+  Leaf,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -99,6 +101,20 @@ const ROLE_VISUAL: Record<IngredientRole, {
     accentBorder: 'border-lime-500/25',
     dotColor: '#a3e635',
   },
+  flavoring: {
+    icon: <Leaf size={13} />,
+    accent: 'text-orange-400',
+    accentBg: 'bg-orange-500/10',
+    accentBorder: 'border-orange-500/25',
+    dotColor: '#f97316',
+  },
+  colorant: {
+    icon: <Palette size={13} />,
+    accent: 'text-pink-400',
+    accentBg: 'bg-pink-500/10',
+    accentBorder: 'border-pink-500/25',
+    dotColor: '#ec4899',
+  },
   'anti-caking': {
     icon: <Layers size={13} />,
     accent: 'text-orange-400',
@@ -108,7 +124,19 @@ const ROLE_VISUAL: Record<IngredientRole, {
   },
 };
 
-const CATEGORY_ORDER: IngredientRole[] = ['active', 'filler', 'dry-binder', 'lubricant', 'glidant'];
+const CATEGORY_ORDER: IngredientRole[] = [
+  'active',
+  'filler',
+  'dry-binder',
+  'lubricant',
+  'glidant',
+  'disintegrant',
+  'coating',
+  'sweetener',
+  'anti-caking',
+  'flavoring',
+  'colorant'
+];
 
 interface TechNodeItem {
   id: 'granulator' | 'capsulator' | 'press';
@@ -198,6 +226,8 @@ export const Sidebar = React.memo<SidebarProps>(({
     coating: { label: t('role_coating') ?? 'Coating', shortLabel: t('role_coating_short') ?? 'Coat.', ...ROLE_VISUAL.coating },
     sweetener: { label: t('role_sweetener') ?? 'Sweetener', shortLabel: t('role_sweetener_short') ?? 'Sweet.', ...ROLE_VISUAL.sweetener },
     'anti-caking': { label: t('role_anti_caking') ?? 'Anti-Caking', shortLabel: t('role_anti_caking_short') ?? 'Anti-C.', ...ROLE_VISUAL['anti-caking'] },
+    flavoring: { label: t('role_flavoring') ?? 'Flavoring', shortLabel: t('role_flavoring_short') ?? 'Flav.', ...ROLE_VISUAL.flavoring },
+    colorant: { label: t('role_colorant') ?? 'Colorant', shortLabel: t('role_colorant_short') ?? 'Color.', ...ROLE_VISUAL.colorant },
   }), [t]);
 
   const toggleCategory = (role: string) => {

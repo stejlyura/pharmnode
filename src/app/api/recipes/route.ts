@@ -6,9 +6,7 @@ import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/validation";
 import { checkTariffLimit } from "@/lib/tariffLimits";
 
-const isProduction =
-  process.env.NODE_ENV === "production" ||
-  process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
+const isDev = process.env.NODE_ENV === "development";
 
 // ─── GET /api/recipes ─────────────────────────────────────────────────────────
 // Returns all recipes for the authenticated user.
@@ -21,7 +19,7 @@ export async function GET(request: Request) {
     const queryUserId = searchParams.get("userId");
 
     // Mock dev support
-    if (!isProduction && queryUserId && String(queryUserId).startsWith("mock-")) {
+    if (isDev && queryUserId && String(queryUserId).startsWith("mock-")) {
       return NextResponse.json({ success: true, recipes: [] });
     }
 
@@ -82,7 +80,7 @@ export async function POST(request: Request) {
     const { nodes, connections, name, userId } = body;
 
     // Mock dev support
-    if (!isProduction && !activeUserId && userId && String(userId).startsWith("mock-")) {
+    if (isDev && !activeUserId && userId && String(userId).startsWith("mock-")) {
       return NextResponse.json({ success: true, mock: true });
     }
 
@@ -120,6 +118,18 @@ export async function POST(request: Request) {
     const encryptedNodes = encryptJson(nodes) as Prisma.InputJsonValue;
     const encryptedConnections = encryptJson(connections) as Prisma.InputJsonValue;
 
+    // Extract productionYield from OutputNode expectedLossPercentage
+    let productionYield = 100.0;
+    if (Array.isArray(nodes)) {
+      const outputNode = nodes.find((n: any) => n && n.type === "output");
+      if (outputNode && outputNode.data) {
+        const expectedLoss = parseFloat(String(outputNode.data.expectedLossPercentage ?? 0));
+        if (!isNaN(expectedLoss) && expectedLoss >= 0 && expectedLoss <= 20) {
+          productionYield = 100.0 - expectedLoss;
+        }
+      }
+    }
+
     // ── Update or Create ─────────────────────────────────────────────────────
     let dbRecipe;
     const recipeId = body.recipeId as string | undefined;
@@ -133,7 +143,12 @@ export async function POST(request: Request) {
 
       dbRecipe = await prisma.recipe.update({
         where: { id: recipeId },
-        data: { name: encryptedName, nodes: encryptedNodes, connections: encryptedConnections },
+        data: {
+          name: encryptedName,
+          nodes: encryptedNodes,
+          connections: encryptedConnections,
+          productionYield,
+        },
       });
     } else {
       // ── Tariff limit check (on create only) ────────────────────────────────
@@ -157,6 +172,7 @@ export async function POST(request: Request) {
           name: encryptedName,
           nodes: encryptedNodes,
           connections: encryptedConnections,
+          productionYield,
         },
       });
     }

@@ -269,4 +269,44 @@ describe("POST /api/recipes", () => {
     const body = await res.json();
     expect(body.error).toBe("Recipe not found or forbidden");
   });
+
+  it("extracts expectedLossPercentage from nodes to calculate productionYield", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "user-123", tariff: "hobby" } as any);
+    vi.mocked(checkTariffLimit).mockResolvedValue({ allowed: true, limit: 10, current: 5 });
+
+    let passedData: any = null;
+    (prisma.recipe.create as any).mockImplementation(async (args: any) => {
+      passedData = args.data;
+      return {
+        id: "recipe-777",
+        userId: "user-123",
+        name: "encrypted:Loss Recipe",
+        nodes: JSON.stringify([]),
+        connections: JSON.stringify([]),
+        productionYield: 98.0
+      } as any;
+    });
+
+    const request = new Request("http://localhost:3000/api/recipes", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Loss Recipe",
+        nodes: [
+          {
+            id: "node-out",
+            type: "output",
+            data: { expectedLossPercentage: 2.0 }
+          }
+        ],
+        connections: []
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(200);
+    expect(passedData).toBeDefined();
+    expect(passedData.productionYield).toBe(98.0);
+  });
 });

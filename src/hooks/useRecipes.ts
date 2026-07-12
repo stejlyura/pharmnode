@@ -9,6 +9,7 @@ export interface RecipeData {
   name: string;
   nodes: EditorNode[];
   connections: EditorConnection[];
+  productionYield?: number;
   createdAt: string;
   updatedAt: string;
 }

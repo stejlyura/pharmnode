@@ -3,12 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { sanitizeString, validateRole, validateDensity, validatePercentage, validateOptionalString, validateDilutionScale, validateEffects, validateContraindications, validateSideEffects } from "@/lib/validation";
+import { sanitizeString, validateRole, validateDensity, validatePercentage, validateOptionalString, validateDilutionScale, validateEffects, validateContraindications, validateSideEffects, validateBitterness } from "@/lib/validation";
 import { checkTariffLimit } from "@/lib/tariffLimits";
+import { unstable_cache } from "next/cache";
 
-const isProduction =
-  process.env.NODE_ENV === "production" ||
-  process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production";
+const isDev = process.env.NODE_ENV === "development";
 
 // ─── Tariff limits (enforced server-side only) ────────────────────────────────
 const TARIFF_LIMITS: Record<string, number> = {
@@ -25,15 +24,65 @@ function isValidRole(role: unknown): role is IngredientRole {
   return VALID_ROLES.includes(role as IngredientRole);
 }
 
-// Basic in-memory cache for standard ingredients
-let cachedStandardIngredients: Record<string, unknown>[] | null = null;
-let lastCacheTime = 0;
-const CACHE_TTL = 300 * 1000; // 5 minutes
+// Wrapper to bypass unstable_cache during testing to ensure mock and test isolation
+const customCache = <T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  keys: string[],
+  options?: { revalidate?: number; tags?: string[] }
+): T => {
+  if (process.env.NODE_ENV === "test") {
+    return fn;
+  }
+  return unstable_cache(fn, keys, options);
+};
+
+const getCachedStandardIngredients = customCache(
+  async () => {
+    const dbIngredients = await prisma.ingredient.findMany({
+      orderBy: { id: "asc" },
+      include: {
+        activeMolecules: true,
+        effects: { include: { effect: true } },
+        contraindications: { include: { contraindication: true } },
+        stabilityData: true,
+        regulatoryData: true,
+      },
+    });
+
+    return dbIngredients.map(ing => ({
+      ...ing,
+      effects: ing.effects.map(e => e.effect.name),
+      contraindications: ing.contraindications.map(c => c.contraindication.name),
+      // Map 1:1 relations to clean optional nested objects
+      stabilityProfile: ing.stabilityData
+        ? {
+            ph: ing.stabilityData.ph,
+            hygroscopicity: ing.stabilityData.hygroscopicity,
+            lightSensitive: ing.stabilityData.lightSensitive,
+            heatDegradation: ing.stabilityData.heatDegradation,
+          }
+        : null,
+      regulatoryInfo: ing.regulatoryData
+        ? {
+            pharmacopoeiaGrade: ing.regulatoryData.pharmacopoeiaGrade,
+            allergenStatus: ing.regulatoryData.allergenStatus,
+          }
+        : null,
+      // Remove raw relation objects from top-level response
+      stabilityData: undefined,
+      regulatoryData: undefined,
+    }));
+  },
+  ["standard-ingredients"],
+  {
+    revalidate: 300, // 5 minutes
+    tags: ["ingredients"]
+  }
+);
 
 /** Exported for test isolation only — resets the module-level ingredient cache */
 export function resetIngredientsCache() {
-  cachedStandardIngredients = null;
-  lastCacheTime = 0;
+  // No-op under unstable_cache as cache is bypassed during testing (NODE_ENV === 'test')
 }
 
 // ─── GET /api/ingredients ─────────────────────────────────────────────────────
@@ -49,7 +98,7 @@ export async function GET(request: Request) {
 
     // Mock user support
     const queryUserId = searchParams.get("userId");
-    if (!isProduction && queryUserId && String(queryUserId).startsWith("mock-")) {
+    if (isDev && queryUserId && String(queryUserId).startsWith("mock-")) {
       return NextResponse.json({ success: true, ingredients: [] });
     }
 
@@ -57,54 +106,9 @@ export async function GET(request: Request) {
     const activeUserId = session?.user?.id;
     const now = Date.now();
 
-    // Helper to fetch standard ingredients from database with relations
-    const getStandardIngredientsFromDb = async () => {
-      const dbIngredients = await prisma.ingredient.findMany({
-        orderBy: { id: "asc" },
-        include: {
-          activeMolecules: true,
-          effects: { include: { effect: true } },
-          contraindications: { include: { contraindication: true } },
-          stabilityData: true,
-          regulatoryData: true,
-        },
-      });
-
-      return dbIngredients.map(ing => ({
-        ...ing,
-        effects: ing.effects.map(e => e.effect.name),
-        contraindications: ing.contraindications.map(c => c.contraindication.name),
-        // Map 1:1 relations to clean optional nested objects
-        stabilityProfile: ing.stabilityData
-          ? {
-              ph: ing.stabilityData.ph,
-              hygroscopicity: ing.stabilityData.hygroscopicity,
-              lightSensitive: ing.stabilityData.lightSensitive,
-              heatDegradation: ing.stabilityData.heatDegradation,
-            }
-          : null,
-        regulatoryInfo: ing.regulatoryData
-          ? {
-              pharmacopoeiaGrade: ing.regulatoryData.pharmacopoeiaGrade,
-              allergenStatus: ing.regulatoryData.allergenStatus,
-            }
-          : null,
-        // Remove raw relation objects from top-level response
-        stabilityData: undefined,
-        regulatoryData: undefined,
-      }));
-    };
-
     // "standard" is always public — no auth needed
     if (typeParam === "standard" || (!typeParam && !activeUserId)) {
-      if (cachedStandardIngredients && (now - lastCacheTime < CACHE_TTL)) {
-        return NextResponse.json({ success: true, ingredients: cachedStandardIngredients });
-      }
-
-      const standardIngredients = await getStandardIngredientsFromDb();
-      cachedStandardIngredients = standardIngredients;
-      lastCacheTime = now;
-
+      const standardIngredients = await getCachedStandardIngredients();
       return NextResponse.json({ success: true, ingredients: standardIngredients });
     }
 
@@ -142,14 +146,7 @@ export async function GET(request: Request) {
     }
 
     // "all" or authenticated user with no param → standard + custom merged
-    let standardIngredients: Record<string, unknown>[];
-    if (cachedStandardIngredients && (now - lastCacheTime < CACHE_TTL)) {
-      standardIngredients = cachedStandardIngredients;
-    } else {
-      standardIngredients = await getStandardIngredientsFromDb();
-      cachedStandardIngredients = standardIngredients;
-      lastCacheTime = now;
-    }
+    const standardIngredients = await getCachedStandardIngredients() as any[];
 
     const customIngredients = await prisma.customIngredient.findMany({
       where: { userId: activeUserId },
@@ -197,10 +194,14 @@ export async function POST(request: Request) {
       effects,
       contraindications,
       sideEffects,
+      moistureContent,
+      solubility,
+      bitterness,
+      overagePercent,
     } = body;
 
     // ── Mock dev support ────────────────────────────────────────────────────
-    if (!isProduction && userId && String(userId).startsWith("mock-")) {
+    if (isDev && userId && String(userId).startsWith("mock-")) {
       return NextResponse.json({
         success: true,
         mock: true,
@@ -229,7 +230,10 @@ export async function POST(request: Request) {
     let validatedEffects: string[] = [];
     let validatedContraindications: string[] = [];
     let validatedSideEffects: { name: string; frequency: string; severity: 'low' | 'medium' | 'high' }[] = [];
-
+    let parsedMoisture: number | null = null;
+    let validatedSolubility: string | null = null;
+    let parsedBitterness: number | null = null;
+    let parsedOverage: number = 0.0;
 
     try {
       cleanName = sanitizeString(name);
@@ -256,6 +260,32 @@ export async function POST(request: Request) {
       }
 
       parsedMaxSafe = validatePercentage(maxSafePercentage ?? 100, "Максимальный безопасный процент");
+
+      if (moistureContent !== undefined && moistureContent !== null) {
+        parsedMoisture = parseFloat(String(moistureContent));
+        if (isNaN(parsedMoisture) || parsedMoisture < 0 || parsedMoisture > 100) {
+          throw new Error("Влажность должна быть числом от 0 до 100");
+        }
+      }
+      if (solubility !== undefined && solubility !== null) {
+        const solStr = String(solubility).toLowerCase();
+        if (solStr === 'water' || solStr === 'lipid' || solStr === 'none') {
+          validatedSolubility = solStr;
+        } else if (solStr !== '') {
+          throw new Error("Некорректное значение растворимости");
+        }
+      }
+
+      if (bitterness !== undefined && bitterness !== null && bitterness !== "") {
+        parsedBitterness = validateBitterness(bitterness) ?? null;
+      }
+
+      if (overagePercent !== undefined && overagePercent !== null && overagePercent !== "") {
+        parsedOverage = parseFloat(String(overagePercent));
+        if (isNaN(parsedOverage) || parsedOverage < 0 || parsedOverage > 50) {
+          throw new Error("Технологический избыток (Overage) должен быть числом от 0 до 50");
+        }
+      }
 
       validatedSource = validateOptionalString(source, 255, "Источник вещества");
       validatedDilutionScale = validateDilutionScale(dilutionScale);
@@ -315,6 +345,10 @@ export async function POST(request: Request) {
         effects: encryptedEffects,
         contraindications: encryptedContraindications,
         sideEffects: encryptedSideEffects,
+        moistureContent: parsedMoisture,
+        solubility: validatedSolubility,
+        bitterness: parsedBitterness,
+        overagePercent: parsedOverage,
       },
     });
 
@@ -326,6 +360,7 @@ export async function POST(request: Request) {
       effects: validatedEffects,
       contraindications: validatedContraindications,
       sideEffects: validatedSideEffects,
+      overagePercent: parsedOverage,
     };
 
     // Log compliance event

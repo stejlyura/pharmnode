@@ -5,12 +5,35 @@ export function sanitizeString(str: unknown): string {
 }
 
 export function validateRole(role: unknown): string {
-  const VALID_ROLES = ["active", "filler", "lubricant", "glidant", "dry-binder"];
+  const VALID_ROLES = [
+    "active",
+    "filler",
+    "lubricant",
+    "glidant",
+    "dry-binder",
+    "disintegrant",
+    "coating",
+    "sweetener",
+    "anti-caking",
+    "flavoring",
+    "colorant"
+  ];
   const roleStr = String(role).toLowerCase();
   if (!VALID_ROLES.includes(roleStr)) {
     throw new Error(`Недопустимая роль. Допустимые значения: ${VALID_ROLES.join(", ")}`);
   }
   return roleStr;
+}
+
+export function validateBitterness(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  const num = parseFloat(String(value));
+  if (isNaN(num) || num < 0 || num > 10) {
+    throw new Error("Горечь должна быть числом от 0 до 10");
+  }
+  return num;
 }
 
 export function validateDensity(value: unknown, fieldName = "Плотность"): number {

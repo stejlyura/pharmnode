@@ -212,11 +212,127 @@ export async function generateGMPReport(
   const diameterCm = pressNode?.data.diameterCm ?? 0.3;
   const depthCm = pressNode?.data.depthCm ?? 0.5;
 
+  const outputNode = nodes.find((n) => n.type === "output");
+  const formType = outputNode?.data.formType || "tablet";
+
   doc.text(`Flowability: ${blend.flowability.rating.toUpperCase()}`, 105, y + 6);
-  doc.text(`Punch Diameter: ${(diameterCm * 10).toFixed(1)} mm`, 105, y + 12);
-  doc.text(`Matrix Fill Depth: ${(depthCm * 10).toFixed(1)} mm`, 105, y + 18);
-  doc.text(`Tablet Porosity (Est): ${(tableting.porosity * 100).toFixed(1)}%`, 105, y + 24);
-  y += 38;
+  if (formType === "tablet") {
+    doc.text(`Punch Diameter: ${(diameterCm * 10).toFixed(1)} mm`, 105, y + 12);
+    doc.text(`Matrix Fill Depth: ${(depthCm * 10).toFixed(1)} mm`, 105, y + 18);
+    doc.text(`Tablet Porosity (Est): ${(tableting.porosity * 100).toFixed(1)}%`, 105, y + 24);
+    y += 38;
+  } else if (formType === "capsule") {
+    const { dosageFormFit } = calculatedResults;
+    doc.text(`Recommended Capsule: ${dosageFormFit.recommendedCapsuleSize || "N/A"}`, 105, y + 12);
+    doc.text(`Capsule Fill: ${dosageFormFit.fillPercentage.toFixed(1)}%`, 105, y + 18);
+    doc.text(`Capsule Count: ${dosageFormFit.capsuleCount}`, 105, y + 24);
+    y += 38;
+
+    // Output a dedicated Capsule Sizing block
+    checkPageBreak(30);
+    doc.setFillColor(240, 246, 252);
+    doc.rect(20, y, 170, 22, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(0, 94, 184);
+    doc.text("CAPSULE SIZING & FILLING LOGISTICS", 25, y + 5);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`- Recommended Capsule Size: ${dosageFormFit.recommendedCapsuleSize || "None"}`, 25, y + 10);
+    doc.text(`- Fill Percentage: ${dosageFormFit.fillPercentage.toFixed(1)}% (Volume: ${dosageFormFit.volumeMl.toFixed(4)} mL)`, 25, y + 14);
+    if (dosageFormFit.alternativeSizes && dosageFormFit.alternativeSizes.length > 0) {
+      const altSizesStr = dosageFormFit.alternativeSizes.slice(0, 3).map(a => `${a.size} (${a.fillPercentage.toFixed(0)}%)`).join(", ");
+      doc.text(`- Alternative Sizes: ${altSizesStr}`, 25, y + 18);
+    } else {
+      doc.text(`- Fits in a single capsule: ${dosageFormFit.fitsInSingleCapsule ? "Yes" : "No"}`, 25, y + 18);
+    }
+    y += 26;
+  } else {
+    doc.text(`Dosage Form: POWDER`, 105, y + 12);
+    doc.text(`Serving Weight: ${tableting.recommendedWeightMg.toFixed(1)} mg`, 105, y + 18);
+    doc.text(`Total Servings: ${calculatedResults.batch.totalTablets.toLocaleString()}`, 105, y + 24);
+    y += 38;
+  }
+
+  // 2.1. PRODUCTION MASTER FORMULA (BATCH LAYOUT)
+  checkPageBreak(40 + (ingredientNodes.length * 6));
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(0, 94, 184);
+  doc.text("2.1. Production Master Formula (Batch Layout)", 20, y);
+  y += 6;
+
+  // Table Headers
+  doc.setFillColor(241, 245, 249);
+  doc.rect(20, y, 170, 6, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text("Component Name", 23, y + 4.5);
+  doc.text("Nominal %", 75, y + 4.5);
+  doc.text("Overage %", 97, y + 4.5);
+  doc.text("Nominal Qty (kg)", 120, y + 4.5);
+  doc.text("Actual Qty (kg)", 155, y + 4.5);
+  y += 6;
+
+  // Draw rows using ingredientsBreakdown
+  const ingredientsBreakdown = calculatedResults.batch.ingredientsBreakdown || [];
+
+  if (ingredientsBreakdown.length > 0) {
+    ingredientsBreakdown.forEach((item, idx) => {
+      if (idx % 2 === 1) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(20, y, 170, 6, "F");
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
+
+      doc.text(item.name, 23, y + 4);
+      doc.text(`${(blendIngredients.find(bi => String(bi.ingredient.id) === String(item.ingredientId))?.percentage ?? 0).toFixed(1)}%`, 75, y + 4);
+      doc.text(`${item.overagePercent.toFixed(1)}%`, 97, y + 4);
+      doc.text(`${item.nominalWeightKg.toFixed(4)} kg`, 120, y + 4);
+      doc.text(`${item.finalWeightKg.toFixed(4)} kg`, 155, y + 4);
+      y += 6;
+    });
+  } else {
+    // Fallback if breakdown not populated
+    ingredientNodes.forEach((node, idx) => {
+      const ing = allIngredients.find((i) => String(i.id) === String(node.data.ingredientId));
+      if (ing) {
+        if (idx % 2 === 1) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(20, y, 170, 6, "F");
+        }
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(15, 23, 42);
+
+        const percentage = node.data.percentage ?? 0;
+        const overage = ing.overagePercent ?? 0;
+        const yieldFraction = (outputNode?.data.expectedLossPercentage !== undefined)
+          ? (100 - Number(outputNode.data.expectedLossPercentage)) / 100
+          : 1.0;
+
+        const nominalWeightKg = (calculatedResults.batch.totalTablets * (tableting.recommendedWeightMg || 0) * (percentage / 100)) / 1000000;
+        const finalWeightKg = nominalWeightKg * (1 + overage / 100) / (yieldFraction > 0 ? yieldFraction : 1.0);
+
+        doc.text(ing.name, 23, y + 4);
+        doc.text(`${percentage.toFixed(1)}%`, 75, y + 4);
+        doc.text(`${overage.toFixed(1)}%`, 97, y + 4);
+        doc.text(`${nominalWeightKg.toFixed(4)} kg`, 120, y + 4);
+        doc.text(`${finalWeightKg.toFixed(4)} kg`, 155, y + 4);
+        y += 6;
+      }
+    });
+  }
+
+  // Draw bottom border line
+  doc.setDrawColor(226, 232, 240);
+  doc.line(20, y, 190, y);
+  y += 10;
 
   // 4. CHEMICAL INCOMPATIBILITIES & WARNINGS
   checkPageBreak(35);
@@ -330,7 +446,7 @@ export async function generateGMPReport(
     doc.setTextColor(220, 38, 38);
     const missingWarningText = region === "US" 
       ? "Warning: Not all ingredients have a verified pharmacopoeia standard."
-      : "Внимание: Не все ингредиенты имеют подтвержденный фармакопейный стандарт.";
+      : "Warning: Not all ingredients have a verified pharmacopoeia standard (EU/EMA).";
     doc.text(missingWarningText, 23, y + 5.5);
     y += 12;
   } else {
@@ -345,7 +461,7 @@ export async function generateGMPReport(
   doc.text("5. Packaging Protocol Recommendations", 20, y);
   y += 6;
 
-  const packagingRecs = getPackagingRecommendations(blendIngredients);
+  const packagingRecs = getPackagingRecommendations(blendIngredients, enT);
 
   // Table Headers
   doc.setFillColor(241, 245, 249);

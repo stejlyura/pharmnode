@@ -38,7 +38,7 @@ describe('Chemical Compatibility Rules', () => {
       expect(ruleBackward).not.toBeNull();
       expect(ruleForward).toEqual(ruleBackward);
 
-      expect(ruleForward?.title).toBe('Реакция Майяра');
+      expect(ruleForward?.title).toBe('Maillard Reaction');
       expect(ruleForward?.type).toBe('incompatible');
       expect(ruleForward?.severity).toBe('error');
     });
@@ -59,7 +59,7 @@ describe('Chemical Compatibility Rules', () => {
       // Incompatible
       const incompatibleRule = getIngredientsCompatibilityRule(ingAmines, ingLactose);
       expect(incompatibleRule).not.toBeNull();
-      expect(incompatibleRule?.title).toBe('Реакция Майяра');
+      expect(incompatibleRule?.title).toBe('Maillard Reaction');
 
       // Compatible
       const compatibleRule = getIngredientsCompatibilityRule(ingAmines, ingInert);
@@ -78,7 +78,7 @@ describe('Chemical Compatibility Rules', () => {
 
       const rule = getIngredientsCompatibilityRule(ingComplexAmines, ingLactose);
       expect(rule).not.toBeNull();
-      expect(rule?.title).toBe('Реакция Майяра');
+      expect(rule?.title).toBe('Maillard Reaction');
     });
 
     it('should fallback to base chemicalClassId when activeMolecules is empty or null', () => {
@@ -94,11 +94,11 @@ describe('Chemical Compatibility Rules', () => {
 
       const rule1 = getIngredientsCompatibilityRule(ingEmptyList, ingLactose);
       expect(rule1).not.toBeNull();
-      expect(rule1?.title).toBe('Реакция Майяра');
+      expect(rule1?.title).toBe('Maillard Reaction');
 
       const rule2 = getIngredientsCompatibilityRule(ingNullList, ingLactose);
       expect(rule2).not.toBeNull();
-      expect(rule2?.title).toBe('Реакция Майяра');
+      expect(rule2?.title).toBe('Maillard Reaction');
     });
 
     it('should resolve correctly when both ingredients have multiple activeMolecules', () => {
@@ -119,7 +119,7 @@ describe('Chemical Compatibility Rules', () => {
       // Phenols (21) + Polymers (19) -> Complexation warning
       const rule = getIngredientsCompatibilityRule(ingMultiA, ingMultiB);
       expect(rule).not.toBeNull();
-      expect(rule?.title).toBe('Комплексообразование');
+      expect(rule?.title).toBe('Complexation');
       expect(rule?.severity).toBe('warning');
     });
   });
@@ -136,43 +136,43 @@ describe('Chemical Compatibility Rules', () => {
     };
 
     it('verifies Maillard Reaction rule', () => {
-      verifyRule(1, 14, 'Реакция Майяра', 'error');
+      verifyRule(1, 14, 'Maillard Reaction', 'error');
     });
 
     it('verifies Alkaline degradation rules', () => {
-      verifyRule(1, 9, 'Щелочная деградация', 'error');
-      verifyRule(1, 10, 'Щелочная деградация', 'error');
+      verifyRule(1, 9, 'Alkaline Degradation', 'error');
+      verifyRule(1, 10, 'Alkaline Degradation', 'error');
     });
 
     it('verifies Acid-Base reaction rules', () => {
-      verifyRule(6, 9, 'Кислотно-основное взаимодействие', 'warning');
-      verifyRule(7, 9, 'Кислотно-основное взаимодействие', 'warning');
-      verifyRule(6, 10, 'Газообразование', 'error');
+      verifyRule(6, 9, 'Acid-Base Interaction', 'warning');
+      verifyRule(7, 9, 'Acid-Base Interaction', 'warning');
+      verifyRule(6, 10, 'Gas Formation', 'error');
     });
 
     it('verifies Phenols and polymers complexation rule', () => {
-      verifyRule(21, 19, 'Комплексообразование', 'warning');
+      verifyRule(21, 19, 'Complexation', 'warning');
     });
 
     it('verifies Vitamin degradation rules', () => {
-      verifyRule(23, 9, 'Деградация витамина', 'error');
-      verifyRule(23, 10, 'Деградация витамина', 'error');
-      verifyRule(23, 28, 'Деградация витамина', 'error');
-      verifyRule(23, 13, 'Деградация витамина', 'error');
-      verifyRule(6, 13, 'Металл-катализируемое окисление', 'error');
+      verifyRule(23, 9, 'Vitamin Degradation', 'error');
+      verifyRule(23, 10, 'Vitamin Degradation', 'error');
+      verifyRule(23, 28, 'Vitamin Degradation', 'error');
+      verifyRule(23, 13, 'Vitamin Degradation', 'error');
+      verifyRule(6, 13, 'Metal-Catalyzed Oxidation', 'error');
     });
 
     it('verifies Calcium salts and organic/fatty acids rules', () => {
-      verifyRule(7, 13, 'Образование нерастворимых солей', 'warning');
-      verifyRule(26, 13, 'Омыление in situ', 'warning');
+      verifyRule(7, 13, 'Insoluble Salt Formation', 'warning');
+      verifyRule(26, 13, 'In situ Saponification', 'warning');
     });
 
     it('verifies Amines and polyols warning', () => {
-      verifyRule(1, 17, 'Реакция с микропримесями', 'warning');
+      verifyRule(1, 17, 'Reaction with Microimpurities', 'warning');
     });
 
     it('verifies Protein denaturation rule', () => {
-      verifyRule(27, 9, 'Денатурация в щелочной среде', 'warning');
+      verifyRule(27, 9, 'Denaturation in Alkaline Medium', 'warning');
     });
   });
 });

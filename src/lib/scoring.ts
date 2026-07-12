@@ -160,14 +160,14 @@ export function analyzeRecipe(
   compatibilityWarnings.forEach(w => {
     if (w.type === 'compatibility') {
       if (w.severity === 'error') {
-        penalties.push({ reason: `Химический конфликт: ${w.message}`, deduction: 20 });
+        penalties.push({ reason: `Chemical conflict: ${w.message}`, deduction: 20 });
         score -= 20;
       } else {
-        penalties.push({ reason: `Предупреждение совместимости: ${w.message}`, deduction: 10 });
+        penalties.push({ reason: `Compatibility warning: ${w.message}`, deduction: 10 });
         score -= 10;
       }
     } else if (w.type === 'limit') {
-      penalties.push({ reason: `Превышение предела ввода: ${w.message}`, deduction: 15 });
+      penalties.push({ reason: `Input limit exceeded: ${w.message}`, deduction: 15 });
       score -= 15;
     }
   });
@@ -175,7 +175,7 @@ export function analyzeRecipe(
   // 2. Overdoses
   overdoses.forEach(o => {
     penalties.push({
-      reason: `Передозировка active сырья: ${o.name} (${o.doseMg.toFixed(1)} мг > лимит ${o.maxDoseMg} мг)`,
+      reason: `Active ingredient overdose: ${o.name} (${o.doseMg.toFixed(1)} mg > limit ${o.maxDoseMg} mg)`,
       deduction: 15
     });
     score -= 15;
@@ -183,7 +183,7 @@ export function analyzeRecipe(
 
   // 3. Allergens
   if (hasAllergens) {
-    penalties.push({ reason: "Наличие аллергенов в составе", deduction: 10 });
+    penalties.push({ reason: "Allergens present in the formula", deduction: 10 });
     score -= 10;
   }
 

@@ -40,8 +40,9 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
   const { t, setLocale, locale } = useTranslation();
 
   const activeRawWeightG = data.activeRawWeightG ?? 10;
+  const expectedLossPercentage = Number(data.expectedLossPercentage ?? 0);
   const region = String(data.region ?? 'US');
-  const formType = (data.formType as 'tablet' | 'capsule') || 'tablet';
+  const formType = (data.formType as 'tablet' | 'capsule' | 'powder') || 'tablet';
   const { recommendedWeightMg } = calculatedResults.tableting;
   const { totalTablets, totalBatchWeightKg } = calculatedResults.batch;
   const isRu = locale === 'ru-RU';
@@ -67,8 +68,8 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
   }, [nodes, allIngredients]);
 
   const packagingRecs = React.useMemo(() => {
-    return getPackagingRecommendations(ingredientsList);
-  }, [ingredientsList]);
+    return getPackagingRecommendations(ingredientsList, t);
+  }, [ingredientsList, t]);
 
   const formulaScore = React.useMemo(() => {
     return calculateFormulaScore(ingredientsList);
@@ -162,6 +163,46 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
         </div>
       </div>
 
+      {/* Expected Losses Input */}
+      <div>
+        <div className="flex justify-between items-center mb-1.5">
+          <span className="text-xs text-zinc-400">{t('card_expected_losses')}</span>
+          <span className="text-xs font-semibold text-zinc-200 font-mono">
+            {expectedLossPercentage}%
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="range"
+            min="0"
+            max="20"
+            step="0.5"
+            value={expectedLossPercentage}
+            onChange={(e) => onUpdateData(id, { expectedLossPercentage: parseFloat(e.target.value) || 0 })}
+            className={`flex-1 accent-indigo-500 bg-zinc-800 rounded-lg appearance-none cursor-pointer self-center ${
+              isMobile ? "h-2 py-2" : "h-1.5"
+            }`}
+          />
+          <input
+            type="number"
+            min="0"
+            max="20"
+            step="0.1"
+            value={expectedLossPercentage}
+            onChange={(e) => {
+              let val = parseFloat(e.target.value);
+              if (isNaN(val)) val = 0;
+              if (val < 0) val = 0;
+              if (val > 20) val = 20;
+              onUpdateData(id, { expectedLossPercentage: val });
+            }}
+            className={`bg-zinc-805 border border-zinc-705 text-zinc-105 rounded text-center text-xs font-mono py-1 focus:outline-none focus:border-indigo-500 ${
+              isMobile ? "w-16 py-2 rounded-lg" : "w-16"
+            }`}
+          />
+        </div>
+      </div>
+
       {/* Dosage Form Selector */}
       <div className={`flex items-center justify-between text-[11px] bg-zinc-800/30 p-2 border border-zinc-800/50 text-zinc-100 ${isMobile ? "rounded-xl" : "rounded"}`}>
         <span className="text-zinc-400 font-medium ml-1">
@@ -188,6 +229,16 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
           >
             {locale === 'ru-RU' ? 'Капсула' : 'Capsule'}
           </button>
+          <button
+            onClick={() => onUpdateData(id, { formType: 'powder' })}
+            className={`px-3 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+              formType === 'powder' 
+                ? 'bg-zinc-850 text-indigo-400 font-semibold' 
+                : 'text-zinc-500 hover:text-zinc-400'
+            } ${isMobile ? "px-4 py-1 rounded-md" : ""}`}
+          >
+            {locale === 'ru-RU' ? 'Порошок' : 'Powder'}
+          </button>
         </div>
       </div>
 
@@ -213,13 +264,19 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">{t('card_total_batch_weight')}</span>
+            <span className="text-zinc-500">{t('card_nominal_batch_weight')}</span>
             <span className="font-mono text-zinc-300 font-semibold">
+              {(calculatedResults.batch.nominalBatchWeightKg ?? calculatedResults.batch.totalBatchWeightKg).toFixed(4)} {t('unit_kg')}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_total_batch_weight')}</span>
+            <span className="font-mono text-indigo-400 font-bold">
               {totalBatchWeightKg.toFixed(4)} {t('unit_kg')}
             </span>
           </div>
         </div>
-      ) : (
+      ) : formType === 'capsule' ? (
         <div className="flex flex-col gap-2">
           {/* Capsule fit details */}
           <div className={`flex flex-col gap-1.5 bg-zinc-900/40 p-2.5 border border-zinc-800/50 text-xs ${isMobile ? "rounded-xl p-3" : "rounded"}`}>
@@ -323,6 +380,39 @@ export const OutputNode: React.FC<OutputNodeProps> = ({
                 )
               )}
             </div>
+          </div>
+        </div>
+      ) : (
+        <div className={`flex flex-col gap-1.5 bg-zinc-900/40 p-2.5 border border-zinc-800/50 text-xs ${isMobile ? "rounded-xl p-3" : "rounded"}`}>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_active_share')}</span>
+            <span className="font-mono text-zinc-300 font-semibold">
+              {calculatedResults.activePercentage.toFixed(1)}%
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{locale === 'ru-RU' ? 'Вес порции порошка:' : 'Recommended serving weight:'}</span>
+            <span className="font-mono text-zinc-300 font-semibold">
+              {recommendedWeightMg.toFixed(2)} {t('unit_mg')}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{locale === 'ru-RU' ? 'Всего порций:' : 'Total servings:'}</span>
+            <span className="font-mono text-indigo-400 font-bold">
+              {totalTablets.toLocaleString()} {t('unit_pcs') || 'шт.'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_nominal_batch_weight')}</span>
+            <span className="font-mono text-zinc-300 font-semibold">
+              {(calculatedResults.batch.nominalBatchWeightKg ?? calculatedResults.batch.totalBatchWeightKg).toFixed(4)} {t('unit_kg')}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">{t('card_total_batch_weight')}</span>
+            <span className="font-mono text-indigo-400 font-bold">
+              {totalBatchWeightKg.toFixed(4)} {t('unit_kg')}
+            </span>
           </div>
         </div>
       )}

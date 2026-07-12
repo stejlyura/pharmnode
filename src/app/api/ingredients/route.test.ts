@@ -289,4 +289,223 @@ describe("POST /api/ingredients", () => {
     expect(body.ingredient.name).toBe("New Active");
     expect(body.ingredient.casNumber).toBe("99-99-9");
   });
+
+  it("returns 400 for invalid moisture content (>100 or <0)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+
+    const request = new Request("http://localhost:3000/api/ingredients", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Moist Active",
+        role: "active",
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        moistureContent: 150
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Влажность должна быть числом от 0 до 100");
+  });
+
+  it("returns 400 for invalid solubility", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+
+    const request = new Request("http://localhost:3000/api/ingredients", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Water Active",
+        role: "active",
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        solubility: "ether"
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Некорректное значение растворимости");
+  });
+
+  it("successfully passes moistureContent and solubility to prisma.create", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "user-123", tariff: "professional" } as any);
+    vi.mocked(checkTariffLimit).mockResolvedValue({ allowed: true, limit: 100, current: 5 });
+
+    let passedData: any = null;
+    (prisma.customIngredient.create as any).mockImplementation(async (args: any) => {
+      passedData = args.data;
+      return {
+        id: "cust-123",
+        userId: "user-123",
+        name: "encrypted:Water Active",
+        role: "active",
+        casNumber: null,
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        trueDensity: 0.6,
+        costPerKgUsd: 10,
+        isAllergen: false,
+        moistureContent: 4.5,
+        solubility: "water",
+        effects: JSON.stringify([]),
+        contraindications: JSON.stringify([]),
+        sideEffects: JSON.stringify([])
+      } as any;
+    });
+
+    const request = new Request("http://localhost:3000/api/ingredients", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Water Active",
+        role: "active",
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        moistureContent: 4.5,
+        solubility: "water"
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(201);
+    expect(passedData).toBeDefined();
+    expect(passedData.moistureContent).toBe(4.5);
+    expect(passedData.solubility).toBe("water");
+  });
+
+  it("returns 400 for invalid bitterness (>10 or <0)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+
+    const request = new Request("http://localhost:3000/api/ingredients", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Bitter Active",
+        role: "active",
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        bitterness: 15
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Горечь должна быть числом от 0 до 10");
+  });
+
+  it("successfully passes bitterness to prisma.create", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "user-123", tariff: "professional" } as any);
+    vi.mocked(checkTariffLimit).mockResolvedValue({ allowed: true, limit: 100, current: 5 });
+
+    let passedData: any = null;
+    (prisma.customIngredient.create as any).mockImplementation(async (args: any) => {
+      passedData = args.data;
+      return {
+        id: "cust-123",
+        userId: "user-123",
+        name: "encrypted:Bitter Active",
+        role: "active",
+        casNumber: null,
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        trueDensity: 0.6,
+        costPerKgUsd: 10,
+        isAllergen: false,
+        bitterness: 7.5,
+        effects: JSON.stringify([]),
+        contraindications: JSON.stringify([]),
+        sideEffects: JSON.stringify([])
+      } as any;
+    });
+
+    const request = new Request("http://localhost:3000/api/ingredients", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Bitter Active",
+        role: "active",
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        bitterness: 7.5
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(201);
+    expect(passedData).toBeDefined();
+    expect(passedData.bitterness).toBe(7.5);
+  });
+
+  it("returns 400 for invalid overagePercent (>50 or <0)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+
+    const request = new Request("http://localhost:3000/api/ingredients", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Overage Active",
+        role: "active",
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        overagePercent: 55
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Технологический избыток (Overage) должен быть числом от 0 до 50");
+  });
+
+  it("successfully passes overagePercent to prisma.create", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user-123" }
+    });
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "user-123", tariff: "professional" } as any);
+    vi.mocked(checkTariffLimit).mockResolvedValue({ allowed: true, limit: 100, current: 5 });
+
+    let passedData: any = null;
+    (prisma.customIngredient.create as any).mockImplementation(async (args: any) => {
+      passedData = args.data;
+      return {
+        id: "cust-123",
+        userId: "user-123",
+        name: "encrypted:Overage Active",
+        role: "active",
+        casNumber: null,
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        trueDensity: 0.6,
+        costPerKgUsd: 10,
+        isAllergen: false,
+        overagePercent: 12.5,
+        effects: JSON.stringify([]),
+        contraindications: JSON.stringify([]),
+        sideEffects: JSON.stringify([])
+      } as any;
+    });
+
+    const request = new Request("http://localhost:3000/api/ingredients", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Overage Active",
+        role: "active",
+        looseBulkDensity: 0.5,
+        tappedBulkDensity: 0.6,
+        overagePercent: 12.5
+      })
+    });
+    const res = await POST(request);
+    expect(res.status).toBe(201);
+    expect(passedData).toBeDefined();
+    expect(passedData.overagePercent).toBe(12.5);
+  });
 });

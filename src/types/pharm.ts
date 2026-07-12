@@ -7,7 +7,9 @@ export type IngredientRole =
   | 'disintegrant'   // разрыхлитель
   | 'coating'        // оболочка
   | 'sweetener'      // подсластитель
-  | 'anti-caking';   // агент против слёживания
+  | 'anti-caking'    // агент против слёживания
+  | 'flavoring'      // ароматизатор
+  | 'colorant';      // краситель
 
 /**
  * Рекомендация по вспомогательному веществу, которое следует добавить
@@ -103,6 +105,11 @@ export interface Ingredient {
 
   // Regulatory Info (from IngredientRegulatory relation)
   regulatoryInfo?: IngredientRegulatory;
+
+  moistureContent?: number;
+  solubility?: string;
+  bitterness?: number;
+  overagePercent?: number;
 }
 
 

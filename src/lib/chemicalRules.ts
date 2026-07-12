@@ -16,83 +16,83 @@ export interface CompatibilityRule {
 
 export const CHEMICAL_CLASSES: ChemicalClass[] = [
   // Amines
-  { id: 1, category: "Амины и Азотсодержащие", name: "Первичные и вторичные амины" },
-  { id: 2, category: "Амины и Азотсодержащие", name: "Третичные амины и четвертичные соли" },
-  { id: 3, category: "Амины и Азотсодержащие", name: "Амиды и Имиды" },
-  { id: 4, category: "Амины и Азотсодержащие", name: "Сульфаниламиды / Тиазиды" },
-  { id: 5, category: "Амины и Азотсодержащие", name: "Алкалоиды / Ксантины" },
+  { id: 1, category: "Amines and Nitrogen-containing", name: "Primary and secondary amines" },
+  { id: 2, category: "Amines and Nitrogen-containing", name: "Tertiary amines and quaternary salts" },
+  { id: 3, category: "Amines and Nitrogen-containing", name: "Amides and Imides" },
+  { id: 4, category: "Amines and Nitrogen-containing", name: "Sulfonamides / Thiazides" },
+  { id: 5, category: "Amines and Nitrogen-containing", name: "Alkaloids / Xanthines" },
 
   // Acids and Salts
-  { id: 6, category: "Кислоты, Соли и Эфиры", name: "Органические кислоты (алифатические)" },
-  { id: 7, category: "Кислоты, Соли и Эфиры", name: "Органические кислоты (ароматические)" },
-  { id: 8, category: "Кислоты, Соли и Эфиры", name: "Эфиры" },
-  { id: 9, category: "Кислоты, Соли и Эфиры", name: "Щелочные соли жирных кислот (Стеараты)" },
-  { id: 10, category: "Кислоты, Соли и Эфиры", name: "Щелочные неорганические соли (Карбонаты)" },
-  { id: 11, category: "Кислоты, Соли и Эфиры", name: "Нейтральные неорганические соли" },
-  { id: 12, category: "Кислоты, Соли и Эфиры", name: "Кислые неорганические соли" },
-  { id: 13, category: "Кислоты, Соли и Эфиры", name: "Фосфаты кальция" },
+  { id: 6, category: "Acids, Salts and Esters", name: "Organic acids (aliphatic)" },
+  { id: 7, category: "Acids, Salts and Esters", name: "Organic acids (aromatic)" },
+  { id: 8, category: "Acids, Salts and Esters", name: "Esters" },
+  { id: 9, category: "Acids, Salts and Esters", name: "Alkaline salts of fatty acids (Stearates)" },
+  { id: 10, category: "Acids, Salts and Esters", name: "Alkaline inorganic salts (Carbonates)" },
+  { id: 11, category: "Acids, Salts and Esters", name: "Neutral inorganic salts" },
+  { id: 12, category: "Acids, Salts and Esters", name: "Acid inorganic salts" },
+  { id: 13, category: "Acids, Salts and Esters", name: "Calcium phosphates" },
 
   // Carbohydrates and Polymers
-  { id: 14, category: "Углеводы и Полимеры", name: "Восстанавливающие сахара (Лактоза)" },
-  { id: 15, category: "Углеводы и Полимеры", name: "Невосстанавливающие сахара (Сахароза)" },
-  { id: 16, category: "Углеводы и Полимеры", name: "Полисахариды (МКЦ, Крахмал)" },
-  { id: 17, category: "Углеводы и Полимеры", name: "Полиолы (Маннит, Сорбит)" },
-  { id: 18, category: "Углеводы и Полимеры", name: "Модифицированные целлюлозы / SSG" },
-  { id: 19, category: "Углеводы и Полимеры", name: "Водорастворимые синтетические полимеры (ПВП, ПЭГ)" },
-  { id: 20, category: "Углеводы и Полимеры", name: "Нерастворимые синтетические полимеры" },
+  { id: 14, category: "Carbohydrates and Polymers", name: "Reducing sugars (Lactose)" },
+  { id: 15, category: "Carbohydrates and Polymers", name: "Non-reducing sugars (Sucrose)" },
+  { id: 16, category: "Carbohydrates and Polymers", name: "Polysaccharides (MCC, Starch)" },
+  { id: 17, category: "Carbohydrates and Polymers", name: "Polyols (Mannitol, Sorbitol)" },
+  { id: 18, category: "Carbohydrates and Polymers", name: "Modified celluloses / SSG" },
+  { id: 19, category: "Carbohydrates and Polymers", name: "Water-soluble synthetic polymers (PVP, PEG)" },
+  { id: 20, category: "Carbohydrates and Polymers", name: "Insoluble synthetic polymers" },
 
   // Specific groups
-  { id: 21, category: "Специфические органические группы", name: "Фенолы" },
-  { id: 22, category: "Специфические органические группы", name: "Стероиды / Гормоны" },
-  { id: 23, category: "Специфические органические группы", name: "Жирорастворимые витамины" },
-  { id: 24, category: "Специфические органические группы", name: "Водорастворимые витамины" },
-  { id: 25, category: "Специфические органические группы", name: "Гликозиды" },
-  { id: 26, category: "Специфические органические группы", name: "Липиды, воски, жирные кислоты" },
-  { id: 27, category: "Специфические органические группы", name: "Белки, пептиды, ферменты" },
+  { id: 21, category: "Specific organic groups", name: "Phenols" },
+  { id: 22, category: "Specific organic groups", name: "Steroids / Hormones" },
+  { id: 23, category: "Specific organic groups", name: "Fat-soluble vitamins" },
+  { id: 24, category: "Specific organic groups", name: "Water-soluble vitamins" },
+  { id: 25, category: "Specific organic groups", name: "Glycosides" },
+  { id: 26, category: "Specific organic groups", name: "Lipids, waxes, fatty acids" },
+  { id: 27, category: "Specific organic groups", name: "Proteins, peptides, enzymes" },
 
   // Minerals and Others
-  { id: 28, category: "Минералы и Прочее", name: "Силикаты и диоксид кремния" },
-  { id: 29, category: "Минералы и Прочее", name: "Оксиды металлов" },
-  { id: 30, category: "Минералы и Прочее", name: "Пероксиды / Окислители" },
-  { id: 31, category: "Минералы и Прочее", name: "Восстановители / Антиоксиданты" },
-  { id: 32, category: "Минералы и Прочее", name: "Галогенсодержащие соединения" },
-  { id: 33, category: "Минералы и Прочее", name: "Эфирные масла / Терпены" },
-  { id: 34, category: "Минералы и Прочее", name: "Сорбенты" },
-  { id: 35, category: "Минералы и Прочее", name: "Инертный / Прочий" },
+  { id: 28, category: "Minerals and Others", name: "Silicates and silicon dioxide" },
+  { id: 29, category: "Minerals and Others", name: "Metal oxides" },
+  { id: 30, category: "Minerals and Others", name: "Peroxides / Oxidizers" },
+  { id: 31, category: "Minerals and Others", name: "Reducing agents / Antioxidants" },
+  { id: 32, category: "Minerals and Others", name: "Halogenated compounds" },
+  { id: 33, category: "Minerals and Others", name: "Essential oils / Terpenes" },
+  { id: 34, category: "Minerals and Others", name: "Sorbents" },
+  { id: 35, category: "Minerals and Others", name: "Inert / Other" },
 ];
 
 export const COMPATIBILITY_RULES: CompatibilityRule[] = [
   // Maillard Reaction
-  { classA: 1, classB: 14, type: 'incompatible', severity: 'error', title: 'Реакция Майяра', message: 'Первичная аминогруппа вступает в реакцию с альдегидной (редуцирующей) группой сахара. В присутствии влаги это вызывает потемнение смеси, образование токсичных адуктов и потерю активности АФС.', suggestion: 'Замените восстанавливающий сахар на инертный (Сахароза), Маннит или МКЦ.' },
+  { classA: 1, classB: 14, type: 'incompatible', severity: 'error', title: 'Maillard Reaction', message: 'Primary amine group reacts with the aldehyde (reducing) group of sugar. In the presence of moisture, this causes browning of the blend, formation of toxic adducts, and loss of API activity.', suggestion: 'Replace the reducing sugar with inert one (Sucrose), Mannitol, or MCC.' },
 
   // Alkaline degradation of amines
-  { classA: 1, classB: 9, type: 'incompatible', severity: 'error', title: 'Щелочная деградация', message: 'Щелочные соли (Стеараты) создают локальную щелочную микросреду, ускоряя гидролитическое расщепление аминов во влажной среде.', suggestion: 'Замените стеарат магния на стеариновую кислоту или ПРУВ.' },
-  { classA: 1, classB: 10, type: 'incompatible', severity: 'error', title: 'Щелочная деградация', message: 'Карбонаты и другие щелочные неорганические соли разрушают первичные амины.', suggestion: 'Избегайте сильных щелочных агентов.' },
+  { classA: 1, classB: 9, type: 'incompatible', severity: 'error', title: 'Alkaline Degradation', message: 'Alkaline salts (Stearates) create a local alkaline microenvironment, accelerating hydrolytic cleavage of amines in a moist environment.', suggestion: 'Replace magnesium stearate with stearic acid or PRUV (SSF).' },
+  { classA: 1, classB: 10, type: 'incompatible', severity: 'error', title: 'Alkaline Degradation', message: 'Carbonates and other alkaline inorganic salts degrade primary amines.', suggestion: 'Avoid strong alkaline agents.' },
 
   // Acid-Base reactions
-  { classA: 6, classB: 9, type: 'incompatible', severity: 'warning', title: 'Кислотно-основное взаимодействие', message: 'Алифатическая органическая кислота реагирует со щелочным лубрикантом, разрушая смазывающую решетку стеарата.', suggestion: 'Используйте кислый или нейтральный лубрикант.' },
-  { classA: 7, classB: 9, type: 'incompatible', severity: 'warning', title: 'Кислотно-основное взаимодействие', message: 'Ароматическая органическая кислота реагирует со щелочным лубрикантом, разрушая смазывающую решетку стеарата.', suggestion: 'Используйте кислый или нейтральный лубрикант.' },
-  { classA: 6, classB: 10, type: 'incompatible', severity: 'error', title: 'Газообразование', message: 'Органические кислоты реагируют с карбонатами с выделением углекислого газа во влажной среде, что приведет к вздутию и разрушению таблетки.', suggestion: 'Избегайте карбонатов, если это не шипучая таблетка.' },
+  { classA: 6, classB: 9, type: 'incompatible', severity: 'warning', title: 'Acid-Base Interaction', message: 'Aliphatic organic acid reacts with alkaline lubricant, disrupting the lubricating grid of the stearate.', suggestion: 'Use an acidic or neutral lubricant.' },
+  { classA: 7, classB: 9, type: 'incompatible', severity: 'warning', title: 'Acid-Base Interaction', message: 'Aromatic organic acid reacts with alkaline lubricant, disrupting the lubricating grid of the stearate.', suggestion: 'Use an acidic or neutral lubricant.' },
+  { classA: 6, classB: 10, type: 'incompatible', severity: 'error', title: 'Gas Formation', message: 'Organic acids react with carbonates releasing carbon dioxide in a moist environment, which will lead to swelling and destruction of the tablet.', suggestion: 'Avoid carbonates unless it is an effervescent tablet.' },
 
   // Phenols and polymers complexation
-  { classA: 21, classB: 19, type: 'incompatible', severity: 'warning', title: 'Комплексообразование', message: 'Фенольные группы способны образовывать водородные связи с полимерными цепями (ПВП, ПЭГ), что может замедлить растворение in vitro.', suggestion: 'Проверьте кинетику высвобождения, возможно потребуется увеличить долю дезинтегранта.' },
+  { classA: 21, classB: 19, type: 'incompatible', severity: 'warning', title: 'Complexation', message: 'Phenolic groups are capable of forming hydrogen bonds with polymer chains (PVP, PEG), which may delay dissolution in vitro.', suggestion: 'Check dissolution kinetics; it may be necessary to increase the disintegrant share.' },
 
   // Vitamins and Metals/Alkalis
-  { classA: 23, classB: 9, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Жирорастворимые витамины крайне чувствительны к щелочной среде стеаратов.', suggestion: 'Используйте антиоксиданты и нейтральные наполнители.' },
-  { classA: 23, classB: 10, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Жирорастворимые витамины окисляются в щелочной среде неорганических солей.', suggestion: 'Используйте антиоксиданты и нейтральные наполнители.' },
-  { classA: 23, classB: 28, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Следовые количества тяжелых металлов в силикатах (Тальк) катализируют окисление витаминов.', suggestion: 'Избегайте талька или используйте хелатирующие агенты (ЭДТА).' },
-  { classA: 23, classB: 13, type: 'incompatible', severity: 'error', title: 'Деградация витамина', message: 'Ионы кальция и следовые металлы в фосфатах катализируют деградацию витамина.', suggestion: 'Избегайте неорганических солей.' },
-  { classA: 6, classB: 13, type: 'incompatible', severity: 'error', title: 'Металл-катализируемое окисление', message: 'Двухвалентные ионы кальция в составе фосфата катализируют окисление алифатических органических кислот (например, Витамина С).', suggestion: 'Используйте Маннит или МКЦ.' },
+  { classA: 23, classB: 9, type: 'incompatible', severity: 'error', title: 'Vitamin Degradation', message: 'Fat-soluble vitamins are extremely sensitive to the alkaline environment of stearates.', suggestion: 'Use antioxidants and neutral fillers.' },
+  { classA: 23, classB: 10, type: 'incompatible', severity: 'error', title: 'Vitamin Degradation', message: 'Fat-soluble vitamins oxidize in the alkaline environment of inorganic salts.', suggestion: 'Use antioxidants and neutral fillers.' },
+  { classA: 23, classB: 28, type: 'incompatible', severity: 'error', title: 'Vitamin Degradation', message: 'Trace amounts of heavy metals in silicates (Talc) catalyze vitamin oxidation.', suggestion: 'Avoid talc or use chelating agents (EDTA).' },
+  { classA: 23, classB: 13, type: 'incompatible', severity: 'error', title: 'Vitamin Degradation', message: 'Calcium ions and trace metals in phosphates catalyze vitamin degradation.', suggestion: 'Avoid inorganic salts.' },
+  { classA: 6, classB: 13, type: 'incompatible', severity: 'error', title: 'Metal-Catalyzed Oxidation', message: 'Divalent calcium ions in the phosphate catalyze the oxidation of aliphatic organic acids (e.g. Vitamin C).', suggestion: 'Use Mannitol or MCC.' },
 
   // Calcium salts and organic acids
-  { classA: 7, classB: 13, type: 'incompatible', severity: 'warning', title: 'Образование нерастворимых солей', message: 'Взаимодействие ароматической органической кислоты с кальциевой солью образует малорастворимые комплексы, снижая биодоступность.', suggestion: 'Замените на нейтральный наполнитель.' },
-  { classA: 26, classB: 13, type: 'incompatible', severity: 'warning', title: 'Омыление in situ', message: 'Жирные кислоты (Стеариновая к-та) образуют нерастворимые кальциевые соли при контакте с фосфатами.', suggestion: 'Рассмотрите замену лубриканта.' },
+  { classA: 7, classB: 13, type: 'incompatible', severity: 'warning', title: 'Insoluble Salt Formation', message: 'Interaction of an aromatic organic acid with a calcium salt forms poorly soluble complexes, reducing bioavailability.', suggestion: 'Replace with a neutral filler.' },
+  { classA: 26, classB: 13, type: 'incompatible', severity: 'warning', title: 'In situ Saponification', message: 'Fatty acids (Stearic acid) form insoluble calcium salts upon contact with phosphates.', suggestion: 'Consider replacing the lubricant.' },
 
   // Amines and polyols
-  { classA: 1, classB: 17, type: 'incompatible', severity: 'warning', title: 'Реакция с микропримесями', message: 'Полиолы (Сорбит) могут содержать следовые количества редуцирующих сахаров, которые вступают в реакцию с первичными аминами.', suggestion: 'Используйте очищенный Маннит или МКЦ.' },
+  { classA: 1, classB: 17, type: 'incompatible', severity: 'warning', title: 'Reaction with Microimpurities', message: 'Polyols (Sorbitol) may contain trace amounts of reducing sugars that react with primary amines.', suggestion: 'Use purified Mannitol or MCC.' },
 
   // Proteins
-  { classA: 27, classB: 9, type: 'incompatible', severity: 'warning', title: 'Денатурация в щелочной среде', message: 'Белки и ферменты подвержены щелочному гидролизу в присутствии щелочных солей.', suggestion: 'Используйте нейтральную среду.' }
+  { classA: 27, classB: 9, type: 'incompatible', severity: 'warning', title: 'Denaturation in Alkaline Medium', message: 'Proteins and enzymes are prone to alkaline hydrolysis in the presence of alkaline salts.', suggestion: 'Use a neutral environment.' }
 ];
 
 export function getCompatibilityRule(classA: number, classB: number): CompatibilityRule | null {

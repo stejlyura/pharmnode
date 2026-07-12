@@ -39,6 +39,9 @@ export const IngredientNode: React.FC<IngredientNodeProps> = ({
   else if (ingredient.role === 'dry-binder') roleBadgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
   else if (ingredient.role === 'lubricant') roleBadgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
   else if (ingredient.role === 'glidant') roleBadgeColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
+  else if (ingredient.role === 'sweetener') roleBadgeColor = 'bg-teal-500/10 text-teal-400 border-teal-500/20';
+  else if (ingredient.role === 'flavoring') roleBadgeColor = 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+  else if (ingredient.role === 'colorant') roleBadgeColor = 'bg-pink-500/10 text-pink-400 border-pink-500/20';
 
   return (
     <div className={isMobile ? "flex flex-col gap-4" : "flex flex-col gap-3 p-4"}>

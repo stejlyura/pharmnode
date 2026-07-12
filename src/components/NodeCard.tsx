@@ -108,6 +108,9 @@ export const NodeCard = React.memo<NodeCardProps>(({
       case 'dry-binder': return t('role_dry_binder_singular');
       case 'lubricant': return t('role_lubricant_singular');
       case 'glidant': return t('role_glidant_singular');
+      case 'sweetener': return t('role_sweetener_singular');
+      case 'flavoring': return t('role_flavoring_singular');
+      case 'colorant': return t('role_colorant_singular');
       default: return role;
     }
   };
@@ -241,7 +244,10 @@ export const NodeCard = React.memo<NodeCardProps>(({
 
   const nodeWarnings = React.useMemo(() => {
     if (type === 'ingredient') {
-      return calculatedResults.warnings.filter(w => String(w.ingredientId) === String(data.ingredientId));
+      return calculatedResults.warnings.filter(w => 
+        String(w.ingredientId) === String(data.ingredientId) ||
+        (w.relatedIngredientId !== undefined && String(w.relatedIngredientId) === String(data.ingredientId))
+      );
     }
     if (type === 'blending') {
       return calculatedResults.warnings;
@@ -361,6 +367,9 @@ export const NodeCard = React.memo<NodeCardProps>(({
       case 'ingredient': {
         const ingredient = allIngredients.find(ing => String(ing.id) === String(data.ingredientId));
         if (ingredient?.role === 'active') return { accent: 'bg-rose-500', label: t('card_active_substance') };
+        if (ingredient?.role === 'sweetener') return { accent: 'bg-teal-500', label: t('role_sweetener_singular') };
+        if (ingredient?.role === 'flavoring') return { accent: 'bg-orange-500', label: t('role_flavoring_singular') };
+        if (ingredient?.role === 'colorant') return { accent: 'bg-pink-500', label: t('role_colorant_singular') };
         return { accent: 'bg-zinc-600', label: t('card_excipient') };
       }
       case 'blending':

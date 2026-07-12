@@ -560,8 +560,17 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
     // 5. Read active raw weight from Output Node
     const outputNode = state.nodes.find(node => node.type === 'output');
     const activeRawWeightG = outputNode?.data.activeRawWeightG ?? 10;
+    const expectedLoss = Number(outputNode?.data.expectedLossPercentage ?? 0);
+    const productionYield = 100 - expectedLoss;
 
-    const batch = calculateBatch(activeRawWeightG, tableting.recommendedWeightMg, activePercentage, blend.costPerKg);
+    const batch = calculateBatch(
+      activeRawWeightG,
+      tableting.recommendedWeightMg,
+      activePercentage,
+      blend.costPerKg,
+      blendIngredients.map(item => ({ ingredient: item.ingredient, percentage: item.percentage })),
+      productionYield
+    );
 
     // 6. Gather unique allergens in the blend
     const allergens = Array.from(
@@ -574,7 +583,7 @@ export function useNodeEditor(initialTariff: TariffType = 'hobby', customIngredi
 
     const scoring = analyzeRecipe(blendIngredients, tableting.recommendedWeightMg, warnings);
 
-    const dosageFormFit = calculateDosageFormFit(tableting.recommendedWeightMg, blend.looseDensity, t);
+    const dosageFormFit = calculateDosageFormFit(tableting.recommendedWeightMg, blend.tappedDensity, t);
 
     const regulatoryWarnings = checkRegulatoryCompliance(
       blendIngredients,

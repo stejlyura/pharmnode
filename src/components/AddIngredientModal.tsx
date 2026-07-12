@@ -41,7 +41,11 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
     processingTech: '',
     effects: '',
     contraindications: '',
-    sideEffects: [] as { name: string; frequency: string; severity: 'low' | 'medium' | 'high' }[]
+    sideEffects: [] as { name: string; frequency: string; severity: 'low' | 'medium' | 'high' }[],
+    moistureContent: 3.0,
+    solubility: 'none',
+    bitterness: 0,
+    overagePercent: 0
   });
 
   const [addError, setAddError] = useState<string | null>(null);
@@ -93,7 +97,11 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
       processingTech: addForm.processingTech.trim() || undefined,
       effects: parsedEffects,
       contraindications: parsedContraindications,
-      sideEffects: addForm.sideEffects
+      sideEffects: addForm.sideEffects,
+      moistureContent: Number(addForm.moistureContent),
+      solubility: addForm.solubility === 'none' ? undefined : addForm.solubility,
+      bitterness: addForm.role === 'active' ? Number(addForm.bitterness) : undefined,
+      overagePercent: Number(addForm.overagePercent)
     };
 
     try {
@@ -141,7 +149,11 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
           processingTech: '',
           effects: '',
           contraindications: '',
-          sideEffects: []
+          sideEffects: [],
+          moistureContent: 3.0,
+          solubility: 'none',
+          bitterness: 0,
+          overagePercent: 0
         });
       } else {
         // Redirect to premium paywall on tariff limit exceeded
@@ -215,6 +227,9 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
                 <option value="dry-binder">{t('add_role_dry_binder')}</option>
                 <option value="lubricant">{t('add_role_lubricant')}</option>
                 <option value="glidant">{t('add_role_glidant')}</option>
+                <option value="sweetener">{t('add_role_sweetener')}</option>
+                <option value="flavoring">{t('add_role_flavoring')}</option>
+                <option value="colorant">{t('add_role_colorant')}</option>
               </select>
             </div>
 
@@ -330,6 +345,71 @@ export const AddIngredientModal: React.FC<AddIngredientModalProps> = ({
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                {t('add_moisture_content')}
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="3.0"
+                value={addForm.moistureContent}
+                onChange={(e) => setAddForm(prev => ({ ...prev, moistureContent: parseFloat(e.target.value) || 0 }))}
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                {t('add_overage')}
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="50"
+                placeholder="0.0"
+                value={addForm.overagePercent}
+                onChange={(e) => setAddForm(prev => ({ ...prev, overagePercent: parseFloat(e.target.value) || 0 }))}
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                {t('add_solubility')}
+              </label>
+              <select
+                value={addForm.solubility}
+                onChange={(e) => setAddForm(prev => ({ ...prev, solubility: e.target.value }))}
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-zinc-900"
+              >
+                <option value="none">{t('add_solubility_none')}</option>
+                <option value="water">{t('add_solubility_water')}</option>
+                <option value="lipid">{t('add_solubility_lipid')}</option>
+              </select>
+            </div>
+
+            {addForm.role === 'active' && (
+              <div>
+                <label className="block text-[10px] text-zinc-400 font-semibold mb-1 uppercase tracking-wider">
+                  {t('add_bitterness')}
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  placeholder="0.0"
+                  value={addForm.bitterness}
+                  onChange={(e) => setAddForm(prev => ({ ...prev, bitterness: parseFloat(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-850 text-zinc-200 font-mono rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            )}
 
             <div className="col-span-1 md:col-span-2 flex items-center gap-2 bg-zinc-900/40 border border-zinc-900 p-3 rounded-lg mt-1">
               <input

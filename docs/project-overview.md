@@ -66,10 +66,8 @@ pharmnode/
     │   └── product-evolution.md
     ├── deployment/
     │   └── setup-guide.md
-    ├── tasks/
-    │   └── todo.md
-    └── archive/
-        └── pre-mvp-research.md
+    └── tasks/
+        └── todo.md
 ```
 
 ---
@@ -108,6 +106,16 @@ pharmnode/
 - **Тёмная** (`[data-theme="dark"]`): премиум тёмная — `#000000` фон, `#05e69f` акцент
 
 **Компоненты:** glassmorphism, градиентные границы, SVG-линии связей (Bezier curves), animated transitions.
+
+
+---
+
+## Интеграция с ИИ и MCP-инструментами (codebase-memory, sequential-thinking)
+
+Для детального анализа исходного кода, функций и зависимостей этого проекта используются специализированные MCP-инструменты:
+- **codebase-memory** (база знаний в виде графа): При сбоях MCP-сервера в песочнице используйте прямые SQL-запросы к локальной SQLite базе `/Users/dev/.cache/codebase-memory-mcp/Users-dev-projects-pharmnode.db`.
+- **sequential-thinking** (цепочка мыслей): Для пошагового логического рассуждения и детального планирования.
+- Приоритетные правила и методы работы ИИ с проектом описаны в [`AGENTS.md`](../AGENTS.md).
 
 ---
 ⬅️ [Вернуться к индексу документации](index.md)

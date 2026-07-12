@@ -18,7 +18,8 @@ export const baseIngredientsMatrix: Ingredient[] = [
     risk: 20,
     cost: 450.00,
     stability: 75,
-    manufacturability: 70
+    manufacturability: 70,
+    bitterness: 6.0
   },
   {
     id: 2,
@@ -114,10 +115,10 @@ export const baseIngredientsMatrix: Ingredient[] = [
     cost: 15.00,
     stability: 80,
     manufacturability: 85,
-    effects: ["Обезболивающее", "Жаропонижающее"],
-    contraindications: ["Печеночная недостаточность"],
+    effects: ["Analgesic", "Antipyretic"],
+    contraindications: ["Hepatic impairment"],
     sideEffects: [
-      { name: "Аллергическая сыпь", frequency: "редко", severity: "medium" }
+      { name: "Allergic rash", frequency: "rarely", severity: "medium" }
     ]
   },
   {
@@ -138,11 +139,11 @@ export const baseIngredientsMatrix: Ingredient[] = [
     cost: 22.00,
     stability: 80,
     manufacturability: 80,
-    effects: ["Обезболивающее", "Противовоспалительное", "Жаропонижающее"],
-    contraindications: ["Язва желудка", "Почечная недостаточность", "Аспириновая астма"],
+    effects: ["Analgesic", "Anti-inflammatory", "Antipyretic"],
+    contraindications: ["Stomach ulcer", "Renal failure", "Aspirin-induced asthma"],
     sideEffects: [
-      { name: "Боли в желудке", frequency: "часто", severity: "medium" },
-      { name: "Тошнота", frequency: "редко", severity: "low" }
+      { name: "Stomach pain", frequency: "often", severity: "medium" },
+      { name: "Nausea", frequency: "rarely", severity: "low" }
     ]
   },
   {
@@ -163,10 +164,10 @@ export const baseIngredientsMatrix: Ingredient[] = [
     cost: 18.00,
     stability: 70,
     manufacturability: 75,
-    effects: ["Иммунитет", "Энергия", "Антиоксидант"],
-    contraindications: ["Гипероксалурия", "Тромбофлебит"],
+    effects: ["Immunity", "Energy", "Antioxidant"],
+    contraindications: ["Hyperoxaluria", "Thrombophlebitis"],
     sideEffects: [
-      { name: "Изжога", frequency: "редко", severity: "low" }
+      { name: "Heartburn", frequency: "rarely", severity: "low" }
     ]
   },
   {
@@ -301,12 +302,13 @@ export const baseIngredientsMatrix: Ingredient[] = [
     cost: 25.00,
     stability: 85,
     manufacturability: 85,
-    effects: ["Стимулятор", "Энергия", "Фокусировка"],
-    contraindications: ["Гипертония", "Бессонница", "Аритмия"],
+    effects: ["Stimulant", "Energy", "Focus"],
+    contraindications: ["Hypertension", "Insomnia", "Arrhythmia"],
     sideEffects: [
-      { name: "Тахикардия", frequency: "часто", severity: "medium" },
-      { name: "Бессонница", frequency: "часто", severity: "medium" }
-    ]
+      { name: "Tachycardia", frequency: "often", severity: "medium" },
+      { name: "Insomnia", frequency: "often", severity: "medium" }
+    ],
+    bitterness: 7.5
   },
   {
     id: 16,
@@ -345,10 +347,10 @@ export const baseIngredientsMatrix: Ingredient[] = [
     cost: 1200.00,
     stability: 65,
     manufacturability: 70,
-    effects: ["Здоровье костей", "Иммунитет"],
-    contraindications: ["Гиперкальциемия"],
+    effects: ["Bone health", "Immunity"],
+    contraindications: ["Hypercalcemia"],
     sideEffects: [
-      { name: "Головная боль", frequency: "редко", severity: "low" }
+      { name: "Headache", frequency: "rarely", severity: "low" }
     ]
   },
   {

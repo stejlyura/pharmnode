@@ -148,6 +148,35 @@ describe("authOptions", () => {
         expect(result).toBe(true);
         expect(prisma.user.create).not.toHaveBeenCalled();
       });
+
+      it("should block sign-in to admin@pharmnode.com if provider is not credentials", async () => {
+        const signInCallback = authOptions.callbacks?.signIn;
+        expect(signInCallback).toBeDefined();
+
+        const result = await signInCallback!({
+          user: { email: "admin@pharmnode.com" },
+          account: { provider: "google" },
+        } as any);
+
+        expect(result).toBe(false);
+      });
+
+      it("should allow sign-in to admin@pharmnode.com if provider is credentials", async () => {
+        const signInCallback = authOptions.callbacks?.signIn;
+        expect(signInCallback).toBeDefined();
+
+        vi.mocked(prisma.user.findUnique).mockResolvedValue({
+          id: "admin-id",
+          email: "admin@pharmnode.com",
+        } as any);
+
+        const result = await signInCallback!({
+          user: { email: "admin@pharmnode.com" },
+          account: { provider: "credentials" },
+        } as any);
+
+        expect(result).toBe(true);
+      });
     });
 
     describe("jwt callback", () => {
@@ -208,6 +237,55 @@ describe("authOptions", () => {
         expect(prisma.user.findUnique).toHaveBeenCalledWith({
           where: { email: "user@example.com" },
         });
+      });
+
+      it("should ignore spoofed tariff and renewsAt passed in trigger update (directly or nested) and fetch secure values from DB", async () => {
+        const mockDbUser = {
+          id: "db-uuid-12345",
+          email: "user@example.com",
+          tariff: "hobby",
+          emailVerified: false,
+          renewsAt: null,
+        };
+
+        vi.mocked(prisma.user.findUnique).mockResolvedValue(mockDbUser as any);
+        vi.mocked(prisma.userSession.findUnique).mockResolvedValue({ id: "session-id" } as any);
+
+        const jwtCallback = authOptions.callbacks?.jwt;
+
+        // Test client payload with root keys
+        const resultToken1 = await jwtCallback!({
+          token: { id: "db-uuid-12345", email: "user@example.com", sessionToken: "session-123", tariff: "hobby", renewsAt: null, emailVerified: false },
+          user: undefined,
+          trigger: "update",
+          session: {
+            tariff: "enterprise",
+            renewsAt: new Date("2028-01-01").toISOString(),
+            emailVerified: true,
+          },
+        } as any);
+
+        expect(resultToken1.tariff).toBe("hobby");
+        expect(resultToken1.renewsAt).toBeNull();
+        expect(resultToken1.emailVerified).toBe(false);
+
+        // Test client payload with user nested keys
+        const resultToken2 = await jwtCallback!({
+          token: { id: "db-uuid-12345", email: "user@example.com", sessionToken: "session-123", tariff: "hobby", renewsAt: null, emailVerified: false },
+          user: undefined,
+          trigger: "update",
+          session: {
+            user: {
+              tariff: "professional",
+              renewsAt: new Date("2028-01-01").toISOString(),
+              emailVerified: true,
+            }
+          },
+        } as any);
+
+        expect(resultToken2.tariff).toBe("hobby");
+        expect(resultToken2.renewsAt).toBeNull();
+        expect(resultToken2.emailVerified).toBe(false);
       });
     });
   });

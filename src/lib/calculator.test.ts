@@ -155,6 +155,24 @@ describe('calculateBlendProperties', () => {
     // cost = 50 * 0.99 + 20 * 0.01 = 49.5 + 0.2 = 49.7
     expect(res.costPerKg).toBeCloseTo(49.7, 4);
   });
+
+  it('should calculate weighted average moistureContent', () => {
+    const ingW1: Ingredient = {
+      ...ingA,
+      moistureContent: 5.0
+    };
+    const ingW2: Ingredient = {
+      ...ingB,
+      moistureContent: 2.0
+    };
+    const ingredients = [
+      { ingredient: ingW1, percentage: 30 },
+      { ingredient: ingW2, percentage: 70 }
+    ];
+    const res = calculateBlendProperties(ingredients);
+    // average moisture = 5.0 * 0.3 + 2.0 * 0.7 = 1.5 + 1.4 = 2.9
+    expect(res.moistureContent).toBeCloseTo(2.9, 4);
+  });
 });
 
 describe('calculateTableting', () => {
@@ -187,9 +205,59 @@ describe('calculateBatch', () => {
     // totalBatchCost = 0.0999 * 200 = 19.98 USD
     const res = calculateBatch(10, 100, 10, 200);
     expect(res.totalTablets).toBe(999);
+    expect(res.nominalBatchWeightKg).toBeCloseTo(0.0999, 4);
     expect(res.totalBatchWeightKg).toBeCloseTo(0.0999, 4);
     expect(res.costPerTabletUsd).toBeCloseTo(0.02, 4);
     expect(res.totalBatchCostUsd).toBeCloseTo(19.98, 4);
+  });
+
+  it('should adjust for productionYield and overagePercent correctly', () => {
+    const ingredients = [
+      {
+        ingredient: {
+          id: 1,
+          name: 'Active Ingredient',
+          role: 'active' as const,
+          chemicalClassId: 1,
+          looseBulkDensity: 0.5,
+          tappedBulkDensity: 0.6,
+          costPerKgUsd: 100,
+          maxSafePercentage: 100,
+          overagePercent: 10, // 10% overage
+        },
+        percentage: 20
+      },
+      {
+        ingredient: {
+          id: 2,
+          name: 'Filler',
+          role: 'filler' as const,
+          chemicalClassId: 2,
+          looseBulkDensity: 0.5,
+          tappedBulkDensity: 0.6,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100,
+          overagePercent: 0
+        },
+        percentage: 80
+      }
+    ];
+
+    const res = calculateBatch(20, 500, 20, 28, ingredients, 95);
+    expect(res.totalTablets).toBe(200);
+    expect(res.nominalBatchWeightKg).toBeCloseTo(0.1, 4);
+    expect(res.totalBatchWeightKg).toBeCloseTo(0.107368, 4);
+    expect(res.totalBatchCostUsd).toBeCloseTo(3.1579, 4);
+    expect(res.costPerTabletUsd).toBeCloseTo(0.01579, 5);
+
+    expect(res.ingredientsBreakdown).toBeDefined();
+    expect(res.ingredientsBreakdown!.length).toBe(2);
+    expect(res.ingredientsBreakdown![0].nominalWeightKg).toBeCloseTo(0.02, 4);
+    expect(res.ingredientsBreakdown![0].finalWeightKg).toBeCloseTo(0.023158, 4);
+    expect(res.ingredientsBreakdown![0].overagePercent).toBe(10);
+    expect(res.ingredientsBreakdown![1].nominalWeightKg).toBeCloseTo(0.08, 4);
+    expect(res.ingredientsBreakdown![1].finalWeightKg).toBeCloseTo(0.08421, 4);
+    expect(res.ingredientsBreakdown![1].overagePercent).toBe(0);
   });
 });
 
@@ -276,6 +344,166 @@ describe('checkCompatibilityAndLimits', () => {
 
     const warnings = checkCompatibilityAndLimits(ingredients, undefined, nodes, connections);
     expect(warnings.length).toBe(0);
+  });
+
+  it('should report warning when average moisture content is > 5%', () => {
+    const ingredients = [
+      {
+        ingredient: {
+          id: 10,
+          name: 'Moist Ingredient A',
+          role: 'active',
+          chemicalClassId: 1,
+          looseBulkDensity: 0.4,
+          tappedBulkDensity: 0.5,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100,
+          moistureContent: 6.0
+        } as any,
+        percentage: 100
+      }
+    ];
+
+    const warnings = checkCompatibilityAndLimits(ingredients);
+    expect(warnings.some(w => w.message.includes('High average moisture content') || w.message.includes('Высокая влажность смеси'))).toBe(true);
+  });
+
+  it('should report warning when individual ingredient moisture content is > 5%', () => {
+    const ingredients = [
+      {
+        ingredient: {
+          id: 11,
+          name: 'Moist Active',
+          role: 'active',
+          chemicalClassId: 1,
+          looseBulkDensity: 0.4,
+          tappedBulkDensity: 0.5,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100,
+          moistureContent: 8.0
+        } as any,
+        percentage: 10
+      },
+      {
+        ingredient: {
+          id: 12,
+          name: 'Dry Filler',
+          role: 'filler',
+          chemicalClassId: 2,
+          looseBulkDensity: 0.5,
+          tappedBulkDensity: 0.6,
+          costPerKgUsd: 5,
+          maxSafePercentage: 100,
+          moistureContent: 1.0
+        } as any,
+        percentage: 90
+      }
+    ];
+
+    const warnings = checkCompatibilityAndLimits(ingredients);
+    const ingWarning = warnings.find(w => w.ingredientId === 11);
+    expect(ingWarning).toBeDefined();
+    expect(ingWarning?.message).toContain('Moist Active');
+  });
+
+  it('should report warning when there is a solubility conflict between actives', () => {
+    const ingredients = [
+      {
+        ingredient: {
+          id: 21,
+          name: 'Water Active',
+          role: 'active',
+          chemicalClassId: 1,
+          looseBulkDensity: 0.4,
+          tappedBulkDensity: 0.5,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100,
+          solubility: 'water'
+        } as any,
+        percentage: 10
+      },
+      {
+        ingredient: {
+          id: 22,
+          name: 'Lipid Active',
+          role: 'active',
+          chemicalClassId: 2,
+          looseBulkDensity: 0.4,
+          tappedBulkDensity: 0.5,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100,
+          solubility: 'lipid'
+        } as any,
+        percentage: 10
+      }
+    ];
+
+    const warnings = checkCompatibilityAndLimits(ingredients);
+    const conflict = warnings.find(w => w.ingredientId === 21 && w.relatedIngredientId === 22);
+    expect(conflict).toBeDefined();
+    const hasMatch = conflict?.message.includes('Solubility Conflict') || conflict?.message.includes('Конфликт растворимости');
+    expect(hasMatch).toBe(true);
+  });
+
+  it('should report warning when active ingredient bitterness is > 5 and there are no sweeteners or flavorings', () => {
+    const ingredients = [
+      {
+        ingredient: {
+          id: 31,
+          name: 'Bitter Active',
+          role: 'active',
+          chemicalClassId: 1,
+          looseBulkDensity: 0.4,
+          tappedBulkDensity: 0.5,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100,
+          bitterness: 7.0
+        } as any,
+        percentage: 10
+      }
+    ];
+
+    const warnings = checkCompatibilityAndLimits(ingredients);
+    const warning = warnings.find(w => w.ingredientId === 31);
+    expect(warning).toBeDefined();
+    const hasBitterMatch = warning?.message.includes('too bitter') || warning?.message.includes('слишком горький');
+    expect(hasBitterMatch).toBe(true);
+  });
+
+  it('should NOT report warning when bitter active is matched with a sweetener or flavoring', () => {
+    const ingredients = [
+      {
+        ingredient: {
+          id: 31,
+          name: 'Bitter Active',
+          role: 'active',
+          chemicalClassId: 1,
+          looseBulkDensity: 0.4,
+          tappedBulkDensity: 0.5,
+          costPerKgUsd: 10,
+          maxSafePercentage: 100,
+          bitterness: 7.0
+        } as any,
+        percentage: 10
+      },
+      {
+        ingredient: {
+          id: 32,
+          name: 'Sweet agent',
+          role: 'sweetener',
+          chemicalClassId: 2,
+          looseBulkDensity: 0.4,
+          tappedBulkDensity: 0.5,
+          costPerKgUsd: 5,
+          maxSafePercentage: 100
+        } as any,
+        percentage: 2.0
+      }
+    ];
+
+    const warnings = checkCompatibilityAndLimits(ingredients);
+    const warning = warnings.find(w => w.ingredientId === 31);
+    expect(warning).toBeUndefined();
   });
 });
 
@@ -849,6 +1077,30 @@ describe('getPackagingRecommendations', () => {
     ]);
     expect(result.some(r => r.type === 'moisture_protection')).toBe(true);
     expect(result.some(r => r.type === 'light_protection')).toBe(true);
+  });
+
+  it('correctly uses translation helper if provided', () => {
+    const mockDict: Record<string, string> = {
+      'pack_standard_message': 'Translated Standard Message',
+      'pack_standard_details': 'Translated Standard Details',
+      'pack_moisture_message': 'Translated Moisture Message',
+      'pack_moisture_details': 'Translated Moisture Details with {list}',
+      'PVP': 'Translated PVP',
+    };
+    const t = (key: string) => mockDict[key] || key;
+
+    const standardResult = getPackagingRecommendations([], t);
+    expect(standardResult[0].message).toBe('Translated Standard Message');
+    expect(standardResult[0].details).toBe('Translated Standard Details');
+
+    const hygro = makeIngredient({
+      name: 'PVP',
+      stabilityProfile: { ph: null, hygroscopicity: 80, lightSensitive: false, heatDegradation: null },
+    });
+    const moistureResult = getPackagingRecommendations([{ ingredient: hygro, percentage: 50 }], t);
+    const moisture = moistureResult.find(r => r.type === 'moisture_protection');
+    expect(moisture?.message).toBe('Translated Moisture Message');
+    expect(moisture?.details).toBe('Translated Moisture Details with Translated PVP');
   });
 });
 

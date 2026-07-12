@@ -1,9 +1,13 @@
 import { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
+import FacebookProvider from "next-auth/providers/facebook";
+import LinkedInProvider from "next-auth/providers/linkedin";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import { rateLimit } from "./rateLimit";
+import crypto from "node:crypto";
 
 const isProduction = process.env.NODE_ENV === "production";
 if (isProduction) {
@@ -30,6 +34,31 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET
+      ? [
+          AzureADProvider({
+            clientId: process.env.AZURE_AD_CLIENT_ID,
+            clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
+            tenantId: process.env.AZURE_AD_TENANT_ID,
+          }),
+        ]
+      : []),
+    ...(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
+      ? [
+          FacebookProvider({
+            clientId: process.env.FACEBOOK_CLIENT_ID,
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET
+      ? [
+          LinkedInProvider({
+            clientId: process.env.LINKEDIN_CLIENT_ID,
+            clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
           }),
         ]
       : []),
@@ -97,8 +126,14 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       if (!user.email) return false;
+
+      // Prevent Admin Takeover via OAuth
+      if (user.email === "admin@pharmnode.com" && account?.provider !== "credentials") {
+        console.warn(`[SECURITY WARNING] Blocked sign-in attempt to admin@pharmnode.com using provider: ${account?.provider}`);
+        return false;
+      }
 
       try {
         const existingUser = await prisma.user.findUnique({
@@ -251,24 +286,11 @@ export const authOptions: NextAuthOptions = {
 
       // Handle session updates triggered via useSession().update()
       if (trigger === "update") {
-        console.log("[JWT CALLBACK] Processing update trigger payload:", JSON.stringify(session));
-        if (session?.tariff) {
-          token.tariff = session.tariff;
-        } else if (session?.user?.tariff) {
-          token.tariff = session.user.tariff;
-        }
-
-        if (session?.renewsAt !== undefined) {
-          token.renewsAt = session.renewsAt;
-        } else if (session?.user?.renewsAt !== undefined) {
-          token.renewsAt = session.user.renewsAt;
-        }
-
-        if (session?.emailVerified !== undefined) {
-          token.emailVerified = session.emailVerified;
-        } else if (session?.user?.emailVerified !== undefined) {
-          token.emailVerified = session.user.emailVerified;
-        }
+        console.log("[JWT CALLBACK] Processing update trigger. Sensitive fields are refreshed from DB, client-provided payload is ignored for security.");
+        // We purposefully do not copy tariff, renewsAt, or emailVerified from session/client payload
+        // to prevent client-side tariff spoofing (Client-Side Tariff Spoofing vulnerability).
+        // Since the database lookup above already refreshed token.tariff, token.renewsAt, 
+        // and token.emailVerified from the database, no action is needed here for these fields.
       }
 
       console.log("[JWT CALLBACK] Returning token:", JSON.stringify(token));
@@ -301,6 +323,6 @@ export const authOptions: NextAuthOptions = {
           "Generate one with: openssl rand -base64 32"
       );
     }
-    return s || "dev-nextauth-secret-key-for-pharmnode";
+    return s || crypto.randomBytes(32).toString("base64");
   })(),
 };

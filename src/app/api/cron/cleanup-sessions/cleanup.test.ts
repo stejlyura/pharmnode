@@ -26,7 +26,8 @@ describe("Session Cleanup Cron Route", () => {
     vi.unstubAllEnvs();
   });
 
-  it("should clean up sessions in development without auth header", async () => {
+  it("should clean up sessions in development without auth header if CRON_SECRET is not set", async () => {
+    vi.stubEnv("CRON_SECRET", "");
     const deleteManyMock = vi.mocked(prisma.userSession.deleteMany);
     deleteManyMock.mockResolvedValueOnce({ count: 5 });
 
@@ -45,6 +46,14 @@ describe("Session Cleanup Cron Route", () => {
         },
       },
     });
+  });
+
+  it("should fail with 401 in development if CRON_SECRET is set but auth header is missing", async () => {
+    // CRON_SECRET is set to "test_cron_secret" in beforeEach
+    const request = new Request("http://localhost:3000/api/cron/cleanup-sessions");
+    const response = await GET(request);
+
+    expect(response.status).toBe(401);
   });
 
   it("should fail with 401 in production if Authorization header is missing", async () => {

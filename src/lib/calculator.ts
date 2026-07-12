@@ -28,6 +28,7 @@ export interface BlendProperties {
   trueDensity: number;
   costPerKg: number;
   flowability: FlowabilityResult;
+  moistureContent?: number;
 }
 
 export interface TabletingResult {
@@ -36,11 +37,21 @@ export interface TabletingResult {
   recommendedWeightMg: number;
 }
 
+export interface IngredientBatchWeight {
+  ingredientId: string | number;
+  name: string;
+  nominalWeightKg: number;
+  finalWeightKg: number;
+  overagePercent: number;
+}
+
 export interface BatchResult {
   totalTablets: number;
   totalBatchWeightKg: number;
+  nominalBatchWeightKg?: number;
   costPerTabletUsd: number;
   totalBatchCostUsd: number;
+  ingredientsBreakdown?: IngredientBatchWeight[];
 }
 
 
@@ -105,7 +116,8 @@ export function calculateBlendProperties(
       tappedDensity: 0,
       trueDensity: 0,
       costPerKg: 0,
-      flowability: { hausner: 1.0, carr: 0.0, rating: 'Unknown' }
+      flowability: { hausner: 1.0, carr: 0.0, rating: 'Unknown' },
+      moistureContent: 0
     };
   }
 
@@ -151,12 +163,20 @@ export function calculateBlendProperties(
 
   const flowability = calculateFlowability(looseDensitySum, tappedDensitySum);
 
+  let moistureContentSum = 0;
+  for (const item of ingredients) {
+    const normalizedPercentage = item.percentage * scale;
+    const fraction = normalizedPercentage / 100;
+    moistureContentSum += (item.ingredient.moistureContent ?? 0) * fraction;
+  }
+
   return {
     looseDensity: looseDensitySum,
     tappedDensity: tappedDensitySum,
     trueDensity: trueDensitySum,
     costPerKg: costSum,
-    flowability
+    flowability,
+    moistureContent: moistureContentSum
   };
 }
 
@@ -193,14 +213,18 @@ export function calculateBatch(
   activeRawWeightG: number,
   recommendedWeightMg: number,
   activePercentage: number,
-  costPerKgBlend: number
+  costPerKgBlend: number,
+  ingredientsList?: { ingredient: Ingredient; percentage: number }[],
+  productionYield?: number
 ): BatchResult {
   if (activeRawWeightG <= 0 || recommendedWeightMg <= 0 || activePercentage <= 0) {
     return {
       totalTablets: 0,
       totalBatchWeightKg: 0,
+      nominalBatchWeightKg: 0,
       costPerTabletUsd: 0,
-      totalBatchCostUsd: 0
+      totalBatchCostUsd: 0,
+      ingredientsBreakdown: []
     };
   }
 
@@ -210,20 +234,54 @@ export function calculateBatch(
   // Total tablets = activeRawWeightG / (recommendedWeightG * activeFraction)
   const totalTablets = Math.floor(activeRawWeightG / (recommendedWeightG * activeFraction));
 
-  // Total batch weight in kg
-  const totalBatchWeightKg = (totalTablets * recommendedWeightMg) / 1000000;
+  // Nominal batch weight in kg (without overage & yield)
+  const nominalBatchWeightKg = (totalTablets * recommendedWeightMg) / 1000000;
 
-  // Cost per tablet in USD = weight in kg * cost per kg
-  const costPerTabletUsd = (recommendedWeightMg / 1000000) * costPerKgBlend;
+  const yieldFraction = (productionYield !== undefined && productionYield > 0) ? productionYield / 100 : 1.0;
 
-  // Total batch cost in USD
-  const totalBatchCostUsd = totalBatchWeightKg * costPerKgBlend;
+  let totalBatchWeightKg = 0;
+  let totalBatchCostUsd = 0;
+  const ingredientsBreakdown: IngredientBatchWeight[] = [];
+
+  if (ingredientsList && ingredientsList.length > 0) {
+    ingredientsList.forEach((item) => {
+      const percentage = item.percentage;
+      const overagePercent = item.ingredient.overagePercent ?? 0;
+      const costPerKg = item.ingredient.costPerKgUsd ?? 0;
+
+      // Nominal weight for this ingredient in kg
+      const nominalWeightKg = nominalBatchWeightKg * (percentage / 100);
+
+      // Final weight adjusted for overage and yield
+      const finalWeightKg = nominalWeightKg * (1 + overagePercent / 100) / yieldFraction;
+
+      totalBatchWeightKg += finalWeightKg;
+      totalBatchCostUsd += finalWeightKg * costPerKg;
+
+      ingredientsBreakdown.push({
+        ingredientId: item.ingredient.id,
+        name: item.ingredient.name,
+        nominalWeightKg,
+        finalWeightKg,
+        overagePercent
+      });
+    });
+  } else {
+    // Fallback if no ingredients breakdown is provided
+    totalBatchWeightKg = nominalBatchWeightKg / yieldFraction;
+    totalBatchCostUsd = totalBatchWeightKg * costPerKgBlend;
+  }
+
+  // Cost per tablet in USD = total actual batch cost / totalTablets
+  const costPerTabletUsd = totalTablets > 0 ? totalBatchCostUsd / totalTablets : 0;
 
   return {
     totalTablets,
     totalBatchWeightKg,
+    nominalBatchWeightKg,
     costPerTabletUsd,
-    totalBatchCostUsd
+    totalBatchCostUsd,
+    ingredientsBreakdown
   };
 }
 
@@ -239,6 +297,7 @@ export function checkCompatibilityAndLimits(
   const warnings: CompatibilityWarning[] = [];
   const activeIngredients = ingredients.filter(item => item.percentage > 0);
   const translate = t || ((key: string) => key);
+  const blendProps = calculateBlendProperties(ingredients);
 
   // 1. Check percentage limits
   for (const item of activeIngredients) {
@@ -308,9 +367,7 @@ export function checkCompatibilityAndLimits(
     }
   }
 
-  // 3. Process Graph Validation: Carr Index > 25 and no Granulator node between Blending and Press
   if (nodes && connections) {
-    const blendProps = calculateBlendProperties(ingredients);
     const carr = blendProps.flowability.carr;
     if (carr > 25) {
       const adj = new Map<string, string[]>();
@@ -356,6 +413,112 @@ export function checkCompatibilityAndLimits(
           severity: 'warning',
           message: 'Carr Index > 25: poor flowability. Add a Granulator node before tableting.',
           suggestion: 'Insert a Granulation node between Blending and Press to improve powder flow.'
+        });
+      }
+    }
+  }
+
+  // 4. Sticking Risk warning (Влажность > 5%)
+  const avgMoisture = blendProps.moistureContent ?? 0;
+  if (avgMoisture > 5) {
+    const msgTemplate = translate('warning_high_moisture_message');
+    const msg = msgTemplate === 'warning_high_moisture_message' 
+      ? `Высокая влажность смеси (${avgMoisture.toFixed(2)}%): риск налипания массы на пуансоны.` 
+      : msgTemplate.replace('{moisture}', avgMoisture.toFixed(2));
+    
+    const suggTemplate = translate('warning_high_moisture_suggestion');
+    const sugg = suggTemplate === 'warning_high_moisture_suggestion' 
+      ? `Добавьте влагопоглотитель или проведите дополнительную сушку смеси.` 
+      : suggTemplate;
+
+    warnings.push({
+      type: 'compatibility',
+      severity: 'warning',
+      message: msg,
+      suggestion: sugg
+    });
+  }
+
+  // 5. Individual ingredient moisture warning (> 5%)
+  for (const item of activeIngredients) {
+    if (item.ingredient.moistureContent !== undefined && item.ingredient.moistureContent !== null && item.ingredient.moistureContent > 5) {
+      const msgTemplate = translate('warning_ingredient_moisture_message');
+      const msg = msgTemplate === 'warning_ingredient_moisture_message'
+        ? `Высокая влажность ингредиента ${item.ingredient.name} (${item.ingredient.moistureContent}%).`
+        : msgTemplate.replace('{name}', item.ingredient.name).replace('{moisture}', String(item.ingredient.moistureContent));
+
+      const suggTemplate = translate('warning_ingredient_moisture_suggestion');
+      const sugg = suggTemplate === 'warning_ingredient_moisture_suggestion'
+        ? 'Рекомендуется сушка перед смешиванием.'
+        : suggTemplate;
+
+      warnings.push({
+        type: 'compatibility',
+        severity: 'warning',
+        ingredientId: item.ingredient.id,
+        message: msg,
+        suggestion: sugg
+      });
+    }
+  }
+
+  // 6. Solubility conflict warning
+  const actives = activeIngredients.filter(item => item.ingredient.role === 'active');
+  const waterSolubles = actives.filter(item => item.ingredient.solubility === 'water');
+  const lipidSolubles = actives.filter(item => item.ingredient.solubility === 'lipid');
+
+  if (waterSolubles.length > 0 && lipidSolubles.length > 0) {
+    for (const wItem of waterSolubles) {
+      for (const lItem of lipidSolubles) {
+        const msgTemplate = translate('warning_solubility_conflict_message');
+        const msg = msgTemplate === 'warning_solubility_conflict_message'
+          ? `Конфликт растворимости: ${wItem.ingredient.name} (водорастворимый) и ${lItem.ingredient.name} (жирорастворимый).`
+          : msgTemplate.replace('{nameA}', wItem.ingredient.name).replace('{nameB}', lItem.ingredient.name);
+
+        const suggTemplate = translate('warning_solubility_conflict_suggestion');
+        const sugg = suggTemplate === 'warning_solubility_conflict_suggestion'
+          ? 'Добавьте эмульгатор/ПАВ или разделите фазы.'
+          : suggTemplate;
+
+        warnings.push({
+          type: 'compatibility',
+          severity: 'warning',
+          ingredientId: wItem.ingredient.id,
+          relatedIngredientId: lItem.ingredient.id,
+          message: msg,
+          suggestion: sugg
+        });
+      }
+    }
+  }
+
+  // 7. Organoleptic / Taste warning (Bitterness check)
+  const bitterActives = activeIngredients.filter(
+    item => item.ingredient.role === 'active' && item.ingredient.bitterness !== undefined && item.ingredient.bitterness !== null && item.ingredient.bitterness > 5
+  );
+  
+  if (bitterActives.length > 0) {
+    const hasMaskingAgent = ingredients.some(
+      item => (item.ingredient.role === 'sweetener' || item.ingredient.role === 'flavoring') && item.percentage > 0
+    );
+    if (!hasMaskingAgent) {
+      for (const item of bitterActives) {
+        const msgTemplate = translate('warning_bitterness_too_high_message');
+        const msg = msgTemplate === 'warning_bitterness_too_high_message'
+          ? `Рецепт слишком горький из-за активного ингредиента ${item.ingredient.name}.`
+          : msgTemplate.replace('{name}', item.ingredient.name);
+
+        const suggTemplate = translate('warning_bitterness_too_high_suggestion');
+        const sugg = suggTemplate === 'warning_bitterness_too_high_suggestion'
+          ? 'Добавьте подсластитель или ароматизатор для маскировки горечи.'
+          : suggTemplate;
+
+        warnings.push({
+          type: 'compatibility',
+          severity: 'warning',
+          ingredientId: item.ingredient.id,
+          message: msg,
+          suggestion: sugg
         });
       }
     }
@@ -804,10 +967,17 @@ export interface PackagingRecommendation {
  * without a stabilityProfile.
  */
 export function getPackagingRecommendations(
-  ingredients: { ingredient: Ingredient; percentage: number }[]
+  ingredients: { ingredient: Ingredient; percentage: number }[],
+  t?: (key: string) => string
 ): PackagingRecommendation[] {
   const recommendations: PackagingRecommendation[] = [];
   const active = ingredients.filter(i => i.percentage > 0);
+  const translate = t || ((key: string) => key);
+
+  const getTranslation = (key: string, defaultValue: string) => {
+    const val = translate(key);
+    return val === key ? defaultValue : val;
+  };
 
   // 1. Hygroscopicity check (> 70 → moisture protection)
   const hygroscopicItems = active.filter(
@@ -815,10 +985,11 @@ export function getPackagingRecommendations(
       && i.ingredient.stabilityProfile.hygroscopicity > 70
   );
   if (hygroscopicItems.length > 0) {
+    const list = hygroscopicItems.map(i => translate(i.ingredient.name)).join(', ');
     recommendations.push({
       type: 'moisture_protection',
-      message: 'Требуется влагозащитный блистер (ALU/ALU)',
-      details: `Ингредиенты с высокой гигроскопичностью: ${hygroscopicItems.map(i => i.ingredient.name).join(', ')}`,
+      message: getTranslation('pack_moisture_message', 'Требуется влагозащитный блистер (ALU/ALU)'),
+      details: getTranslation('pack_moisture_details', 'Ингредиенты с высокой гигроскопичностью: {list}').replace('{list}', list),
     });
   }
 
@@ -827,10 +998,11 @@ export function getPackagingRecommendations(
     i => i.ingredient.stabilityProfile?.lightSensitive === true
   );
   if (lightSensitiveItems.length > 0) {
+    const list = lightSensitiveItems.map(i => translate(i.ingredient.name)).join(', ');
     recommendations.push({
       type: 'light_protection',
-      message: 'Требуется светонепроницаемая упаковка',
-      details: `Светочувствительные ингредиенты: ${lightSensitiveItems.map(i => i.ingredient.name).join(', ')}`,
+      message: getTranslation('pack_light_message', 'Требуется светонепроницаемая упаковка'),
+      details: getTranslation('pack_light_details', 'Светочувствительные ингредиенты: {list}').replace('{list}', list),
     });
   }
 
@@ -841,10 +1013,11 @@ export function getPackagingRecommendations(
       && i.ingredient.stabilityProfile.heatDegradation < 40
   );
   if (heatSensitiveItems.length > 0) {
+    const list = heatSensitiveItems.map(i => translate(i.ingredient.name)).join(', ');
     recommendations.push({
       type: 'heat_protection',
-      message: 'Рекомендуется хранение при контролируемой температуре (2–8°C)',
-      details: `Термолабильные ингредиенты: ${heatSensitiveItems.map(i => i.ingredient.name).join(', ')}`,
+      message: getTranslation('pack_heat_message', 'Рекомендуется хранение при контролируемой температуре (2–8°C)'),
+      details: getTranslation('pack_heat_details', 'Термолабильные ингредиенты: {list}').replace('{list}', list),
     });
   }
 
@@ -852,8 +1025,8 @@ export function getPackagingRecommendations(
   if (recommendations.length === 0) {
     recommendations.push({
       type: 'standard',
-      message: 'Стандартная упаковка (PVC/PVDC блистер)',
-      details: 'Особых требований к упаковке не выявлено.',
+      message: getTranslation('pack_standard_message', 'Стандартная упаковка (PVC/PVDC блистер)'),
+      details: getTranslation('pack_standard_details', 'Особых требований к упаковке не выявлено.'),
     });
   }
 
@@ -948,15 +1121,15 @@ export function getTabletSizes(): readonly TabletSize[] {
  * Calculates how the blend volume per unit fits into standard USP capsules.
  * 
  * @param totalBlendMassMg Recommended weight of a single dose in mg.
- * @param looseBulkDensity Loose bulk density of the blend in g/mL.
+ * @param tappedBulkDensity Tapped bulk density of the blend in g/mL.
  * @param t Optional translator function.
  */
 export function calculateDosageFormFit(
   totalBlendMassMg: number,
-  looseBulkDensity: number,
+  tappedBulkDensity: number,
   t?: (key: string) => string
 ): DosageFormFitResult {
-  if (totalBlendMassMg <= 0 || looseBulkDensity <= 0) {
+  if (totalBlendMassMg <= 0 || tappedBulkDensity <= 0) {
     return {
       recommendedCapsuleSize: null,
       capsuleCount: 0,
@@ -968,8 +1141,8 @@ export function calculateDosageFormFit(
     };
   }
 
-  // Volume in mL = mass in mg / (loose bulk density in g/mL * 1000 mg/g)
-  const volumeMl = totalBlendMassMg / (looseBulkDensity * 1000);
+  // Volume in mL = mass in mg / (tapped bulk density in g/mL * 1000 mg/g)
+  const volumeMl = totalBlendMassMg / (tappedBulkDensity * 1000);
 
   // Find all capsule sizes that can fit the volume
   const fittingCapsules = CAPSULE_SIZES.filter(c => volumeMl <= c.volumeMl);

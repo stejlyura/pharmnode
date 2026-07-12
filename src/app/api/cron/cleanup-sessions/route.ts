@@ -4,10 +4,12 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  // In production, enforce CRON_SECRET auth header verification
-  if (process.env.NODE_ENV === "production") {
+  const cronSecret = process.env.CRON_SECRET;
+
+  // Enforce CRON_SECRET auth header verification in production or if CRON_SECRET is configured
+  if (process.env.NODE_ENV === "production" || cronSecret) {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return new Response("Unauthorized", { status: 401 });
     }
   }
